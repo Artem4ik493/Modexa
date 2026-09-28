@@ -1,0 +1,38 @@
+export type Platform = "telegram" | "discord";
+
+export type EntityId = string;
+
+export interface User {
+  id: EntityId;
+  platform: Platform;
+  displayName: string;
+}
+
+export interface Community {
+  id: EntityId;
+  platform: Platform;
+  name: string;
+}
+
+export interface CommandContext {
+  platform: Platform;
+  user: User;
+  community?: Community;
+  args: string[];
+  rawText: string;
+}
+
+export interface CommandResponse {
+  content: string;
+}
+
+export type CommandHandler = (
+  context: CommandContext
+) => CommandResponse | Promise<CommandResponse>;
+
+export interface CommandDefinition {
+  name: string;
+  aliases?: string[];
+  description?: string;
+  handler: CommandHandler;
+}
