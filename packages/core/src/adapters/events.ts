@@ -24,13 +24,6 @@ export interface AdapterMessage {
 
   channel?: PlatformChannel;
 
-  /**
-   * External platform identifier where a response
-   * should be sent.
-   *
-   * For Telegram this is the chat ID.
-   * For Discord this will normally be a channel ID.
-   */
   destinationExternalId: string;
 
   content: string;

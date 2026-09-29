@@ -73,3 +73,55 @@ export interface InteractionRequest {
     unknown
   >;
 }
+
+/**
+ * Action that Core can execute after a user
+ * interacts with a rendered button or menu option.
+ * Link buttons are handled by the platform itself.
+ */
+export type StoredInteractionAction =
+  | {
+      type: "command";
+      command: string;
+      args?: string[];
+    }
+  | {
+      type: "callback";
+      data: string;
+    }
+  | {
+      type: "menu";
+      menuId: string;
+      value: string;
+    };
+
+/**
+ * Button with a compact token that adapters
+ * put into platform callback payloads.
+ * Link and disabled buttons have no token.
+ */
+export interface BoundInteractionButton
+  extends InteractionButton {
+  token?: string;
+}
+
+export interface BoundInteractionMenuOption
+  extends InteractionMenuOption {
+  token: string;
+}
+
+export interface BoundInteractionMenu
+  extends Omit<
+    InteractionMenu,
+    "options"
+  > {
+  options: BoundInteractionMenuOption[];
+}
+
+export interface BoundInteractionResponse {
+  content?: string;
+
+  buttons?: BoundInteractionButton[];
+
+  menus?: BoundInteractionMenu[];
+}

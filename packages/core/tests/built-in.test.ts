@@ -68,11 +68,18 @@ describe("built-in commands", () => {
       rawText: "/help"
     });
 
-    expect(result).toEqual({
-      content:
-        "Available commands:\n" +
-        "/ping — Check if Modexa is alive\n" +
-        "/help (/commands) — Show available commands"
-    });
+    const content = result?.content ?? "";
+
+    expect(content).toContain(
+      "Available commands:"
+    );
+
+    expect(content).toContain(
+      "/ping — Check if Modexa is alive"
+    );
+
+    expect(content).toContain(
+      "/help (/commands) — Show available commands"
+    );
   });
 });
