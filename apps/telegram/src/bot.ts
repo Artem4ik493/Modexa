@@ -2,7 +2,8 @@ import { Bot } from "grammy";
 import {
   CommandParser,
   CommandRegistry,
-  CommandService
+  CommandService,
+  createBuiltinCommands
 } from "@modexa/core";
 
 function getDisplayName(user: {
@@ -32,13 +33,7 @@ export function createTelegramBot(token: string): Bot {
   const parser = new CommandParser();
   const registry = new CommandRegistry();
 
-  registry.register({
-    name: "ping",
-    description: "Check if Modexa is alive",
-    handler: () => ({
-      content: "Pong!"
-    })
-  });
+  createBuiltinCommands(registry);
 
   const commandService = new CommandService(
     parser,
