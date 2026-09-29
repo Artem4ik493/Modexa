@@ -11,11 +11,10 @@ import {
   ExecutionContextService,
   InteractionActionStore,
   InteractionDispatcher,
-  createBuiltinCommands,
-  registerBuiltinInteractions
+  createBuiltinCommands
 } from "../src/index.js";
 
-function setup() {
+function setup(inCommunity = false) {
   const registry =
     new CommandRegistry();
 
@@ -33,7 +32,7 @@ function setup() {
       )
     );
 
-  registerBuiltinInteractions(dispatcher);
+  const now = new Date();
 
   const execution =
     new ExecutionContextService().create({
@@ -42,9 +41,17 @@ function setup() {
       user: {
         id: "user-1",
         displayName: "Artem",
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
+        createdAt: now,
+        updatedAt: now
+      },
+      community: inCommunity
+        ? {
+            id: "community-1",
+            name: "Test",
+            createdAt: now,
+            updatedAt: now
+          }
+        : undefined
     });
 
   return {
@@ -59,15 +66,15 @@ const scope = {
   platform: "telegram"
 };
 
-describe("built-in interactions", () => {
+describe("built-in menu commands", () => {
   it("shows account details with a working back button", async () => {
     const { store, dispatcher, execution } =
       setup();
 
     const token = store.create({
       action: {
-        type: "callback",
-        data: "account"
+        type: "command",
+        command: "/account"
       },
       scope
     });
@@ -111,14 +118,78 @@ describe("built-in interactions", () => {
     });
   });
 
-  it("returns the menu from the menu callback", async () => {
+  it("shows settings in a private chat", async () => {
     const { store, dispatcher, execution } =
       setup();
 
     const token = store.create({
       action: {
-        type: "callback",
-        data: "menu"
+        type: "command",
+        command: "/settings"
+      },
+      scope
+    });
+
+    const result =
+      await dispatcher.dispatch({
+        token,
+        execution
+      });
+
+    expect(result).toMatchObject({
+      status: "handled",
+      response: {
+        content:
+          "Settings\nNothing to configure yet."
+      }
+    });
+  });
+
+  it("does not expose account details in a community", async () => {
+    const { store, dispatcher, execution } =
+      setup(true);
+
+    const token = store.create({
+      action: {
+        type: "command",
+        command: "/account"
+      },
+      scope
+    });
+
+    const result =
+      await dispatcher.dispatch({
+        token,
+        execution
+      });
+
+    expect(result.status).toBe("handled");
+
+    if (result.status !== "handled") {
+      return;
+    }
+
+    expect(
+      result.response.content
+    ).toContain("private chat");
+
+    expect(
+      result.response.content
+    ).not.toContain("user-1");
+
+    expect(
+      result.response.buttons
+    ).toBeUndefined();
+  });
+
+  it("returns the main menu with two command buttons", async () => {
+    const { store, dispatcher, execution } =
+      setup();
+
+    const token = store.create({
+      action: {
+        type: "command",
+        command: "/menu"
       },
       scope
     });
@@ -137,10 +208,6 @@ describe("built-in interactions", () => {
 
     expect(
       result.response.buttons
-    ).toHaveLength(3);
-
-    expect(
-      result.response.buttons?.[2].token
-    ).toBeUndefined();
+    ).toHaveLength(2);
   });
 });

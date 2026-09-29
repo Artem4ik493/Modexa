@@ -13,7 +13,6 @@ import {
   InteractionActionStore,
   InteractionDispatcher,
   createBuiltinCommands,
-  registerBuiltinInteractions,
   type AdapterAction,
   type AdapterEvent
 } from "@modexa/core";
@@ -63,8 +62,6 @@ function setup() {
       logger
     );
 
-  registerBuiltinInteractions(dispatcher);
-
   const handler =
     createTelegramEventHandler({
       responder: {
@@ -96,8 +93,17 @@ function setup() {
 function messageEvent(
   content: string,
   userId = "42",
-  chatId = "42"
+  chatId = "42",
+  group = false
 ): AdapterEvent {
+  const chat = group
+    ? {
+        platform: "telegram" as const,
+        externalId: chatId,
+        name: "Test Group"
+      }
+    : undefined;
+
   return {
     type: "message.created",
     message: {
@@ -108,6 +114,8 @@ function messageEvent(
         externalId: userId,
         displayName: "Artem"
       },
+      community: chat,
+      channel: chat,
       destinationExternalId: chatId,
       content,
       createdAt: new Date()
@@ -243,6 +251,33 @@ describe("Telegram event handler", () => {
       type: "message.edit",
       content: "Choose an action:"
     });
+  });
+
+  it("does not show account details in a group", async () => {
+    const { actions, handler } = setup();
+
+    await handler(
+      messageEvent(
+        "/account",
+        "42",
+        "-100500",
+        true
+      )
+    );
+
+    expect(actions).toHaveLength(1);
+
+    const content = (
+      actions[0] as { content: string }
+    ).content;
+
+    expect(content).toContain(
+      "private chat"
+    );
+
+    expect(content).not.toContain(
+      "telegram:42"
+    );
   });
 
   it("answers an unknown token without sending messages", async () => {

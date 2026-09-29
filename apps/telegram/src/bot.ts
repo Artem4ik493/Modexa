@@ -6,8 +6,7 @@ import {
   ExecutionContextService,
   InteractionActionStore,
   InteractionDispatcher,
-  createBuiltinCommands,
-  registerBuiltinInteractions
+  createBuiltinCommands
 } from "@modexa/core";
 
 import {
@@ -52,10 +51,6 @@ export function createTelegramAdapter(
       commandService,
       logger
     );
-
-  registerBuiltinInteractions(
-    dispatcher
-  );
 
   const adapter =
     new TelegramAdapter(

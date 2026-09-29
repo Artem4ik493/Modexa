@@ -1,23 +1,11 @@
 import type {
+  CommandContext,
   CommandDefinition,
   CommandResponse
 } from "./types.js";
 
 import type { CommandRegistry } from "./commands.js";
 
-import type {
-  InteractionDispatcher
-} from "./interactions/dispatcher.js";
-
-import type {
-  InteractionButton,
-  InteractionResponse
-} from "./interactions/types.js";
-
-/**
- * Temporary smoke-test menu. To be replaced by real
- * Modexa commands (/account, /settings, ...).
- */
 function createMenuResponse(): CommandResponse {
   return {
     content: "Choose an action:",
@@ -26,38 +14,75 @@ function createMenuResponse(): CommandResponse {
         id: "account",
         label: "Account",
         action: {
-          type: "callback",
-          data: "account"
+          type: "command",
+          command: "/account"
         }
       },
       {
         id: "settings",
         label: "Settings",
         action: {
-          type: "callback",
-          data: "settings"
-        }
-      },
-      {
-        id: "website",
-        label: "Website",
-        action: {
-          type: "link",
-          url: "https://example.com"
+          type: "command",
+          command: "/settings"
         }
       }
     ]
   };
 }
 
-function createBackButton(): InteractionButton {
+function createBackButton() {
   return {
     id: "back",
     label: "Back",
     action: {
-      type: "callback",
-      data: "menu"
+      type: "command" as const,
+      command: "/menu"
     }
+  };
+}
+
+function handleAccount(
+  context: CommandContext
+): CommandResponse {
+  const { execution } = context;
+
+  if (
+    !execution.capabilities.includes(
+      "account.manage"
+    )
+  ) {
+    return {
+      content:
+        "Account management is only available in a private chat with the bot."
+    };
+  }
+
+  return {
+    content: [
+      "Account",
+      `Name: ${execution.user.displayName}`,
+      `ID: ${execution.user.id}`,
+      `Context: ${execution.type}`
+    ].join("\n"),
+    buttons: [createBackButton()]
+  };
+}
+
+function handleSettings(
+  context: CommandContext
+): CommandResponse {
+  if (context.execution.type !== "dm") {
+    return {
+      content:
+        "Community settings are not available yet.",
+      buttons: [createBackButton()]
+    };
+  }
+
+  return {
+    content:
+      "Settings\nNothing to configure yet.",
+    buttons: [createBackButton()]
   };
 }
 
@@ -74,8 +99,18 @@ export function createBuiltinCommands(
     },
     {
       name: "menu",
-      description: "Show interaction menu",
+      description: "Show the main menu",
       handler: () => createMenuResponse()
+    },
+    {
+      name: "account",
+      description: "Show your Modexa account",
+      handler: handleAccount
+    },
+    {
+      name: "settings",
+      description: "Show settings",
+      handler: handleSettings
     },
     {
       name: "help",
@@ -111,40 +146,4 @@ export function createBuiltinCommands(
   for (const command of commands) {
     registry.register(command);
   }
-}
-
-/**
- * Temporary smoke-test interaction handlers for the
- * /menu buttons. Platform-agnostic on purpose.
- */
-export function registerBuiltinInteractions(
-  dispatcher: InteractionDispatcher
-): void {
-  dispatcher.registerCallback(
-    "menu",
-    (): InteractionResponse =>
-      createMenuResponse()
-  );
-
-  dispatcher.registerCallback(
-    "account",
-    ({ execution }): InteractionResponse => ({
-      content: [
-        "Account",
-        `Name: ${execution.user.displayName}`,
-        `ID: ${execution.user.id}`,
-        `Context: ${execution.type}`
-      ].join("\n"),
-      buttons: [createBackButton()]
-    })
-  );
-
-  dispatcher.registerCallback(
-    "settings",
-    (): InteractionResponse => ({
-      content:
-        "Settings\nNothing to configure yet.",
-      buttons: [createBackButton()]
-    })
-  );
 }
