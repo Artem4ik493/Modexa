@@ -1,18 +1,9 @@
+import type { Community } from "./communities/types.js";
+import type { User } from "./identity/types.js";
+
 export type Platform = "telegram" | "discord";
 
 export type EntityId = string;
-
-export interface User {
-  id: EntityId;
-  platform: Platform;
-  displayName: string;
-}
-
-export interface Community {
-  id: EntityId;
-  platform: Platform;
-  name: string;
-}
 
 export interface CommandContext {
   platform: Platform;

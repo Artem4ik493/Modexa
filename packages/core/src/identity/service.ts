@@ -1,0 +1,187 @@
+import type {
+  ExternalIdentity,
+  ExternalIdentityId,
+  IdentityPlatform,
+  User,
+  UserId
+} from "./types.js";
+
+export interface CreateUserInput {
+  displayName: string;
+  now?: Date;
+}
+
+export interface AttachIdentityInput {
+  userId: UserId;
+  platform: IdentityPlatform;
+  externalId: string;
+  username?: string;
+  displayName?: string;
+  now?: Date;
+}
+
+export class IdentityService {
+  private readonly users = new Map<UserId, User>();
+  private readonly identities = new Map<
+    ExternalIdentityId,
+    ExternalIdentity
+  >();
+
+  private readonly identityIndex = new Map<
+    string,
+    ExternalIdentityId
+  >();
+
+  private nextUserId = 1;
+  private nextIdentityId = 1;
+
+  createUser(input: CreateUserInput): User {
+    const now = input.now ?? new Date();
+
+    const user: User = {
+      id: `user-${this.nextUserId++}`,
+      displayName: input.displayName,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    this.users.set(user.id, user);
+
+    return user;
+  }
+
+  getUser(userId: UserId): User | undefined {
+    return this.users.get(userId);
+  }
+
+  attachIdentity(
+    input: AttachIdentityInput
+  ): ExternalIdentity {
+    const user = this.users.get(input.userId);
+
+    if (!user) {
+      throw new Error(
+        `User "${input.userId}" does not exist`
+      );
+    }
+
+    const identityKey = this.getIdentityKey(
+      input.platform,
+      input.externalId
+    );
+
+    const existingIdentityId =
+      this.identityIndex.get(identityKey);
+
+    if (existingIdentityId) {
+      const existingIdentity =
+        this.identities.get(existingIdentityId);
+
+      if (existingIdentity) {
+        if (existingIdentity.userId === input.userId) {
+          return existingIdentity;
+        }
+
+        throw new Error(
+          `Identity "${input.platform}:${input.externalId}" is already attached to another user`
+        );
+      }
+    }
+
+    const now = input.now ?? new Date();
+
+    const identity: ExternalIdentity = {
+      id: `identity-${this.nextIdentityId++}`,
+      userId: input.userId,
+      platform: input.platform,
+      externalId: input.externalId,
+      username: input.username,
+      displayName: input.displayName,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    this.identities.set(identity.id, identity);
+    this.identityIndex.set(identityKey, identity.id);
+
+    user.updatedAt = now;
+
+    return identity;
+  }
+
+  findUserByIdentity(
+    platform: IdentityPlatform,
+    externalId: string
+  ): User | undefined {
+    const identityKey = this.getIdentityKey(
+      platform,
+      externalId
+    );
+
+    const identityId =
+      this.identityIndex.get(identityKey);
+
+    if (!identityId) {
+      return undefined;
+    }
+
+    const identity = this.identities.get(identityId);
+
+    if (!identity) {
+      return undefined;
+    }
+
+    return this.users.get(identity.userId);
+  }
+
+  getUserIdentities(
+    userId: UserId
+  ): ExternalIdentity[] {
+    return [...this.identities.values()].filter(
+      (identity) => identity.userId === userId
+    );
+  }
+
+  detachIdentity(
+    identityId: ExternalIdentityId,
+    now = new Date()
+  ): void {
+    const identity = this.identities.get(identityId);
+
+    if (!identity) {
+      throw new Error(
+        `Identity "${identityId}" does not exist`
+      );
+    }
+
+    const userIdentities =
+      this.getUserIdentities(identity.userId);
+
+    if (userIdentities.length <= 1) {
+      throw new Error(
+        "Cannot detach the last identity from a user"
+      );
+    }
+
+    const identityKey = this.getIdentityKey(
+      identity.platform,
+      identity.externalId
+    );
+
+    this.identities.delete(identity.id);
+    this.identityIndex.delete(identityKey);
+
+    const user = this.users.get(identity.userId);
+
+    if (user) {
+      user.updatedAt = now;
+    }
+  }
+
+  private getIdentityKey(
+    platform: IdentityPlatform,
+    externalId: string
+  ): string {
+    return `${platform}:${externalId}`;
+  }
+}
