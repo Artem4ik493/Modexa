@@ -8,3 +8,4 @@ export * from "./identity/index.js";
 export * from "./communities/index.js";
 export * from "./memberships/index.js";
 export * from "./access/index.js";
+export * from "./billing/index.js";

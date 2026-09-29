@@ -46,16 +46,18 @@ export function createTelegramBot(token: string): Bot {
     const result = await commandService.handle(text, {
       platform: "telegram",
       user: {
-        id: String(ctx.from.id),
-        platform: "telegram",
-        displayName: getDisplayName(ctx.from)
+        id: `telegram:${ctx.from.id}`,
+        displayName: getDisplayName(ctx.from),
+        createdAt: new Date(),
+        updatedAt: new Date()
       },
       community:
         ctx.chat.type === "group" || ctx.chat.type === "supergroup"
           ? {
-              id: String(ctx.chat.id),
-              platform: "telegram",
-              name: ctx.chat.title
+              id: `telegram:${ctx.chat.id}`,
+              name: ctx.chat.title,
+              createdAt: new Date(),
+              updatedAt: new Date()
             }
           : undefined
     });
