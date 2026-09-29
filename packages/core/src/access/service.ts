@@ -19,8 +19,11 @@ export class AccessControlService {
     CommunityRole
   >();
 
-  private readonly userSystemRoles: UserSystemRole[] = [];
-  private readonly userCommunityRoles: UserCommunityRole[] = [];
+  private readonly userSystemRoles: UserSystemRole[] =
+    [];
+
+  private readonly userCommunityRoles: UserCommunityRole[] =
+    [];
 
   registerSystemRole(role: SystemRole): void {
     this.systemRoles.set(role.id, role);
@@ -30,6 +33,18 @@ export class AccessControlService {
     role: CommunityRole
   ): void {
     this.communityRoles.set(role.id, role);
+  }
+
+  getSystemRole(
+    roleId: string
+  ): SystemRole | undefined {
+    return this.systemRoles.get(roleId);
+  }
+
+  getCommunityRole(
+    roleId: string
+  ): CommunityRole | undefined {
+    return this.communityRoles.get(roleId);
   }
 
   assignSystemRole(
@@ -59,6 +74,24 @@ export class AccessControlService {
       userId,
       roleId
     });
+  }
+
+  revokeSystemRole(
+    userId: UserId,
+    roleId: string
+  ): void {
+    const index =
+      this.userSystemRoles.findIndex(
+        (assignment) =>
+          assignment.userId === userId &&
+          assignment.roleId === roleId
+      );
+
+    if (index === -1) {
+      return;
+    }
+
+    this.userSystemRoles.splice(index, 1);
   }
 
   assignCommunityRole(
@@ -92,6 +125,69 @@ export class AccessControlService {
     });
   }
 
+  revokeCommunityRole(
+    userId: UserId,
+    communityRoleId: string
+  ): void {
+    const index =
+      this.userCommunityRoles.findIndex(
+        (assignment) =>
+          assignment.userId === userId &&
+          assignment.communityRoleId ===
+            communityRoleId
+      );
+
+    if (index === -1) {
+      return;
+    }
+
+    this.userCommunityRoles.splice(index, 1);
+  }
+
+  getUserSystemRoles(
+    userId: UserId
+  ): SystemRole[] {
+    return this.userSystemRoles
+      .filter(
+        (assignment) =>
+          assignment.userId === userId
+      )
+      .map(
+        (assignment) =>
+          this.systemRoles.get(assignment.roleId)
+      )
+      .filter(
+        (role): role is SystemRole =>
+          role !== undefined
+      );
+  }
+
+  getUserCommunityRoles(
+    userId: UserId,
+    communityId?: CommunityId
+  ): CommunityRole[] {
+    return this.userCommunityRoles
+      .filter(
+        (assignment) =>
+          assignment.userId === userId
+      )
+      .map(
+        (assignment) =>
+          this.communityRoles.get(
+            assignment.communityRoleId
+          )
+      )
+      .filter(
+        (role): role is CommunityRole =>
+          role !== undefined
+      )
+      .filter(
+        (role) =>
+          communityId === undefined ||
+          role.communityId === communityId
+      );
+  }
+
   hasSystemRole(
     userId: UserId,
     roleId: string
@@ -107,23 +203,10 @@ export class AccessControlService {
     userId: UserId,
     permission: Permission
   ): boolean {
-    const systemRoleIds =
-      this.userSystemRoles
-        .filter(
-          (assignment) =>
-            assignment.userId === userId
-        )
-        .map(
-          (assignment) => assignment.roleId
-        );
-
-    return systemRoleIds.some((roleId) => {
-      const role = this.systemRoles.get(roleId);
-
-      return role?.permissions.includes(
-        permission
-      ) ?? false;
-    });
+    return this.getUserSystemRoles(userId).some(
+      (role) =>
+        role.permissions.includes(permission)
+    );
   }
 
   hasCommunityPermission(
@@ -131,33 +214,11 @@ export class AccessControlService {
     communityId: CommunityId,
     permission: Permission
   ): boolean {
-    const roleIds =
-      this.userCommunityRoles
-        .filter(
-          (assignment) =>
-            assignment.userId === userId
-        )
-        .map(
-          (assignment) =>
-            assignment.communityRoleId
-        );
-
-    return roleIds.some((roleId) => {
-      const role = this.communityRoles.get(
-        roleId
-      );
-
-      if (!role) {
-        return false;
-      }
-
-      if (role.communityId !== communityId) {
-        return false;
-      }
-
-      return role.permissions.includes(
-        permission
-      );
-    });
+    return this.getUserCommunityRoles(
+      userId,
+      communityId
+    ).some((role) =>
+      role.permissions.includes(permission)
+    );
   }
 }

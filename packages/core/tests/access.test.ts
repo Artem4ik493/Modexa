@@ -9,6 +9,10 @@ import {
   MODEXA_OWNER_ROLE_ID
 } from "../src/access/built-in.js";
 
+import {
+  createBuiltinCommunityRoles
+} from "../src/access/community-roles.js";
+
 describe("AccessControlService", () => {
   it("registers and assigns the MODEXA_OWNER role", () => {
     const service = new AccessControlService();
@@ -97,33 +101,67 @@ describe("AccessControlService", () => {
     );
 
     expect(
+      service.getUserSystemRoles("user-1")
+    ).toHaveLength(1);
+  });
+
+  it("can revoke a system role", () => {
+    const service = new AccessControlService();
+
+    service.registerSystemRole(
+      MODEXA_OWNER_ROLE
+    );
+
+    service.assignSystemRole(
+      "user-1",
+      MODEXA_OWNER_ROLE_ID
+    );
+
+    service.revokeSystemRole(
+      "user-1",
+      MODEXA_OWNER_ROLE_ID
+    );
+
+    expect(
       service.hasSystemRole(
         "user-1",
         MODEXA_OWNER_ROLE_ID
       )
-    ).toBe(true);
+    ).toBe(false);
   });
 
-  it("registers and assigns a community role", () => {
+  it("creates built-in community roles", () => {
+    const roles =
+      createBuiltinCommunityRoles(
+        "community-1"
+      );
+
+    expect(roles).toHaveLength(3);
+
+    expect(
+      roles.map((role) => role.name)
+    ).toEqual([
+      "ADMIN",
+      "MODERATOR",
+      "MEMBER"
+    ]);
+  });
+
+  it("gives an ADMIN community permissions", () => {
     const service = new AccessControlService();
 
-    service.registerCommunityRole({
-      id: "community-admin",
-      communityId: "community-1",
-      name: "ADMIN",
-      permissions: [
-        "community.manage",
-        "member.manage",
-        "moderation.warn",
-        "moderation.mute",
-        "moderation.kick",
-        "moderation.ban"
-      ]
-    });
+    const roles =
+      createBuiltinCommunityRoles(
+        "community-1"
+      );
+
+    for (const role of roles) {
+      service.registerCommunityRole(role);
+    }
 
     service.assignCommunityRole(
       "user-1",
-      "community-admin"
+      "community-1:admin"
     );
 
     expect(
@@ -133,23 +171,115 @@ describe("AccessControlService", () => {
         "moderation.ban"
       )
     ).toBe(true);
+
+    expect(
+      service.hasCommunityPermission(
+        "user-1",
+        "community-1",
+        "bridge.manage"
+      )
+    ).toBe(true);
+  });
+
+  it("gives a MODERATOR moderation permissions", () => {
+    const service = new AccessControlService();
+
+    const roles =
+      createBuiltinCommunityRoles(
+        "community-1"
+      );
+
+    for (const role of roles) {
+      service.registerCommunityRole(role);
+    }
+
+    service.assignCommunityRole(
+      "user-1",
+      "community-1:moderator"
+    );
+
+    expect(
+      service.hasCommunityPermission(
+        "user-1",
+        "community-1",
+        "moderation.warn"
+      )
+    ).toBe(true);
+
+    expect(
+      service.hasCommunityPermission(
+        "user-1",
+        "community-1",
+        "moderation.ban"
+      )
+    ).toBe(true);
+
+    expect(
+      service.hasCommunityPermission(
+        "user-1",
+        "community-1",
+        "bridge.manage"
+      )
+    ).toBe(false);
+  });
+
+  it("gives a MEMBER only basic permissions", () => {
+    const service = new AccessControlService();
+
+    const roles =
+      createBuiltinCommunityRoles(
+        "community-1"
+      );
+
+    for (const role of roles) {
+      service.registerCommunityRole(role);
+    }
+
+    service.assignCommunityRole(
+      "user-1",
+      "community-1:member"
+    );
+
+    expect(
+      service.hasCommunityPermission(
+        "user-1",
+        "community-1",
+        "community.view"
+      )
+    ).toBe(true);
+
+    expect(
+      service.hasCommunityPermission(
+        "user-1",
+        "community-1",
+        "commands.use"
+      )
+    ).toBe(true);
+
+    expect(
+      service.hasCommunityPermission(
+        "user-1",
+        "community-1",
+        "moderation.ban"
+      )
+    ).toBe(false);
   });
 
   it("does not apply a community role to another community", () => {
     const service = new AccessControlService();
 
-    service.registerCommunityRole({
-      id: "community-admin",
-      communityId: "community-1",
-      name: "ADMIN",
-      permissions: [
-        "community.manage"
-      ]
-    });
+    const roles =
+      createBuiltinCommunityRoles(
+        "community-1"
+      );
+
+    for (const role of roles) {
+      service.registerCommunityRole(role);
+    }
 
     service.assignCommunityRole(
       "user-1",
-      "community-admin"
+      "community-1:admin"
     );
 
     expect(
@@ -161,17 +291,27 @@ describe("AccessControlService", () => {
     ).toBe(false);
   });
 
-  it("does not give a community permission to an unassigned user", () => {
+  it("can revoke a community role", () => {
     const service = new AccessControlService();
 
-    service.registerCommunityRole({
-      id: "community-admin",
-      communityId: "community-1",
-      name: "ADMIN",
-      permissions: [
-        "community.manage"
-      ]
-    });
+    const roles =
+      createBuiltinCommunityRoles(
+        "community-1"
+      );
+
+    for (const role of roles) {
+      service.registerCommunityRole(role);
+    }
+
+    service.assignCommunityRole(
+      "user-1",
+      "community-1:admin"
+    );
+
+    service.revokeCommunityRole(
+      "user-1",
+      "community-1:admin"
+    );
 
     expect(
       service.hasCommunityPermission(
