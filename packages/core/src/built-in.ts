@@ -1,6 +1,4 @@
-import type {
-  CommandDefinition
-} from "./types.js";
+import type { CommandDefinition } from "./types.js";
 import type { CommandRegistry } from "./commands.js";
 
 export function createBuiltinCommands(
@@ -15,6 +13,52 @@ export function createBuiltinCommands(
       })
     },
     {
+      name: "menu",
+      description: "Show interaction menu",
+      handler: () => ({
+        content:
+          "Choose an action:",
+        buttons: [
+          {
+            id:
+              "account",
+            label:
+              "Account",
+            action: {
+              type:
+                "callback",
+              data:
+                "account"
+            }
+          },
+          {
+            id:
+              "settings",
+            label:
+              "Settings",
+            action: {
+              type:
+                "callback",
+              data:
+                "settings"
+            }
+          },
+          {
+            id:
+              "website",
+            label:
+              "Website",
+            action: {
+              type:
+                "link",
+              url:
+                "https://example.com"
+            }
+          }
+        ]
+      })
+    },
+    {
       name: "help",
       aliases: ["commands"],
       description: "Show available commands",
@@ -23,12 +67,14 @@ export function createBuiltinCommands(
           .list()
           .map((command) => {
             const aliases =
-              command.aliases && command.aliases.length > 0
+              command.aliases &&
+              command.aliases.length > 0
                 ? ` (${command.aliases.map((alias) => `/${alias}`).join(", ")})`
                 : "";
 
             const description =
-              command.description ?? "No description";
+              command.description ??
+              "No description";
 
             return `/${command.name}${aliases} — ${description}`;
           })

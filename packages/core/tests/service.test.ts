@@ -1,65 +1,110 @@
-import { describe, expect, it, vi } from "vitest";
-import { CommandParser } from "../src/parser.js";
-import { CommandRegistry } from "../src/commands.js";
-import { CommandService } from "../src/service.js";
+import { describe, expect, it } from "vitest";
+
+import {
+  CommandParser,
+  CommandRegistry,
+  CommandService
+} from "../src/index.js";
+
+import type {
+  ExecutionContext
+} from "../src/contexts/types.js";
 
 describe("CommandService", () => {
+  function createExecutionContext(): ExecutionContext {
+    return {
+      type: "dm",
+      platform: "telegram",
+      correlationId: "test-correlation-id",
+      user: {
+        id: "user-1",
+        displayName: "Test User",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      capabilities: [
+        "commands",
+        "account.manage",
+        "identity.link",
+        "billing"
+      ]
+    };
+  }
+
+  function createService(
+    registry: CommandRegistry
+  ): CommandService {
+    return new CommandService(
+      new CommandParser(),
+      registry
+    );
+  }
+
   it("handles a valid command", async () => {
-    const parser = new CommandParser();
-    const registry = new CommandRegistry();
+    const registry =
+      new CommandRegistry();
 
     registry.register({
       name: "ping",
-      handler: (context) => ({
-        content: `Pong! ${context.args.join(", ")}`
+      handler: () => ({
+        content: "pong"
       })
     });
 
-    const service = new CommandService(
-      parser,
-      registry
-    );
+    const service =
+      createService(registry);
 
-    const result = await service.handle(
-      "/ping hello world",
-      {
-        platform: "telegram",
-        user: {
-          id: "user-1",
-          platform: "telegram",
-          displayName: "Test User"
-        }
-      }
-    );
+    const execution =
+      createExecutionContext();
+
+    const result =
+      await service.handle(
+        "/ping",
+        {
+          platform: execution.platform,
+          user: execution.user,
+          community: execution.community,
+          channel: execution.channel
+        },
+        execution
+      );
 
     expect(result).toEqual({
       handled: true,
       response: {
-        content: "Pong! hello, world"
+        content: "pong"
       }
     });
   });
 
   it("does not handle regular text", async () => {
-    const parser = new CommandParser();
-    const registry = new CommandRegistry();
+    const registry =
+      new CommandRegistry();
 
-    const service = new CommandService(
-      parser,
-      registry
-    );
+    registry.register({
+      name: "ping",
+      handler: () => ({
+        content: "pong"
+      })
+    });
 
-    const result = await service.handle(
-      "hello world",
-      {
-        platform: "telegram",
-        user: {
-          id: "user-1",
-          platform: "telegram",
-          displayName: "Test User"
-        }
-      }
-    );
+    const service =
+      createService(registry);
+
+    const execution =
+      createExecutionContext();
+
+    const result =
+      await service.handle(
+        "hello",
+        {
+          platform: execution.platform,
+          user: execution.user,
+          community: execution.community,
+          channel: execution.channel
+        },
+        execution
+      );
 
     expect(result).toEqual({
       handled: false,
@@ -68,25 +113,33 @@ describe("CommandService", () => {
   });
 
   it("does not handle an unknown command", async () => {
-    const parser = new CommandParser();
-    const registry = new CommandRegistry();
+    const registry =
+      new CommandRegistry();
 
-    const service = new CommandService(
-      parser,
-      registry
-    );
+    registry.register({
+      name: "ping",
+      handler: () => ({
+        content: "pong"
+      })
+    });
 
-    const result = await service.handle(
-      "/unknown",
-      {
-        platform: "discord",
-        user: {
-          id: "user-1",
-          platform: "discord",
-          displayName: "Test User"
-        }
-      }
-    );
+    const service =
+      createService(registry);
+
+    const execution =
+      createExecutionContext();
+
+    const result =
+      await service.handle(
+        "/unknown",
+        {
+          platform: execution.platform,
+          user: execution.user,
+          community: execution.community,
+          channel: execution.channel
+        },
+        execution
+      );
 
     expect(result).toEqual({
       handled: false,
@@ -95,40 +148,78 @@ describe("CommandService", () => {
   });
 
   it("passes parsed arguments to the handler", async () => {
-    const parser = new CommandParser();
-    const registry = new CommandRegistry();
-
-    const handler = vi.fn(() => ({
-      content: "ok"
-    }));
+    const registry =
+      new CommandRegistry();
 
     registry.register({
-      name: "test",
-      handler
+      name: "echo",
+      handler: (context) => ({
+        content: context.args.join("|")
+      })
     });
 
-    const service = new CommandService(
-      parser,
-      registry
-    );
+    const service =
+      createService(registry);
 
-    await service.handle(
-      "/test one two three",
-      {
-        platform: "telegram",
-        user: {
-          id: "user-1",
-          platform: "telegram",
-          displayName: "Test User"
-        }
+    const execution =
+      createExecutionContext();
+
+    const result =
+      await service.handle(
+        "/echo one two three",
+        {
+          platform: execution.platform,
+          user: execution.user,
+          community: execution.community,
+          channel: execution.channel
+        },
+        execution
+      );
+
+    expect(result).toEqual({
+      handled: true,
+      response: {
+        content: "one|two|three"
       }
-    );
+    });
+  });
 
-    expect(handler).toHaveBeenCalledWith(
-      expect.objectContaining({
-        args: ["one", "two", "three"],
-        rawText: "/test one two three"
+  it("passes the execution context to the command", async () => {
+    const registry =
+      new CommandRegistry();
+
+    registry.register({
+      name: "context",
+      handler: (context) => ({
+        content:
+          `${context.execution.type}:${context.execution.correlationId}`
       })
-    );
+    });
+
+    const service =
+      createService(registry);
+
+    const execution =
+      createExecutionContext();
+
+    const result =
+      await service.handle(
+        "/context",
+        {
+          platform: execution.platform,
+          user: execution.user,
+          community: execution.community,
+          channel: execution.channel
+        },
+        execution
+      );
+
+    expect(result).toEqual({
+      handled: true,
+      response: {
+        content:
+          "dm:test-correlation-id"
+      }
+    });
   });
 });
