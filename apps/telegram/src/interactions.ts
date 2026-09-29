@@ -1,115 +1,140 @@
 import type {
-  InteractionButton,
-  InteractionResponse
+  BoundInteractionResponse
 } from "@modexa/core";
 
 import {
   InlineKeyboard
 } from "grammy";
 
-export function renderTelegramInteraction(
-  response: InteractionResponse
-): InlineKeyboard | undefined {
-  const buttons =
-    response.buttons ?? [];
+export const TELEGRAM_CALLBACK_PREFIX =
+  "mx:";
 
-  const menus =
-    response.menus ?? [];
+export const TELEGRAM_CALLBACK_DATA_MAX_BYTES =
+  64;
 
-  const activeButtons =
-    buttons.filter(
-      (button) => !button.disabled
-    );
+export function createTelegramCallbackData(
+  token: string
+): string {
+  const data =
+    `${TELEGRAM_CALLBACK_PREFIX}${token}`;
+
+  const bytes =
+    new TextEncoder().encode(data)
+      .length;
 
   if (
-    activeButtons.length === 0 &&
-    menus.length === 0
+    bytes >
+    TELEGRAM_CALLBACK_DATA_MAX_BYTES
   ) {
+    throw new Error(
+      "Telegram callback_data exceeds 64-byte limit"
+    );
+  }
+
+  return data;
+}
+
+export function parseTelegramCallbackData(
+  data: string | undefined
+): string | undefined {
+  if (
+    !data ||
+    !data.startsWith(
+      TELEGRAM_CALLBACK_PREFIX
+    )
+  ) {
+    return undefined;
+  }
+
+  const token = data.slice(
+    TELEGRAM_CALLBACK_PREFIX.length
+  );
+
+  return token.length > 0
+    ? token
+    : undefined;
+}
+
+type KeyboardItem =
+  | {
+      label: string;
+      url: string;
+    }
+  | {
+      label: string;
+      callbackData: string;
+    };
+
+export function renderTelegramInteraction(
+  response: BoundInteractionResponse
+): InlineKeyboard | undefined {
+  const items: KeyboardItem[] = [];
+
+  for (const button of response.buttons ?? []) {
+    if (button.disabled) {
+      continue;
+    }
+
+    if (button.action.type === "link") {
+      items.push({
+        label: button.label,
+        url: button.action.url
+      });
+
+      continue;
+    }
+
+    if (!button.token) {
+      throw new Error(
+        `Interaction button has no token: ${button.id}`
+      );
+    }
+
+    items.push({
+      label: button.label,
+      callbackData:
+        createTelegramCallbackData(
+          button.token
+        )
+    });
+  }
+
+  for (const menu of response.menus ?? []) {
+    for (const option of menu.options) {
+      items.push({
+        label: option.label,
+        callbackData:
+          createTelegramCallbackData(
+            option.token
+          )
+      });
+    }
+  }
+
+  if (items.length === 0) {
     return undefined;
   }
 
   const keyboard =
     new InlineKeyboard();
 
-  for (
-    let index = 0;
-    index < activeButtons.length;
-    index += 1
-  ) {
-    appendButton(
-      keyboard,
-      activeButtons[index]
-    );
-
-    if (
-      index <
-      activeButtons.length - 1
-    ) {
+  items.forEach((item, index) => {
+    if (index > 0) {
       keyboard.row();
     }
-  }
 
-  for (
-    const menu of menus
-  ) {
-    for (
-      let index = 0;
-      index < menu.options.length;
-      index += 1
-    ) {
-      const option =
-        menu.options[index];
-
-      keyboard.text(
-        option.label,
-        `menu:${menu.id}:${option.value}`
+    if ("url" in item) {
+      keyboard.url(
+        item.label,
+        item.url
       );
-
-      if (
-        index <
-        menu.options.length - 1
-      ) {
-        keyboard.row();
-      }
+    } else {
+      keyboard.text(
+        item.label,
+        item.callbackData
+      );
     }
-
-    if (
-      menu.options.length > 0 &&
-      activeButtons.length > 0
-    ) {
-      keyboard.row();
-    }
-  }
+  });
 
   return keyboard;
-}
-
-function appendButton(
-  keyboard: InlineKeyboard,
-  button: InteractionButton
-): void {
-  switch (
-    button.action.type
-  ) {
-    case "command":
-      keyboard.text(
-        button.label,
-        `command:${button.id}`
-      );
-      break;
-
-    case "callback":
-      keyboard.text(
-        button.label,
-        `callback:${button.action.data}`
-      );
-      break;
-
-    case "link":
-      keyboard.url(
-        button.label,
-        button.action.url
-      );
-      break;
-  }
 }

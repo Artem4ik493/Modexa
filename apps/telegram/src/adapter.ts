@@ -9,9 +9,25 @@ import {
 
 import {
   Bot,
+  GrammyError,
   InlineKeyboard,
   type Context
 } from "grammy";
+
+import {
+  parseTelegramCallbackData
+} from "./interactions.js";
+
+function isMessageNotModified(
+  error: unknown
+): boolean {
+  return (
+    error instanceof GrammyError &&
+    error.description.includes(
+      "message is not modified"
+    )
+  );
+}
 
 export class TelegramAdapter
   implements PlatformAdapter
@@ -27,6 +43,14 @@ export class TelegramAdapter
       event: AdapterEvent
     ) => void | Promise<void>
   > = [];
+
+  /**
+   * Text to show on a callback query when it is
+   * answered. Set by the application while the
+   * interaction event is being processed.
+   */
+  private readonly pendingAnswers =
+    new Map<string, string>();
 
   private started = false;
 
@@ -56,6 +80,20 @@ export class TelegramAdapter
     this.started = false;
   }
 
+  /**
+   * Telegram-specific: sets the toast text that will
+   * be shown when the callback query is answered.
+   */
+  answerInteraction(
+    interactionExternalId: string,
+    text: string
+  ): void {
+    this.pendingAnswers.set(
+      interactionExternalId,
+      text
+    );
+  }
+
   async sendAction(
     action: AdapterAction
   ): Promise<void> {
@@ -82,18 +120,40 @@ export class TelegramAdapter
         return;
       }
 
-      case "message.edit":
-        await this.bot.api.editMessageText(
-          Number(
-            action.channelExternalId
-          ),
-          Number(
-            action.messageExternalId
-          ),
-          action.content
-        );
+      case "message.edit": {
+        const replyMarkup =
+          this.getReplyMarkup(
+            action.metadata
+          );
+
+        try {
+          await this.bot.api.editMessageText(
+            Number(
+              action.channelExternalId
+            ),
+            Number(
+              action.messageExternalId
+            ),
+            action.content,
+            replyMarkup
+              ? {
+                  reply_markup:
+                    replyMarkup
+                }
+              : undefined
+          );
+        } catch (error) {
+          if (
+            isMessageNotModified(error)
+          ) {
+            return;
+          }
+
+          throw error;
+        }
 
         return;
+      }
 
       case "message.delete":
         await this.bot.api.deleteMessage(
@@ -254,16 +314,34 @@ export class TelegramAdapter
     this.bot.on(
       "callback_query:data",
       async (ctx) => {
-        const event =
-          this.createInteractionEvent(
-            ctx
+        const interactionId =
+          ctx.callbackQuery.id;
+
+        try {
+          await this.emitEvent(
+            this.createInteractionEvent(
+              ctx
+            )
+          );
+        } finally {
+          const text =
+            this.pendingAnswers.get(
+              interactionId
+            );
+
+          this.pendingAnswers.delete(
+            interactionId
           );
 
-        await this.emitEvent(
-          event
-        );
-
-        await ctx.answerCallbackQuery();
+          try {
+            await ctx.answerCallbackQuery(
+              text
+            );
+          } catch {
+            // The callback query may already
+            // have expired on Telegram's side.
+          }
+        }
       }
     );
   }
@@ -370,8 +448,31 @@ export class TelegramAdapter
     const callbackData =
       callbackQuery.data;
 
+    const message =
+      callbackQuery.message;
+
     const chat =
-      callbackQuery.message?.chat;
+      message?.chat;
+
+    const isGroup =
+      chat !== undefined &&
+      chat.type !== "private";
+
+    const externalChat =
+      chat && isGroup
+        ? {
+            platform:
+              "telegram" as const,
+
+            externalId:
+              String(chat.id),
+
+            name:
+              "title" in chat
+                ? chat.title
+                : "Telegram"
+          }
+        : undefined;
 
     return {
       type:
@@ -401,38 +502,27 @@ export class TelegramAdapter
         },
 
         community:
-          chat &&
-          chat.type !== "private"
-            ? {
-                platform:
-                  "telegram",
-
-                externalId:
-                  String(chat.id),
-
-                name:
-                  "title" in chat
-                    ? chat.title
-                    : "Telegram"
-              }
-            : undefined,
+          externalChat,
 
         channel:
-          chat &&
-          chat.type !== "private"
-            ? {
-                platform:
-                  "telegram",
+          externalChat,
 
-                externalId:
-                  String(chat.id),
-
-                name:
-                  "title" in chat
-                    ? chat.title
-                    : "Telegram"
-              }
+        destinationExternalId:
+          chat
+            ? String(chat.id)
             : undefined,
+
+        messageExternalId:
+          message
+            ? String(
+                message.message_id
+              )
+            : undefined,
+
+        token:
+          parseTelegramCallbackData(
+            callbackData
+          ),
 
         createdAt:
           new Date(),

@@ -24,6 +24,13 @@ export interface AdapterMessage {
 
   channel?: PlatformChannel;
 
+  /**
+   * External platform identifier where a response
+   * should be sent.
+   *
+   * For Telegram this is the chat ID.
+   * For Discord this will normally be a channel ID.
+   */
   destinationExternalId: string;
 
   content: string;
@@ -63,6 +70,26 @@ export interface AdapterInteraction {
   community?: PlatformCommunity;
 
   channel?: PlatformChannel;
+
+  /**
+   * External platform identifier where the response
+   * should be sent (Telegram chat ID, Discord channel ID).
+   * Undefined when the platform cannot address a response.
+   */
+  destinationExternalId?: string;
+
+  /**
+   * External identifier of the message that contained
+   * the pressed button or menu, so it can be edited.
+   */
+  messageExternalId?: string;
+
+  /**
+   * Compact Modexa interaction token extracted by the
+   * adapter from the platform payload. Undefined when
+   * the payload was not created by Modexa.
+   */
+  token?: string;
 
   createdAt: Date;
 

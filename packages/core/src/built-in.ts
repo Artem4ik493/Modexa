@@ -1,5 +1,65 @@
-import type { CommandDefinition } from "./types.js";
+import type {
+  CommandDefinition,
+  CommandResponse
+} from "./types.js";
+
 import type { CommandRegistry } from "./commands.js";
+
+import type {
+  InteractionDispatcher
+} from "./interactions/dispatcher.js";
+
+import type {
+  InteractionButton,
+  InteractionResponse
+} from "./interactions/types.js";
+
+/**
+ * Temporary smoke-test menu. To be replaced by real
+ * Modexa commands (/account, /settings, ...).
+ */
+function createMenuResponse(): CommandResponse {
+  return {
+    content: "Choose an action:",
+    buttons: [
+      {
+        id: "account",
+        label: "Account",
+        action: {
+          type: "callback",
+          data: "account"
+        }
+      },
+      {
+        id: "settings",
+        label: "Settings",
+        action: {
+          type: "callback",
+          data: "settings"
+        }
+      },
+      {
+        id: "website",
+        label: "Website",
+        action: {
+          type: "link",
+          url: "https://example.com"
+        }
+      }
+    ]
+  };
+}
+
+function createBackButton(): InteractionButton {
+  return {
+    id: "back",
+    label: "Back",
+    action: {
+      type: "callback",
+      data: "menu"
+    }
+  };
+}
 
 export function createBuiltinCommands(
   registry: CommandRegistry
@@ -15,48 +75,7 @@ export function createBuiltinCommands(
     {
       name: "menu",
       description: "Show interaction menu",
-      handler: () => ({
-        content:
-          "Choose an action:",
-        buttons: [
-          {
-            id:
-              "account",
-            label:
-              "Account",
-            action: {
-              type:
-                "callback",
-              data:
-                "account"
-            }
-          },
-          {
-            id:
-              "settings",
-            label:
-              "Settings",
-            action: {
-              type:
-                "callback",
-              data:
-                "settings"
-            }
-          },
-          {
-            id:
-              "website",
-            label:
-              "Website",
-            action: {
-              type:
-                "link",
-              url:
-                "https://example.com"
-            }
-          }
-        ]
-      })
+      handler: () => createMenuResponse()
     },
     {
       name: "help",
@@ -92,4 +111,40 @@ export function createBuiltinCommands(
   for (const command of commands) {
     registry.register(command);
   }
+}
+
+/**
+ * Temporary smoke-test interaction handlers for the
+ * /menu buttons. Platform-agnostic on purpose.
+ */
+export function registerBuiltinInteractions(
+  dispatcher: InteractionDispatcher
+): void {
+  dispatcher.registerCallback(
+    "menu",
+    (): InteractionResponse =>
+      createMenuResponse()
+  );
+
+  dispatcher.registerCallback(
+    "account",
+    ({ execution }): InteractionResponse => ({
+      content: [
+        "Account",
+        `Name: ${execution.user.displayName}`,
+        `ID: ${execution.user.id}`,
+        `Context: ${execution.type}`
+      ].join("\n"),
+      buttons: [createBackButton()]
+    })
+  );
+
+  dispatcher.registerCallback(
+    "settings",
+    (): InteractionResponse => ({
+      content:
+        "Settings\nNothing to configure yet.",
+      buttons: [createBackButton()]
+    })
+  );
 }
