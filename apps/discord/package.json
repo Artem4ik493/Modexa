@@ -1,0 +1,19 @@
+{
+  "name": "@modexa/discord",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --env-file=../../.env --import=tsx src/index.ts",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@modexa/core": "workspace:*",
+    "discord.js": "^14.27.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "tsx": "^4.20.5",
+    "vitest": "^5.0.2"
+  }
+}
