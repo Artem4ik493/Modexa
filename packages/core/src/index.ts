@@ -27,3 +27,5 @@ export * from "./diagnostics/index.js";
 export * from "./contexts/index.js";
 
 export * from "./interactions/index.js";
+
+export * from "./i18n/index.js";

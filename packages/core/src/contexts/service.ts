@@ -1,5 +1,7 @@
 import type { CommunityAccessService } from "../access/community-access.js";
 
+import { DEFAULT_LOCALE } from "../i18n/locale.js";
+
 import type {
   ExecutionCapability,
   ExecutionContext,
@@ -33,12 +35,16 @@ export class ExecutionContextService {
   create(
     input: CreateExecutionContextInput
   ): ExecutionContext {
+    const locale =
+      input.locale ?? DEFAULT_LOCALE;
+
     if (!input.community) {
       return {
         type: "dm",
         platform: input.platform,
         correlationId: input.correlationId,
         user: input.user,
+        locale,
         capabilities: [...DM_CAPABILITIES]
       };
     }
@@ -50,6 +56,7 @@ export class ExecutionContextService {
       user: input.user,
       community: input.community,
       channel: input.channel,
+      locale,
       capabilities: [...COMMUNITY_CAPABILITIES]
     };
   }

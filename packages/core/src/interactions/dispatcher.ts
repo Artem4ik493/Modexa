@@ -11,6 +11,14 @@ import type {
 } from "../diagnostics/types.js";
 
 import type {
+  MessageKey
+} from "../i18n/messages.js";
+
+import {
+  translate
+} from "../i18n/translate.js";
+
+import type {
   CommandService
 } from "../service.js";
 
@@ -64,18 +72,21 @@ export type InteractionDispatchResult =
       message: string;
     };
 
-const FAILURE_MESSAGES = {
-  not_found:
-    "This action is no longer available.",
-  expired:
-    "This action has expired. Please run the command again.",
-  forbidden:
-    "This action belongs to another user.",
-  unhandled:
-    "This action is not supported.",
-  failed:
-    "Something went wrong. Please try again."
-} as const;
+type FailureStatus = Exclude<
+  InteractionDispatchResult["status"],
+  "handled"
+>;
+
+const FAILURE_KEYS: Record<
+  FailureStatus,
+  MessageKey
+> = {
+  not_found: "interaction.not_found",
+  expired: "interaction.expired",
+  forbidden: "interaction.forbidden",
+  unhandled: "interaction.unhandled",
+  failed: "interaction.failed"
+};
 
 export class InteractionDispatcher {
   private readonly callbacks = new Map<
@@ -115,6 +126,17 @@ export class InteractionDispatcher {
 
     const now = input.now ?? new Date();
 
+    const failure = (
+      status: FailureStatus
+    ): InteractionDispatchResult => ({
+      status,
+      message: translate(
+        FAILURE_KEYS[status],
+        undefined,
+        execution.locale
+      )
+    });
+
     const diagnostics =
       createDiagnosticContext({
         correlationId:
@@ -143,11 +165,7 @@ export class InteractionDispatcher {
         }
       );
 
-      return {
-        status: resolved.status,
-        message:
-          FAILURE_MESSAGES[resolved.status]
-      };
+      return failure(resolved.status);
     }
 
     const { action } = resolved;
@@ -176,11 +194,7 @@ export class InteractionDispatcher {
           }
         );
 
-        return {
-          status: "unhandled",
-          message:
-            FAILURE_MESSAGES.unhandled
-        };
+        return failure("unhandled");
       }
 
       return {
@@ -206,10 +220,7 @@ export class InteractionDispatcher {
         error
       );
 
-      return {
-        status: "failed",
-        message: FAILURE_MESSAGES.failed
-      };
+      return failure("failed");
     }
   }
 

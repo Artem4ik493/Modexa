@@ -1,6 +1,7 @@
 import type { Channel } from "./channels/types.js";
 import type { Community } from "./communities/types.js";
 import type { ExecutionContext } from "./contexts/types.js";
+import type { MessageKey } from "./i18n/messages.js";
 import type { User } from "./identity/types.js";
 import type { InteractionResponse } from "./interactions/types.js";
 
@@ -43,6 +44,12 @@ export interface CommandDefinition {
   aliases?: string[];
 
   description?: string;
+
+  /**
+   * Translatable description. Takes priority over
+   * `description` when the command list is rendered.
+   */
+  descriptionKey?: MessageKey;
 
   handler: CommandHandler;
 }

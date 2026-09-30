@@ -31,7 +31,7 @@ describe("built-in commands", () => {
     );
   });
 
-  it("executes ping", async () => {
+  it("executes ping in Russian by default", async () => {
     const registry = new CommandRegistry();
 
     createBuiltinCommands(registry);
@@ -48,7 +48,7 @@ describe("built-in commands", () => {
     });
 
     expect(result).toEqual({
-      content: "Pong!"
+      content: "Понг!"
     });
   });
 
@@ -71,15 +71,15 @@ describe("built-in commands", () => {
     const content = result?.content ?? "";
 
     expect(content).toContain(
-      "Available commands:"
+      "Доступные команды:"
     );
 
     expect(content).toContain(
-      "/ping — Check if Modexa is alive"
+      "/ping — Проверить, что Modexa работает"
     );
 
     expect(content).toContain(
-      "/help (/commands) — Show available commands"
+      "/help (/commands) — Показать список команд"
     );
   });
 });

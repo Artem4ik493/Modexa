@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build:core": "tsc -p packages/core/tsconfig.json",
+    "typecheck": "pnpm build:core && tsc -p apps/telegram/tsconfig.json --noEmit && tsc -p apps/discord/tsconfig.json --noEmit",
+    "test": "pnpm build:core && vitest run && pnpm --filter @modexa/telegram test && pnpm --filter @modexa/discord test",
+    "verify": "pnpm typecheck && pnpm test"
   },
   "keywords": [],
   "author": "",

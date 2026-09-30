@@ -11,10 +11,14 @@ import {
   ExecutionContextService,
   InteractionActionStore,
   InteractionDispatcher,
-  createBuiltinCommands
+  createBuiltinCommands,
+  type Locale
 } from "../src/index.js";
 
-function setup(inCommunity = false) {
+function setup(
+  inCommunity = false,
+  locale?: Locale
+) {
   const registry =
     new CommandRegistry();
 
@@ -38,6 +42,7 @@ function setup(inCommunity = false) {
     new ExecutionContextService().create({
       platform: "telegram",
       correlationId: "corr-test",
+      locale,
       user: {
         id: "user-1",
         displayName: "Artem",
@@ -96,7 +101,7 @@ describe("built-in menu commands", () => {
     );
 
     expect(result.response.content).toContain(
-      "Context: dm"
+      "Контекст: личный чат"
     );
 
     const backToken =
@@ -113,7 +118,7 @@ describe("built-in menu commands", () => {
     expect(back).toMatchObject({
       status: "handled",
       response: {
-        content: "Choose an action:"
+        content: "Выберите действие:"
       }
     });
   });
@@ -140,7 +145,7 @@ describe("built-in menu commands", () => {
       status: "handled",
       response: {
         content:
-          "Settings\nNothing to configure yet."
+          "Настройки\nПока нечего настраивать."
       }
     });
   });
@@ -171,7 +176,7 @@ describe("built-in menu commands", () => {
 
     expect(
       result.response.content
-    ).toContain("private chat");
+    ).toContain("личном чате");
 
     expect(
       result.response.content
@@ -182,7 +187,7 @@ describe("built-in menu commands", () => {
     ).toBeUndefined();
   });
 
-  it("returns the main menu with two command buttons", async () => {
+  it("returns the main menu with two localized buttons", async () => {
     const { store, dispatcher, execution } =
       setup();
 
@@ -207,7 +212,52 @@ describe("built-in menu commands", () => {
     }
 
     expect(
-      result.response.buttons
-    ).toHaveLength(2);
+      result.response.buttons?.map(
+        (button) => button.label
+      )
+    ).toEqual(["Аккаунт", "Настройки"]);
+  });
+
+  it("renders the menu in English for an English user", async () => {
+    const { store, dispatcher, execution } =
+      setup(false, "en");
+
+    const token = store.create({
+      action: {
+        type: "command",
+        command: "/menu"
+      },
+      scope
+    });
+
+    const result =
+      await dispatcher.dispatch({
+        token,
+        execution
+      });
+
+    expect(result).toMatchObject({
+      status: "handled",
+      response: {
+        content: "Choose an action:"
+      }
+    });
+  });
+
+  it("translates dispatcher errors", async () => {
+    const { dispatcher, execution } =
+      setup();
+
+    const result =
+      await dispatcher.dispatch({
+        token: "missing",
+        execution
+      });
+
+    expect(result).toEqual({
+      status: "not_found",
+      message:
+        "Это действие больше недоступно."
+    });
   });
 });

@@ -6,13 +6,24 @@ import type {
 
 import type { CommandRegistry } from "./commands.js";
 
-function createMenuResponse(): CommandResponse {
+import type {
+  InteractionButton
+} from "./interactions/types.js";
+
+import {
+  createTranslator,
+  type Translator
+} from "./i18n/translate.js";
+
+function createMenuResponse(
+  t: Translator
+): CommandResponse {
   return {
-    content: "Choose an action:",
+    content: t("menu.title"),
     buttons: [
       {
         id: "account",
-        label: "Account",
+        label: t("menu.account"),
         action: {
           type: "command",
           command: "/account"
@@ -20,7 +31,7 @@ function createMenuResponse(): CommandResponse {
       },
       {
         id: "settings",
-        label: "Settings",
+        label: t("menu.settings"),
         action: {
           type: "command",
           command: "/settings"
@@ -30,12 +41,14 @@ function createMenuResponse(): CommandResponse {
   };
 }
 
-function createBackButton() {
+function createBackButton(
+  t: Translator
+): InteractionButton {
   return {
     id: "back",
-    label: "Back",
+    label: t("menu.back"),
     action: {
-      type: "command" as const,
+      type: "command",
       command: "/menu"
     }
   };
@@ -46,43 +59,60 @@ function handleAccount(
 ): CommandResponse {
   const { execution } = context;
 
+  const t = createTranslator(
+    execution.locale
+  );
+
   if (
     !execution.capabilities.includes(
       "account.manage"
     )
   ) {
     return {
-      content:
-        "Account management is only available in a private chat with the bot."
+      content: t("account.dm_only")
     };
   }
 
   return {
     content: [
-      "Account",
-      `Name: ${execution.user.displayName}`,
-      `ID: ${execution.user.id}`,
-      `Context: ${execution.type}`
+      t("account.title"),
+      t("account.name", {
+        name: execution.user.displayName
+      }),
+      t("account.id", {
+        id: execution.user.id
+      }),
+      t("account.context", {
+        context: t(
+          execution.type === "dm"
+            ? "context.dm"
+            : "context.community"
+        )
+      })
     ].join("\n"),
-    buttons: [createBackButton()]
+    buttons: [createBackButton(t)]
   };
 }
 
 function handleSettings(
   context: CommandContext
 ): CommandResponse {
+  const t = createTranslator(
+    context.execution.locale
+  );
+
   if (context.execution.type !== "dm") {
     return {
-      content:
-        "Community settings are not available yet.",
-      buttons: [createBackButton()]
+      content: t(
+        "settings.community_unavailable"
+      ),
+      buttons: [createBackButton(t)]
     };
   }
 
   return {
-    content:
-      "Settings\nNothing to configure yet.",
-    buttons: [createBackButton()]
+    content: t("settings.dm"),
+    buttons: [createBackButton(t)]
   };
 }
 
@@ -92,31 +122,47 @@ export function createBuiltinCommands(
   const commands: CommandDefinition[] = [
     {
       name: "ping",
-      description: "Check if Modexa is alive",
-      handler: () => ({
-        content: "Pong!"
+      descriptionKey:
+        "command.ping.description",
+      handler: (context) => ({
+        content: createTranslator(
+          context.execution?.locale
+        )("command.ping.pong")
       })
     },
     {
       name: "menu",
-      description: "Show the main menu",
-      handler: () => createMenuResponse()
+      descriptionKey:
+        "command.menu.description",
+      handler: (context) =>
+        createMenuResponse(
+          createTranslator(
+            context.execution?.locale
+          )
+        )
     },
     {
       name: "account",
-      description: "Show your Modexa account",
+      descriptionKey:
+        "command.account.description",
       handler: handleAccount
     },
     {
       name: "settings",
-      description: "Show settings",
+      descriptionKey:
+        "command.settings.description",
       handler: handleSettings
     },
     {
       name: "help",
       aliases: ["commands"],
-      description: "Show available commands",
-      handler: () => {
+      descriptionKey:
+        "command.help.description",
+      handler: (context) => {
+        const t = createTranslator(
+          context.execution?.locale
+        );
+
         const commandList = registry
           .list()
           .map((command) => {
@@ -127,8 +173,10 @@ export function createBuiltinCommands(
                 : "";
 
             const description =
-              command.description ??
-              "No description";
+              command.descriptionKey
+                ? t(command.descriptionKey)
+                : (command.description ??
+                  t("help.no_description"));
 
             return `/${command.name}${aliases} — ${description}`;
           })
@@ -136,8 +184,8 @@ export function createBuiltinCommands(
 
         return {
           content: commandList
-            ? `Available commands:\n${commandList}`
-            : "No commands available."
+            ? `${t("help.title")}\n${commandList}`
+            : t("help.empty")
         };
       }
     }

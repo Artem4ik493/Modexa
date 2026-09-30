@@ -186,7 +186,7 @@ describe("Telegram event handler", () => {
     expect(actions[0]).toMatchObject({
       type: "message.send",
       channelExternalId: "42",
-      content: "Choose an action:"
+      content: "Выберите действие:"
     });
 
     expect(
@@ -220,7 +220,7 @@ describe("Telegram event handler", () => {
       edit as { content: string }
     ).content;
 
-    expect(content).toContain("Account");
+    expect(content).toContain("Аккаунт");
     expect(content).toContain(
       "telegram:42"
     );
@@ -249,7 +249,7 @@ describe("Telegram event handler", () => {
 
     expect(actions[2]).toMatchObject({
       type: "message.edit",
-      content: "Choose an action:"
+      content: "Выберите действие:"
     });
   });
 
@@ -272,7 +272,7 @@ describe("Telegram event handler", () => {
     ).content;
 
     expect(content).toContain(
-      "private chat"
+      "личном чате"
     );
 
     expect(content).not.toContain(
@@ -295,7 +295,7 @@ describe("Telegram event handler", () => {
     expect(answers[0].id).toBe("cb-1");
 
     expect(answers[0].text).toContain(
-      "no longer available"
+      "больше недоступно"
     );
   });
 
@@ -315,7 +315,7 @@ describe("Telegram event handler", () => {
     expect(actions).toHaveLength(1);
 
     expect(answers[0].text).toContain(
-      "another user"
+      "другому пользователю"
     );
   });
 

@@ -1,5 +1,6 @@
 import type { Channel } from "../channels/types.js";
 import type { Community } from "../communities/types.js";
+import type { Locale } from "../i18n/locale.js";
 import type { User } from "../identity/types.js";
 import type { Platform } from "../types.js";
 
@@ -33,6 +34,12 @@ export interface ExecutionContext {
 
   channel?: Channel;
 
+  /**
+   * Language for user-facing text. Defaults to the
+   * Modexa default locale when not set.
+   */
+  locale?: Locale;
+
   capabilities: ExecutionCapability[];
 }
 
@@ -46,4 +53,6 @@ export interface CreateExecutionContextInput {
   community?: Community;
 
   channel?: Channel;
+
+  locale?: Locale;
 }
