@@ -141,6 +141,7 @@ describe("AccessControlService", () => {
     expect(
       roles.map((role) => role.name)
     ).toEqual([
+      "OWNER",
       "ADMIN",
       "MODERATOR",
       "MEMBER"
