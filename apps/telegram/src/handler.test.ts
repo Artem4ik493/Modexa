@@ -62,6 +62,11 @@ function setup() {
       logger
     );
 
+  dispatcher.registerCallback(
+    "menu.close",
+    () => ({ close: true })
+  );
+
   const handler =
     createTelegramEventHandler({
       responder: {
@@ -250,6 +255,26 @@ describe("Telegram event handler", () => {
     expect(actions[2]).toMatchObject({
       type: "message.edit",
       content: "Выберите действие:"
+    });
+  });
+
+  it("closes an interactive menu", async () => {
+    const { actions, handler } = setup();
+
+    await handler(messageEvent("/menu"));
+
+    const closeToken =
+      callbackTokens(actions[0])[2];
+
+    await handler(
+      interactionEvent(closeToken)
+    );
+
+    expect(actions).toHaveLength(2);
+    expect(actions[1]).toMatchObject({
+      type: "message.delete",
+      channelExternalId: "42",
+      messageExternalId: "10"
     });
   });
 
