@@ -165,8 +165,18 @@ export class CommandService {
       );
 
       return {
-        handled: false,
-        response: null
+        handled: true,
+        response: {
+          content: translate(
+            "command.not_found",
+            {
+              role: this.resolveRoleLabel(
+                execution
+              )
+            },
+            execution.locale
+          )
+        }
       };
     }
 
@@ -185,5 +195,26 @@ export class CommandService {
       handled: true,
       response
     };
+  }
+
+  private resolveRoleLabel(
+    execution: ExecutionContext
+  ): string {
+    if (execution.user.platformRole === "owner") {
+      return "owner";
+    }
+
+    if (execution.user.platformRole === "admin") {
+      return "admin";
+    }
+
+    if (
+      execution.type === "community" &&
+      execution.community
+    ) {
+      return "member";
+    }
+
+    return "user";
   }
 }
