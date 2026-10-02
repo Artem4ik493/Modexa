@@ -2,6 +2,7 @@ import {
   AdapterRegistry,
   CoreLogger,
   createRuntimeServices,
+  InteractionActionStore,
   type PlatformAdapter
 } from "@modexa/core";
 
