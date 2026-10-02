@@ -142,6 +142,80 @@ export class IdentityService {
     );
   }
 
+  mergeUsers(
+    sourceUserId: UserId,
+    targetUserId: UserId,
+    now = new Date()
+  ): User {
+    if (sourceUserId === targetUserId) {
+      const sourceUser =
+        this.users.get(sourceUserId);
+
+      if (!sourceUser) {
+        throw new Error(
+          `User "${sourceUserId}" does not exist`
+        );
+      }
+
+      return sourceUser;
+    }
+
+    const sourceUser =
+      this.users.get(sourceUserId);
+    const targetUser =
+      this.users.get(targetUserId);
+
+    if (!sourceUser) {
+      throw new Error(
+        `User "${sourceUserId}" does not exist`
+      );
+    }
+
+    if (!targetUser) {
+      throw new Error(
+        `User "${targetUserId}" does not exist`
+      );
+    }
+
+    const sourceIdentities =
+      this.getUserIdentities(sourceUserId);
+
+    const sourceKeys = new Set(
+      sourceIdentities.map((identity) =>
+        this.getIdentityKey(
+          identity.platform,
+          identity.externalId
+        )
+      )
+    );
+
+    const targetIdentities =
+      this.getUserIdentities(targetUserId);
+
+    for (const identity of targetIdentities) {
+      const key = this.getIdentityKey(
+        identity.platform,
+        identity.externalId
+      );
+
+      if (sourceKeys.has(key)) {
+        throw new Error(
+          `Cannot merge users because identity "${key}" exists on both users`
+        );
+      }
+    }
+
+    for (const identity of targetIdentities) {
+      identity.userId = sourceUserId;
+      identity.updatedAt = now;
+    }
+
+    sourceUser.updatedAt = now;
+    this.users.delete(targetUserId);
+
+    return sourceUser;
+  }
+
   detachIdentity(
     identityId: ExternalIdentityId,
     now = new Date()
