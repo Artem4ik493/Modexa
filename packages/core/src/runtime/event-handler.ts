@@ -183,8 +183,6 @@ function buildExecutionContext(
 
   if (
     deps.bridgeService &&
-    resolved?.community &&
-    resolved.channel &&
     input.community &&
     input.channel
   ) {
@@ -200,9 +198,9 @@ function buildExecutionContext(
       channelName:
         input.channel.name,
       communityId:
-        resolved.community.id,
+        resolved?.community?.id,
       channelId:
-        resolved.channel.id
+        resolved?.channel?.id
     });
   }
 
