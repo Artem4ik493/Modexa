@@ -161,6 +161,47 @@ export const enMessages: MessageCatalog = {
   "context.community":
     "community",
 
+  "command.bridge_test.description":
+    "Test-link a Telegram and Discord chat",
+  "bridge.test.title":
+    "Choose a chat to link",
+  "bridge.test.source":
+    "Source: {platform} — {community} / {channel}",
+  "bridge.test.page":
+    "Page: {page}/{total}",
+  "bridge.test.community_only":
+    "This command can only be used in a community chat.",
+  "bridge.test.forbidden":
+    "Community management permission is required to create a Bridge link.",
+  "bridge.test.source_unknown":
+    "This chat has not been registered in Modexa yet. Send a message to the bot and try again.",
+  "bridge.test.no_targets":
+    "There are no available chats on the other platform to link.",
+  "bridge.test.previous":
+    "← Back",
+  "bridge.test.next":
+    "Next →",
+  "bridge.test.page_unavailable":
+    "This page is no longer available.",
+  "bridge.test.endpoint_unavailable":
+    "The selected chat is no longer available.",
+  "bridge.test.request_sent":
+    "Request sent to {target}. Waiting for confirmation.",
+  "bridge.test.confirmation":
+    "Link request\n\nSource: {source}\n\nConfirm creating a bridge with this chat.",
+  "bridge.test.confirm":
+    "Confirm",
+  "bridge.test.reject":
+    "Reject",
+  "bridge.test.success":
+    "Bridge connected!\n\n{source}\n{target}\n\nThe link is working.",
+  "bridge.test.confirmed":
+    "Link confirmed. Bridge is working.",
+  "bridge.test.rejected":
+    "Link request rejected.",
+  "bridge.test.unknown_action":
+    "Unknown Bridge action.",
+
   "command.settings.description":
     "Show settings",
   "settings.community_unavailable":
