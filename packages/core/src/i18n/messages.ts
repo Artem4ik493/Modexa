@@ -93,6 +93,18 @@ export const ruMessages = {
     "Показать настройки",
   "settings.community_unavailable":
     "Настройки сообщества пока недоступны.",
+  "settings.forbidden":
+    "Для изменения настроек нужны права управления сообществом.",
+  "settings.community":
+    "Настройки сообщества",
+  "settings.mode.public":
+    "Режим: публичный",
+  "settings.mode.private":
+    "Режим: приватный",
+  "settings.mode.public_button":
+    "🌐 Публичный",
+  "settings.mode.private_button":
+    "🔒 Приватный",
   "settings.dm":
     "Настройки\nПока нечего настраивать.",
 
@@ -206,6 +218,18 @@ export const enMessages: MessageCatalog = {
     "Show settings",
   "settings.community_unavailable":
     "Community settings are not available yet.",
+  "settings.forbidden":
+    "Community management permission is required to change settings.",
+  "settings.community":
+    "Community settings",
+  "settings.mode.public":
+    "Mode: public",
+  "settings.mode.private":
+    "Mode: private",
+  "settings.mode.public_button":
+    "🌐 Public",
+  "settings.mode.private_button":
+    "🔒 Private",
   "settings.dm":
     "Settings\nNothing to configure yet.",
 
