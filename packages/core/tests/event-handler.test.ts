@@ -222,7 +222,7 @@ describe("Platform event handler", () => {
       content: "Выберите действие:"
     });
 
-    expect(tokensOf(actions[0])).toHaveLength(2);
+    expect(tokensOf(actions[0])).toHaveLength(3);
   });
 
   it("edits the message when a button is pressed", async () => {
@@ -254,7 +254,7 @@ describe("Platform event handler", () => {
     expect(content).toContain("Аккаунт");
     expect(content).toContain("telegram:42");
 
-    expect(tokensOf(actions[1])).toHaveLength(2);
+    expect(tokensOf(actions[1])).toHaveLength(3);
   });
 
   it("returns to the menu with the back button", async () => {
@@ -323,7 +323,9 @@ describe("Platform event handler", () => {
       actions[0] as { content: string }
     ).content;
 
-    expect(content).toContain("личном чате");
+    expect(content).toContain(
+      "У вас нет прав для использования этой команды."
+    );
     expect(content).not.toContain("telegram:42");
   });
 
