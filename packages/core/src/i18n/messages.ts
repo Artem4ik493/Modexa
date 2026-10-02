@@ -15,7 +15,7 @@ export const ruMessages = {
   "command.ping.description":
     "Проверить, что Modexa работает",
   "command.forbidden":
-   "У вас недостаточно прав для использования команд в этом сообществе.",
+    "У вас недостаточно прав для использования команд в этом сообществе.",
   "command.not_found":
     "Команда не найдена. Для просмотра доступных команд для вашей роли {role} используйте /help.",
   "command.ping.pong":
@@ -44,6 +44,35 @@ export const ruMessages = {
     "ID: {id}",
   "account.context":
     "Контекст: {context}",
+  "account.link":
+    "🔗 Связать Telegram и Discord",
+
+  "command.link.description":
+    "Связать аккаунты Telegram и Discord",
+  "identity.link.dm_only":
+    "Связка аккаунтов доступна только в личном чате с ботом.",
+  "identity.link.created":
+    "Код для связки создан.",
+  "identity.link.code":
+    "Код: {code}",
+  "identity.link.target":
+    "Введите этот код в личном чате с ботом в {platform}.",
+  "identity.link.expires":
+    "Код действует 10 минут и может быть использован только один раз.",
+  "identity.link.completed":
+    "Аккаунт {platform} успешно связан с вашим аккаунтом Modexa.",
+  "identity.link.already_linked":
+    "Аккаунт {platform} уже связан с вашим аккаунтом Modexa.",
+  "identity.link.invalid_code":
+    "Код недействителен, истёк или уже использован.",
+  "identity.link.wrong_platform":
+    "Этот код нужно вводить в личном чате с ботом в {platform}.",
+  "identity.link.identity_in_use":
+    "Этот аккаунт уже связан с другим аккаунтом Modexa.",
+  "identity.link.identity_unavailable":
+    "Текущий аккаунт ещё не зарегистрирован в Modexa. Попробуйте снова.",
+  "identity.link.same_account":
+    "Нельзя связать аккаунт с самим собой.",
 
   "context.dm":
     "личный чат",
@@ -63,7 +92,7 @@ export const ruMessages = {
   "bridge.test.channels.title":
     "Выберите чат для привязки:",
   "bridge.test.no_accounts":
-    "У вас нет связанных аккаунтов Telegram и Discord, свяжите их на сайте Modexa.",
+    "У вас нет связанных аккаунтов Telegram и Discord, свяжите их через /link в личном чате с ботом.",
   "bridge.test.no_chats":
     "У вас нет доступных чатов.",
   "bridge.test.private_source.telegram":
@@ -142,7 +171,6 @@ export const ruMessages = {
     "Нет доступных команд.",
   "help.no_description":
     "Без описания"
-    
 } as const;
 
 export type MessageKey =
@@ -195,6 +223,35 @@ export const enMessages: MessageCatalog = {
     "ID: {id}",
   "account.context":
     "Context: {context}",
+  "account.link":
+    "🔗 Link Telegram and Discord",
+
+  "command.link.description":
+    "Link Telegram and Discord accounts",
+  "identity.link.dm_only":
+    "Account linking is only available in a private chat with the bot.",
+  "identity.link.created":
+    "A linking code has been created.",
+  "identity.link.code":
+    "Code: {code}",
+  "identity.link.target":
+    "Enter this code in a private chat with the bot on {platform}.",
+  "identity.link.expires":
+    "The code is valid for 10 minutes and can only be used once.",
+  "identity.link.completed":
+    "Your {platform} account has been linked to your Modexa account.",
+  "identity.link.already_linked":
+    "Your {platform} account is already linked to your Modexa account.",
+  "identity.link.invalid_code":
+    "The code is invalid, expired, or already used.",
+  "identity.link.wrong_platform":
+    "Enter this code in a private chat with the bot on {platform}.",
+  "identity.link.identity_in_use":
+    "This account is already linked to another Modexa account.",
+  "identity.link.identity_unavailable":
+    "Your current account is not registered in Modexa yet. Try again.",
+  "identity.link.same_account":
+    "An account cannot be linked to itself.",
 
   "context.dm":
     "private chat",
@@ -214,7 +271,7 @@ export const enMessages: MessageCatalog = {
   "bridge.test.channels.title":
     "Choose a chat to link:",
   "bridge.test.no_accounts":
-    "You do not have linked Telegram and Discord accounts. Link them on the Modexa website.",
+    "You do not have linked Telegram and Discord accounts. Use /link in a private chat with the bot.",
   "bridge.test.no_chats":
     "You have no available chats.",
   "bridge.test.private_source.telegram":
