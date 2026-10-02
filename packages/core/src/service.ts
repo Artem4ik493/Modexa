@@ -123,6 +123,36 @@ export class CommandService {
       };
     }
 
+    const command =
+      this.registry.get(parsed.name);
+
+    if (
+      command &&
+      !(command.requiredCapabilities ?? []).every(
+        (capability) =>
+          execution.capabilities.includes(capability)
+      )
+    ) {
+      this.logger?.debug(
+        "command.capability_forbidden",
+        {
+          ...diagnostics,
+          command: parsed.name
+        }
+      );
+
+      return {
+        handled: true,
+        response: {
+          content: translate(
+            "command.forbidden",
+            undefined,
+            execution.locale
+          )
+        }
+      };
+    }
+
     const commandContext:
       CommandContext = {
         ...context,
