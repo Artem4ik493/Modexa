@@ -12,7 +12,8 @@ import {
   BridgeService,
   listCommandDescriptors,
   type PlatformIdentityResolver,
-  type CommunityService
+  type CommunityService,
+  type IdentityService
 } from "@modexa/core";
 
 import {
@@ -63,6 +64,9 @@ export interface CreateDiscordAdapterOptions {
 
   communityService?:
     CommunityService;
+
+  identityService?:
+    IdentityService;
 }
 
 export function createDiscordAdapter(
@@ -95,7 +99,9 @@ export function createDiscordAdapter(
   if (options.bridgeService) {
     registry.register(
       createBridgeTestCommand(
-        options.bridgeService
+        options.bridgeService,
+        options.identityService ??
+          new IdentityService()
       )
     );
   }
