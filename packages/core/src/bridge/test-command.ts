@@ -37,6 +37,7 @@ import type {
 } from "./types.js";
 
 const PAGE_SIZE = 20;
+const CLOSE_ACTION = "bridge.test.close";
 
 type BridgeSelectionScope =
   | "any"
@@ -106,6 +107,47 @@ function getTargetEndpoints(
     );
 }
 
+function closeButton(
+  t: ReturnType<typeof createTranslator>
+): {
+  id: string;
+  label: string;
+  action: {
+    type: "callback";
+    data: string;
+  };
+} {
+  return {
+    id: "bridge-close",
+    label: t("bridge.test.close"),
+    action: {
+      type: "callback",
+      data: CLOSE_ACTION
+    }
+  };
+}
+
+function backButton(
+  t: ReturnType<typeof createTranslator>,
+  data: string
+): {
+  id: string;
+  label: string;
+  action: {
+    type: "callback";
+    data: string;
+  };
+} {
+  return {
+    id: "bridge-back",
+    label: t("bridge.test.back"),
+    action: {
+      type: "callback",
+      data
+    }
+  };
+}
+
 function buildScopeResponse(
   locale?: "ru" | "en"
 ): CommandResponse {
@@ -129,7 +171,8 @@ function buildScopeResponse(
           type: "callback",
           data: "bridge.test.scope:account"
         }
-      }
+      },
+      closeButton(t)
     ]
   };
 }
@@ -153,7 +196,11 @@ function buildCommunityResponse(
       content:
         source.platform === "telegram"
           ? t("bridge.test.no_communities.discord")
-          : t("bridge.test.no_communities.telegram")
+          : t("bridge.test.no_communities.telegram"),
+      buttons: [
+        backButton(t, "bridge.test.back:scope"),
+        closeButton(t)
+      ]
     };
   }
 
@@ -235,6 +282,11 @@ function buildCommunityResponse(
     });
   }
 
+  buttons.push(
+    backButton(t, "bridge.test.back:scope"),
+    closeButton(t)
+  );
+
   return {
     content: [
       t("bridge.test.communities.title"),
@@ -253,6 +305,8 @@ function buildChannelResponse(
   scope: BridgeSelectionScope,
   communityPlatform: IdentityPlatform,
   communityExternalId: string,
+  communityPage: number,
+  page: number,
   locale?: "ru" | "en"
 ): CommandResponse {
   const t = createTranslator(locale);
@@ -271,15 +325,31 @@ function buildChannelResponse(
 
   if (endpoints.length === 0) {
     return {
-      content: t(
-        "bridge.test.no_chats"
-      )
+      content: t("bridge.test.no_chats"),
+      buttons: [
+        backButton(
+          t,
+          `bridge.test.communities:${scope}:${communityPage}`
+        ),
+        closeButton(t)
+      ]
     };
   }
 
-  const buttons = endpoints
-    .slice(0, PAGE_SIZE)
-    .map((endpoint) => ({
+  const pageCount = Math.max(
+    1,
+    Math.ceil(endpoints.length / PAGE_SIZE)
+  );
+  const safePage = Math.min(
+    Math.max(page, 0),
+    pageCount - 1
+  );
+  const current = endpoints.slice(
+    safePage * PAGE_SIZE,
+    (safePage + 1) * PAGE_SIZE
+  );
+
+  const buttons = current.map((endpoint) => ({
       id:
         `bridge-select-${endpoint.id}`,
       label:
@@ -293,10 +363,34 @@ function buildChannelResponse(
       }
     }));
 
+  if (safePage < pageCount - 1) {
+    buttons.push({
+      id: "bridge-channel-next",
+      label: t("bridge.test.next"),
+      action: {
+        type: "callback" as const,
+        data:
+          `bridge.test.channels:${scope}:${communityPlatform}:${communityExternalId}:${communityPage}:${safePage + 1}`
+      }
+    });
+  }
+
+  buttons.push(
+    backButton(
+      t,
+      `bridge.test.communities:${scope}:${communityPage}`
+    ),
+    closeButton(t)
+  );
+
   return {
     content: [
       t("bridge.test.channels.title"),
-      endpoints[0].communityName
+      endpoints[0].communityName,
+      t("bridge.test.page", {
+        page: safePage + 1,
+        total: pageCount
+      })
     ].join("\n"),
     buttons
   };
@@ -427,6 +521,19 @@ export function createBridgeTestInteractionHandler(
       context.execution.locale
     );
 
+    if (data === CLOSE_ACTION) {
+      return {
+        content: "",
+        buttons: []
+      };
+    }
+
+    if (data === "bridge.test.back:scope") {
+      return buildScopeResponse(
+        context.execution.locale
+      );
+    }
+
     if (
       data.startsWith(
         "bridge.test.scope:"
@@ -516,6 +623,41 @@ export function createBridgeTestInteractionHandler(
 
     if (
       data.startsWith(
+        "bridge.test.channels:"
+      ) {
+      const parts = data.slice("bridge.test.channels:".length).split(":");
+      const scope = parts[0] as BridgeSelectionScope;
+      const platform = parts[1] as IdentityPlatform;
+      const communityExternalId = parts[2];
+      const communityPage = Number(parts[3]);
+      const page = Number(parts[4]);
+      const source = bridgeService.findEndpointForExecution(context.execution);
+
+      if (
+        !source ||
+        (scope !== "any" && scope !== "account") ||
+        (platform !== "telegram" && platform !== "discord") ||
+        !communityExternalId ||
+        !Number.isInteger(communityPage) ||
+        !Number.isInteger(page)
+      ) {
+        return { content: t("bridge.test.page_unavailable") };
+      }
+
+      return buildChannelResponse(
+        bridgeService,
+        source,
+        scope,
+        platform,
+        communityExternalId,
+        communityPage,
+        page,
+        context.execution.locale
+      );
+    }
+
+    if (
+      data.startsWith(
         "bridge.test.community:"
       )
     ) {
@@ -532,6 +674,7 @@ export function createBridgeTestInteractionHandler(
         parts[1] as IdentityPlatform;
       const communityExternalId =
         parts.slice(2).join(":");
+      const communityPage = 0;
 
       const source =
         bridgeService.findEndpointForExecution(
@@ -599,6 +742,8 @@ export function createBridgeTestInteractionHandler(
         scope,
         platform,
         communityExternalId,
+        communityPage,
+        0,
         context.execution.locale
       );
     }
