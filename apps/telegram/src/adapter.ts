@@ -405,6 +405,22 @@ export class TelegramAdapter
             ctx
           ),
 
+        replyTo:
+          "reply_to_message" in message &&
+          message.reply_to_message?.from
+            ? {
+                platform: "telegram",
+                externalId:
+                  String(
+                    message.reply_to_message.from.id
+                  ),
+                username:
+                  message.reply_to_message.from.username,
+                displayName:
+                  message.reply_to_message.from.first_name
+              }
+            : undefined,
+
         content:
           "text" in message &&
           typeof message.text === "string"
