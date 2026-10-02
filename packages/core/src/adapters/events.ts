@@ -36,6 +36,9 @@ export interface AdapterMessage {
 
   content: string;
 
+  /** Author of the message being replied to, when present. */
+  replyTo?: PlatformUser;
+
   createdAt: Date;
 
   metadata?: Record<
