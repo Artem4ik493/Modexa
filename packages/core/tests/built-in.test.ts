@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CommandRegistry,
+  CommunityService,
   createBuiltinCommands
 } from "../src/index.js";
 
@@ -50,6 +51,56 @@ describe("built-in commands", () => {
     expect(result).toEqual({
       content: "Понг!"
     });
+  });
+
+  it("toggles community mode from settings", async () => {
+    const registry = new CommandRegistry();
+    const communityService = new CommunityService();
+
+    createBuiltinCommands(
+      registry,
+      communityService
+    );
+
+    const community =
+      communityService.createCommunity({
+        name: "Test Community"
+      });
+
+    const result = await registry.execute(
+      "settings",
+      {
+        platform: "telegram",
+        user: {
+          id: "user-1",
+          displayName: "Admin"
+        },
+        community,
+        args: ["private"],
+        rawText: "/settings private",
+        execution: {
+          type: "community",
+          platform: "telegram",
+          correlationId: "test",
+          user: {
+            id: "user-1",
+            displayName: "Admin",
+            createdAt: new Date(),
+            updatedAt: new Date()
+          },
+          community,
+          capabilities: [
+            "commands",
+            "community.manage"
+          ]
+        }
+      }
+    );
+
+    expect(community.mode).toBe("private");
+    expect(result?.content).toContain(
+      "Режим: приватный"
+    );
   });
 
   it("generates help from the command registry", async () => {
