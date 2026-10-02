@@ -578,6 +578,7 @@ export function createBridgeTestCommand(
   return {
     name: "bridge-test",
     aliases: ["bridgetest"],
+    requiredCapabilities: ["community.manage"],
     descriptionKey:
       "command.bridge_test.description",
     handler: (context) =>
