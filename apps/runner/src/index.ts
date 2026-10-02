@@ -87,7 +87,10 @@ if (telegramToken) {
         interactionStore,
 
         bridgeService:
-          services.bridgeService
+          services.bridgeService,
+
+        communityService:
+          services.communityService
       }
     )
   );
