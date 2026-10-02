@@ -6,6 +6,8 @@ import type {
   UserId
 } from "./types.js";
 
+import type { ModexaDatabase } from "../database/service.js";
+
 export interface CreateUserInput {
   displayName: string;
   now?: Date;
@@ -21,6 +23,10 @@ export interface AttachIdentityInput {
 }
 
 export class IdentityService {
+  constructor(
+    private readonly database?: ModexaDatabase
+  ) {}
+
   private readonly users = new Map<UserId, User>();
   private readonly identities = new Map<
     ExternalIdentityId,
@@ -46,6 +52,7 @@ export class IdentityService {
     };
 
     this.users.set(user.id, user);
+    this.database?.createUser(user);
 
     return user;
   }
@@ -103,6 +110,7 @@ export class IdentityService {
 
     this.identities.set(identity.id, identity);
     this.identityIndex.set(identityKey, identity.id);
+    this.database?.createIdentity(identity);
 
     user.updatedAt = now;
 
@@ -120,6 +128,13 @@ export class IdentityService {
 
     const identityId =
       this.identityIndex.get(identityKey);
+
+    if (!identityId && this.database) {
+      return this.database.findUserByIdentity(
+        platform,
+        externalId
+      ) as User | undefined;
+    }
 
     if (!identityId) {
       return undefined;
