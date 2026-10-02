@@ -200,17 +200,20 @@ export class CommandService {
   private resolveRoleLabel(
     execution: ExecutionContext
   ): string {
-    if (execution.user.platformRole === "owner") {
-      return "owner";
-    }
-
-    if (execution.user.platformRole === "admin") {
+    if (
+      execution.type === "community" &&
+      execution.capabilities.includes(
+        "community.manage"
+      )
+    ) {
       return "admin";
     }
 
     if (
       execution.type === "community" &&
-      execution.community
+      execution.capabilities.includes(
+        "community.view"
+      )
     ) {
       return "member";
     }
