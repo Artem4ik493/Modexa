@@ -93,7 +93,13 @@ if (telegramToken) {
           services.communityService,
 
         identityService:
-          services.identityService
+          services.identityService,
+
+        identityLinkService:
+          services.identityLinkService,
+
+        identityLinkingService:
+          services.identityLinkingService
       }
     )
   );
@@ -132,7 +138,13 @@ if (discordToken) {
           services.communityService,
 
         identityService:
-          services.identityService
+          services.identityService,
+
+        identityLinkService:
+          services.identityLinkService,
+
+        identityLinkingService:
+          services.identityLinkingService
       }
     )
   );
