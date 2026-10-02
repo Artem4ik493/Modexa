@@ -93,9 +93,6 @@ if (telegramToken) {
           services.communityService,
 
         identityService:
-          services.identityService,
-
-        identityService:
           services.identityService
       }
     )
@@ -132,7 +129,10 @@ if (discordToken) {
           services.bridgeService,
 
         communityService:
-          services.communityService
+          services.communityService,
+
+        identityService:
+          services.identityService
       }
     )
   );
