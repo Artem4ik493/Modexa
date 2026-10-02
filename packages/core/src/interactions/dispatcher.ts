@@ -266,7 +266,8 @@ export class InteractionDispatcher {
 
       case "callback": {
         const handler =
-          this.callbacks.get(action.data);
+          this.callbacks.get(action.data) ??
+          this.findPrefixedCallback(action.data);
 
         if (!handler) {
           return null;
