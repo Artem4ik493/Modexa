@@ -1,6 +1,7 @@
 import {
   AdapterRegistry,
   CoreLogger,
+  createRuntimeServices,
   type PlatformAdapter
 } from "@modexa/core";
 
@@ -48,6 +49,11 @@ logger.addHandler(
   }
 );
 
+// One set of services for all adapters: Telegram and Discord
+// must see the same users, communities and memberships.
+const services =
+  createRuntimeServices(logger);
+
 const adapters: PlatformAdapter[] =
   [];
 
@@ -58,7 +64,11 @@ if (telegramToken) {
   adapters.push(
     createTelegramAdapter(
       telegramToken,
-      logger
+      logger,
+      {
+        identityResolver:
+          services.identityResolver
+      }
     )
   );
 } else {
@@ -79,7 +89,11 @@ if (discordToken) {
   adapters.push(
     createDiscordAdapter(
       discordToken,
-      logger
+      logger,
+      {
+        identityResolver:
+          services.identityResolver
+      }
     )
   );
 } else {

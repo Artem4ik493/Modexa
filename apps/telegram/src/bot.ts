@@ -6,7 +6,8 @@ import {
   ExecutionContextService,
   InteractionActionStore,
   InteractionDispatcher,
-  createBuiltinCommands
+  createBuiltinCommands,
+  type PlatformIdentityResolver
 } from "@modexa/core";
 
 import {
@@ -21,9 +22,19 @@ import {
   createTelegramEventHandler
 } from "./handler.js";
 
+export interface CreateTelegramAdapterOptions {
+  /**
+   * Shared resolver that maps Telegram users and chats to
+   * real Modexa entities. When omitted, synthetic ids
+   * ("telegram:<id>") are used.
+   */
+  identityResolver?: PlatformIdentityResolver;
+}
+
 export function createTelegramAdapter(
   token: string,
-  logger: CoreLogger
+  logger: CoreLogger,
+  options: CreateTelegramAdapterOptions = {}
 ): TelegramAdapter {
   const bot =
     new Bot(token);
@@ -65,7 +76,9 @@ export function createTelegramAdapter(
       dispatcher,
       store,
       executionContextService:
-        new ExecutionContextService()
+        new ExecutionContextService(),
+      identityResolver:
+        options.identityResolver
     })
   );
 

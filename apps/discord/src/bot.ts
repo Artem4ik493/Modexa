@@ -7,7 +7,8 @@ import {
   InteractionActionStore,
   InteractionDispatcher,
   createBuiltinCommands,
-  listCommandDescriptors
+  listCommandDescriptors,
+  type PlatformIdentityResolver
 } from "@modexa/core";
 
 import {
@@ -35,6 +36,13 @@ export interface CreateDiscordAdapterOptions {
    * When neither is set, commands are registered globally.
    */
   guildId?: string;
+
+  /**
+   * Shared resolver that maps Discord users and servers to
+   * real Modexa entities. When omitted, synthetic ids
+   * ("discord:<id>") are used.
+   */
+  identityResolver?: PlatformIdentityResolver;
 }
 
 export function createDiscordAdapter(
@@ -105,7 +113,9 @@ export function createDiscordAdapter(
       dispatcher,
       store,
       executionContextService:
-        new ExecutionContextService()
+        new ExecutionContextService(),
+      identityResolver:
+        options.identityResolver
     })
   );
 

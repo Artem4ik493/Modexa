@@ -17,6 +17,14 @@ export type {
 } from "./identity.js";
 
 export {
+  createRuntimeServices
+} from "./services.js";
+
+export type {
+  RuntimeServices
+} from "./services.js";
+
+export {
   createPlatformEventHandler
 } from "./event-handler.js";
 
