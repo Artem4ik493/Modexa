@@ -33,12 +33,22 @@ function createResolver() {
   const membershipService =
     new MembershipService();
 
+  const accessControlService =
+    new AccessControlService();
+
+  const communityAccessService =
+    new CommunityAccessService(
+      membershipService,
+      accessControlService
+    );
+
   const resolver =
     new PlatformIdentityResolver({
       identityService,
       communityService,
       channelService,
-      membershipService
+      membershipService,
+      accessControlService
     });
 
   return {
@@ -46,6 +56,8 @@ function createResolver() {
     communityService,
     channelService,
     membershipService,
+    accessControlService,
+    communityAccessService,
     resolver
   };
 }
