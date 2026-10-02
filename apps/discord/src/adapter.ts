@@ -103,7 +103,7 @@ export class DiscordAdapter
 
     await this.client.login(this.token);
 
-    this.registerKnownBridgeEndpoints();
+    await this.registerKnownBridgeEndpoints();
 
     await this.registerSlashCommands();
   }
@@ -321,7 +321,7 @@ export class DiscordAdapter
     );
   }
 
-  private registerKnownBridgeEndpoints(): void {
+  private async registerKnownBridgeEndpoints(): Promise<void> {
     const bridgeService =
       this.options.bridgeService;
 
@@ -330,8 +330,19 @@ export class DiscordAdapter
     }
 
     for (const guild of this.client.guilds.cache.values()) {
-      for (const channel of guild.channels.cache.values()) {
+      let channels;
+
+      try {
+        channels =
+          await guild.channels.fetch();
+      } catch {
+        channels =
+          guild.channels.cache;
+      }
+
+      for (const channel of channels.values()) {
         if (
+          !channel ||
           !channel.isTextBased() ||
           channel.isDMBased() ||
           !("send" in channel) ||
@@ -352,6 +363,51 @@ export class DiscordAdapter
             channel.name
         });
       }
+    }
+  }
+
+  private async registerBridgeGuildEndpoints(
+    guild: Guild
+  ): Promise<void> {
+    const bridgeService =
+      this.options.bridgeService;
+
+    if (!bridgeService) {
+      return;
+    }
+
+    let channels;
+
+    try {
+      channels =
+        await guild.channels.fetch();
+    } catch {
+      channels =
+        guild.channels.cache;
+    }
+
+    for (const channel of channels.values()) {
+      if (
+        !channel ||
+        !channel.isTextBased() ||
+        channel.isDMBased() ||
+        !("send" in channel) ||
+        typeof channel.name !== "string"
+      ) {
+        continue;
+      }
+
+      bridgeService.registerEndpoint({
+        platform: "discord",
+        communityExternalId:
+          guild.id,
+        communityName:
+          guild.name,
+        channelExternalId:
+          channel.id,
+        channelName:
+          channel.name
+      });
     }
   }
 
@@ -754,6 +810,48 @@ export class DiscordAdapter
   }
 
   private registerHandlers(): void {
+    this.client.on(
+      Events.GuildCreate,
+      (guild) => {
+        void this.registerBridgeGuildEndpoints(
+          guild
+        );
+      }
+    );
+
+    this.client.on(
+      Events.ChannelCreate,
+      (channel) => {
+        if (
+          !channel.isTextBased() ||
+          channel.isDMBased() ||
+          !("send" in channel) ||
+          typeof channel.name !== "string"
+        ) {
+          return;
+        }
+
+        const bridgeService =
+          this.options.bridgeService;
+
+        if (!bridgeService) {
+          return;
+        }
+
+        bridgeService.registerEndpoint({
+          platform: "discord",
+          communityExternalId:
+            channel.guildId,
+          communityName:
+            channel.guild.name,
+          channelExternalId:
+            channel.id,
+          channelName:
+            channel.name
+        });
+      }
+    );
+
     this.client.on(
       Events.MessageCreate,
       async (message) => {
