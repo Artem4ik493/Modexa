@@ -106,7 +106,7 @@ function buildSelectionResponse(
   if (safePage > 0) {
     buttons.push({
       id: "bridge-prev",
-      label: "← Назад",
+      label: t("bridge.test.previous"),
       action: {
         type: "callback" as const,
         data:
@@ -118,7 +118,7 @@ function buildSelectionResponse(
   if (safePage < pageCount - 1) {
     buttons.push({
       id: "bridge-next",
-      label: "Далее →",
+      label: t("bridge.test.next"),
       action: {
         type: "callback" as const,
         data:
