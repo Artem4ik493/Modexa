@@ -1,6 +1,7 @@
 import {
   AccessControlService,
-  CommunityAccessService
+  CommunityAccessService,
+  MODEXA_OWNER_ROLE
 } from "../access/index.js";
 
 import {
@@ -85,6 +86,10 @@ export function createRuntimeServices(
 
   const accessControlService =
     new AccessControlService();
+
+  accessControlService.registerSystemRole(
+    MODEXA_OWNER_ROLE
+  );
 
   const communityAccessService =
     new CommunityAccessService(
