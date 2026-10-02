@@ -332,7 +332,15 @@ export class DiscordAdapter
     const guilds =
       await this.client.guilds.fetch();
 
-    for (const guild of guilds.values()) {
+    for (const oauthGuild of guilds.values()) {
+      const guild =
+        this.client.guilds.cache.get(
+          oauthGuild.id
+        ) ??
+        await this.client.guilds.fetch(
+          oauthGuild.id
+        );
+
       let channels;
 
       try {
