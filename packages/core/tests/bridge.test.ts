@@ -149,7 +149,9 @@ describe("BridgeService", () => {
       communityExternalId: "ds",
       communityName: "DS",
       channelExternalId: "ds",
-      channelName: "general"
+      channelName: "general",
+      communityId: "ds",
+      channelId: "ds"
     });
 
     const request = service.createLinkRequest({
