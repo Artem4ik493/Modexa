@@ -115,7 +115,12 @@ if (discordToken) {
           services.identityResolver,
 
         executionContextService:
-          services.executionContextService
+          services.executionContextService,
+
+        interactionStore,
+
+        bridgeService:
+          services.bridgeService
       }
     )
   );
