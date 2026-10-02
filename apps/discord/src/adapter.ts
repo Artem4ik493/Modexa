@@ -316,6 +316,40 @@ export class DiscordAdapter
     );
   }
 
+  private registerKnownBridgeEndpoints(): void {
+    const bridgeService =
+      this.options.bridgeService;
+
+    if (!bridgeService) {
+      return;
+    }
+
+    for (const guild of this.client.guilds.cache.values()) {
+      for (const channel of guild.channels.cache.values()) {
+        if (
+          !channel.isTextBased() ||
+          channel.isDMBased() ||
+          !("send" in channel) ||
+          typeof channel.name !== "string"
+        ) {
+          continue;
+        }
+
+        bridgeService.registerEndpoint({
+          platform: "discord",
+          communityExternalId:
+            guild.id,
+          communityName:
+            guild.name,
+          channelExternalId:
+            channel.id,
+          channelName:
+            channel.name
+        });
+      }
+    }
+  }
+
   private waitUntilReady(): Promise<void> {
     if (this.client.isReady()) {
       return Promise.resolve();
