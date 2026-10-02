@@ -4,6 +4,10 @@ import {
   BridgeService
 } from "../src/bridge/service.js";
 
+import {
+  CommunityService
+} from "../src/communities/service.js";
+
 import type {
   ExecutionContext
 } from "../src/contexts/types.js";
@@ -285,4 +289,66 @@ describe("BridgeService", () => {
       "Bridge test currently supports only Telegram to Discord links"
     );
   });
+  it("blocks links when either community is private", () => {
+    const communityService =
+      new CommunityService();
+
+    const telegramCommunity =
+      communityService.createCommunity({
+        name: "Private TG"
+      });
+
+    const discordCommunity =
+      communityService.createCommunity({
+        name: "Discord"
+      });
+
+    communityService.setMode(
+      telegramCommunity.id,
+      "private"
+    );
+
+    const service =
+      new BridgeService(
+        communityService
+      );
+
+    const telegram =
+      service.registerEndpoint({
+        platform: "telegram",
+        communityExternalId: "tg",
+        communityName: "Private TG",
+        channelExternalId: "tg",
+        channelName: "Private TG",
+        communityId:
+          telegramCommunity.id,
+        channelId: "tg"
+      });
+
+    const discord =
+      service.registerEndpoint({
+        platform: "discord",
+        communityExternalId: "ds",
+        communityName: "Discord",
+        channelExternalId: "ds",
+        channelName: "general",
+        communityId:
+          discordCommunity.id,
+        channelId: "ds"
+      });
+
+    expect(() =>
+      service.createLinkRequest({
+        sourceEndpointId:
+          telegram.id,
+        targetEndpointId:
+          discord.id,
+        requestedByUserId:
+          "user-1"
+      })
+    ).toThrow(
+      "Telegram community is private and cannot be linked"
+    );
+  });
+
 });
