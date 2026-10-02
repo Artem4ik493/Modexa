@@ -10,7 +10,8 @@ import {
   createBridgeTestCommand,
   createBridgeTestInteractionHandler,
   BridgeService,
-  type PlatformIdentityResolver
+  type PlatformIdentityResolver,
+  type CommunityService
 } from "@modexa/core";
 
 import {
@@ -45,6 +46,9 @@ export interface CreateTelegramAdapterOptions {
 
   bridgeService?:
     BridgeService;
+
+  communityService?:
+    CommunityService;
 }
 
 export function createTelegramAdapter(
@@ -60,7 +64,8 @@ export function createTelegramAdapter(
     new CommandRegistry();
 
   createBuiltinCommands(
-    registry
+    registry,
+    options.communityService
   );
 
   if (options.bridgeService) {
