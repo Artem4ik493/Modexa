@@ -38,8 +38,22 @@ function createMenuResponse(
           type: "command",
           command: "/settings"
         }
-      }
+      },
+      createCloseButton(t)
     ]
+  };
+}
+
+function createCloseButton(
+  t: Translator
+): InteractionButton {
+  return {
+    id: "close",
+    label: t("menu.close"),
+    action: {
+      type: "callback",
+      data: "menu.close"
+    }
   };
 }
 
@@ -101,7 +115,8 @@ function handleAccount(
           command: "/link"
         }
       },
-      createBackButton(t)
+      createBackButton(t),
+      createCloseButton(t)
     ]
   };
 }
@@ -117,7 +132,10 @@ function handleSettings(
   if (context.execution.type === "dm") {
     return {
       content: t("settings.dm"),
-      buttons: [createBackButton(t)]
+      buttons: [
+        createBackButton(t),
+        createCloseButton(t)
+      ]
     };
   }
 
@@ -126,7 +144,10 @@ function handleSettings(
   if (!community || !communityService) {
     return {
       content: t("settings.community_unavailable"),
-      buttons: [createBackButton(t)]
+      buttons: [
+        createBackButton(t),
+        createCloseButton(t)
+      ]
     };
   }
 
@@ -142,7 +163,10 @@ function handleSettings(
     ) {
       return {
         content: t("settings.forbidden"),
-        buttons: [createBackButton(t)]
+        buttons: [
+          createBackButton(t),
+          createCloseButton(t)
+        ]
       };
     }
 
@@ -190,9 +214,13 @@ function handleSettings(
               args: ["private"]
             }
           },
-          createBackButton(t)
+          createBackButton(t),
+          createCloseButton(t)
         ]
-      : [createBackButton(t)]
+      : [
+          createBackButton(t),
+          createCloseButton(t)
+        ]
   };
 }
 
