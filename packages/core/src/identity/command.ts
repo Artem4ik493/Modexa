@@ -114,6 +114,21 @@ function handleLink(
     };
   }
 
+  const currentIdentity =
+    identities.find(
+      (identity) =>
+        identity.platform ===
+        currentPlatform
+    );
+
+  if (!currentIdentity) {
+    return {
+      content: t(
+        "identity.link.identity_unavailable"
+      )
+    };
+  }
+
   const code =
     context.args[0]
       ?.trim()
@@ -148,28 +163,17 @@ function handleLink(
       };
     }
 
-    if (
-      session.userId ===
-      context.execution.user.id
-    ) {
-      return {
-        content: t(
-          "identity.link.same_account"
-        )
-      };
-    }
-
     try {
       linkingService.completeLink({
         code,
         targetPlatform:
           currentPlatform,
         targetExternalId:
-          context.execution.user
-            .id,
+          currentIdentity.externalId,
+        targetUsername:
+          currentIdentity.username,
         targetDisplayName:
-          context.execution.user
-            .displayName,
+          currentIdentity.displayName,
         now: new Date()
       });
 
@@ -206,6 +210,9 @@ function handleLink(
           ) ||
           error.message.includes(
             "not found"
+          ) ||
+          error.message.includes(
+            "intended for"
           )
         ) {
           return {
