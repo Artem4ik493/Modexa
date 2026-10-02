@@ -45,7 +45,22 @@ describe("built-in commands", () => {
         displayName: "Test User"
       },
       args: [],
-      rawText: "/ping"
+      rawText: "/ping",
+      execution: {
+        type: "dm",
+        platform: "telegram",
+        correlationId: "test",
+        user: {
+          id: "user-1",
+          displayName: "Test User"
+        },
+        capabilities: [
+          "commands",
+          "account.manage",
+          "identity.link",
+          "billing"
+        ]
+      }
     });
 
     expect(result).toEqual({
@@ -116,7 +131,22 @@ describe("built-in commands", () => {
         displayName: "Test User"
       },
       args: [],
-      rawText: "/help"
+      rawText: "/help",
+      execution: {
+        type: "dm",
+        platform: "telegram",
+        correlationId: "test",
+        user: {
+          id: "user-1",
+          displayName: "Test User"
+        },
+        capabilities: [
+          "commands",
+          "account.manage",
+          "identity.link",
+          "billing"
+        ]
+      }
     });
 
     const content = result?.content ?? "";
