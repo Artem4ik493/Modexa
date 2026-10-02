@@ -63,8 +63,10 @@ export class IdentityLinkingService {
       existingUser &&
       existingUser.id !== session.userId
     ) {
-      throw new Error(
-        `Target identity "${session.targetPlatform}:${input.targetExternalId}" is already attached to another user`
+      this.identityService.mergeUsers(
+        session.userId,
+        existingUser.id,
+        now
       );
     }
 
