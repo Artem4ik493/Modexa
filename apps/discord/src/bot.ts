@@ -162,6 +162,11 @@ export function createDiscordAdapter(
     );
   }
 
+  dispatcher.registerCallback(
+    "menu.close",
+    () => ({ close: true })
+  );
+
   const adapter =
     new DiscordAdapter(
       client,
