@@ -2,6 +2,7 @@ import {
   AdapterRegistry,
   CoreLogger,
   createRuntimeServices,
+  ModexaDatabase,
   InteractionActionStore,
   type PlatformAdapter
 } from "@modexa/core";
@@ -57,6 +58,12 @@ logger.addHandler(
     }
   }
 );
+
+const database = new ModexaDatabase({
+  path:
+    process.env.MODEXA_DATABASE_PATH ??
+    "data/modexa.sqlite"
+});
 
 // One set of services for all adapters: Telegram and Discord
 // must see the same users, communities, memberships and permissions.
@@ -314,6 +321,7 @@ async function shutdown(): Promise<void> {
   );
 
   consoleInterface.close();
+  database.close();
 
   process.exit(0);
 }
