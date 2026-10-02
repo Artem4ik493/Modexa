@@ -329,7 +329,10 @@ export class DiscordAdapter
       return;
     }
 
-    for (const guild of this.client.guilds.cache.values()) {
+    const guilds =
+      await this.client.guilds.fetch();
+
+    for (const guild of guilds.values()) {
       let channels;
 
       try {
@@ -694,6 +697,20 @@ export class DiscordAdapter
         community: place.community,
 
         channel: place.channel,
+
+        replyTo:
+          message.mentions.repliedUser
+            ? {
+                platform: "discord",
+                externalId:
+                  message.mentions.repliedUser.id,
+                username:
+                  message.mentions.repliedUser.username,
+                displayName:
+                  message.mentions.repliedUser.globalName ??
+                  message.mentions.repliedUser.username
+              }
+            : undefined,
 
         content: message.content,
 
