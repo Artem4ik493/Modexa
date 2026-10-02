@@ -105,7 +105,7 @@ describe("built-in menu commands", () => {
     );
 
     const backToken =
-      result.response.buttons?.[0].token;
+      result.response.buttons?.[1].token;
 
     expect(backToken).toBeDefined();
 
