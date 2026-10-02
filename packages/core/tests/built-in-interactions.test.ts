@@ -176,7 +176,7 @@ describe("built-in menu commands", () => {
 
     expect(
       result.response.content
-    ).toContain("личном чате");
+    ).toContain("Команда не найдена");
 
     expect(
       result.response.content
