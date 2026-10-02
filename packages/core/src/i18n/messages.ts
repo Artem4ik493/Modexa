@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 
 import { resolve } from "node:path";
 
+import { fileURLToPath } from "node:url";
+
 import type { Locale } from "./locale.js";
 
 const MESSAGE_KEYS = [
@@ -109,10 +111,18 @@ const LOCALE_FILES: Record<
   en: "en-US.yaml"
 };
 
+const DEFAULT_LOCALIZATION_DIRECTORY =
+  fileURLToPath(
+    new URL(
+      "../../../../localization/language",
+      import.meta.url
+    )
+  );
+
 function localizationDirectory(): string {
   return resolve(
     process.env.MODEXA_LOCALIZATION_DIR ??
-      "localization/language"
+      DEFAULT_LOCALIZATION_DIRECTORY
   );
 }
 
