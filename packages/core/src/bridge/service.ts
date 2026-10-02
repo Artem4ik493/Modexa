@@ -534,8 +534,13 @@ export class BridgeService {
       channelExternalId:
         target.channelExternalId,
       response: {
-        content:
-          `Запрос на привязку\n\n${source.platform === "telegram" ? "Telegram" : "Discord"}: ${source.communityName} / ${source.channelName}\n\nПодтвердите создание связи с этим чатом.`,
+        content: translate(
+          "bridge.test.confirmation",
+          {
+            source: `${source.platform === "telegram" ? "Telegram" : "Discord"}: ${source.communityName} / ${source.channelName}`
+          },
+          locale
+        ),
         buttons: [
           {
             id: "bridge-confirm",
@@ -572,8 +577,14 @@ export class BridgeService {
     }
 
     const message = {
-      content:
-        `Bridge подключён!\n\n${source.platform === "telegram" ? "Telegram" : "Discord"}: ${source.communityName} / ${source.channelName}\n${target.platform === "telegram" ? "Telegram" : "Discord"}: ${target.communityName} / ${target.channelName}\n\nСвязка работает.`,
+      content: translate(
+        "bridge.test.success",
+        {
+          source: `${source.platform === "telegram" ? "Telegram" : "Discord"}: ${source.communityName} / ${source.channelName}`,
+          target: `${target.platform === "telegram" ? "Telegram" : "Discord"}: ${target.communityName} / ${target.channelName}`
+        },
+        locale
+      ),
       buttons: []
     };
 
