@@ -152,6 +152,40 @@ export class ModexaDatabase {
     );
   }
 
+  getIdentityByExternalId(
+    platform: "telegram" | "discord",
+    externalId: string
+  ): PersistedIdentity | undefined {
+    const row = this.database.prepare(
+      `SELECT id, user_id, platform, external_id, username, display_name, created_at, updated_at
+       FROM identities
+       WHERE platform = ? AND external_id = ?
+       LIMIT 1`
+    ).get(platform, externalId) as {
+      id: string;
+      user_id: string;
+      platform: "telegram" | "discord";
+      external_id: string;
+      username: string | null;
+      display_name: string | null;
+      created_at: string;
+      updated_at: string;
+    } | undefined;
+
+    if (!row) return undefined;
+
+    return {
+      id: row.id,
+      userId: row.user_id,
+      platform: row.platform,
+      externalId: row.external_id,
+      username: row.username ?? undefined,
+      displayName: row.display_name ?? undefined,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
+    };
+  }
+
   findUserByIdentity(
     platform: "telegram" | "discord",
     externalId: string
