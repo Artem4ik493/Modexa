@@ -92,7 +92,17 @@ function handleAccount(
         )
       })
     ].join("\n"),
-    buttons: [createBackButton(t)]
+    buttons: [
+      {
+        id: "account-link",
+        label: t("account.link"),
+        action: {
+          type: "command",
+          command: "/link"
+        }
+      },
+      createBackButton(t)
+    ]
   };
 }
 
