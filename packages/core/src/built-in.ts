@@ -131,6 +131,8 @@ function handleSettings(
   }
 
   const mode = context.args[0]?.toLowerCase();
+  let currentMode =
+    community.mode ?? "public";
 
   if (mode === "public" || mode === "private") {
     if (
@@ -144,10 +146,14 @@ function handleSettings(
       };
     }
 
-    communityService.setMode(
-      community.id,
-      mode
-    );
+    const updated =
+      communityService.setMode(
+        community.id,
+        mode
+      );
+
+    currentMode =
+      updated.mode ?? mode;
   }
 
   const canManage =
