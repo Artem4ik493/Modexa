@@ -7,6 +7,9 @@ import {
   InteractionActionStore,
   InteractionDispatcher,
   createBuiltinCommands,
+  createBridgeTestCommand,
+  createBridgeTestInteractionHandler,
+  BridgeService,
   type PlatformIdentityResolver
 } from "@modexa/core";
 
@@ -36,6 +39,12 @@ export interface CreateTelegramAdapterOptions {
    */
   executionContextService?:
     ExecutionContextService;
+
+  interactionStore?:
+    InteractionActionStore;
+
+  bridgeService?:
+    BridgeService;
 }
 
 export function createTelegramAdapter(
@@ -54,6 +63,14 @@ export function createTelegramAdapter(
     registry
   );
 
+  if (options.bridgeService) {
+    registry.register(
+      createBridgeTestCommand(
+        options.bridgeService
+      )
+    );
+  }
+
   const commandService =
     new CommandService(
       new CommandParser(),
@@ -62,6 +79,7 @@ export function createTelegramAdapter(
     );
 
   const store =
+    options.interactionStore ??
     new InteractionActionStore();
 
   const dispatcher =
@@ -70,6 +88,15 @@ export function createTelegramAdapter(
       commandService,
       logger
     );
+
+  if (options.bridgeService) {
+    dispatcher.registerCallback(
+      "bridge.test.",
+      createBridgeTestInteractionHandler(
+        options.bridgeService
+      )
+    );
+  }
 
   const adapter =
     new TelegramAdapter(
@@ -88,7 +115,9 @@ export function createTelegramAdapter(
         options.executionContextService ??
         new ExecutionContextService(),
       identityResolver:
-        options.identityResolver
+        options.identityResolver,
+      bridgeService:
+        options.bridgeService
     })
   );
 
