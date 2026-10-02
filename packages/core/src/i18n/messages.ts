@@ -31,6 +31,8 @@ export const ruMessages = {
     "Настройки",
   "menu.back":
     "Назад",
+  "menu.close":
+    "Закрыть",
 
   "command.account.description":
     "Показать ваш аккаунт Modexa",
@@ -214,6 +216,8 @@ export const enMessages: MessageCatalog = {
     "Settings",
   "menu.back":
     "Back",
+  "menu.close":
+    "Close",
 
   "command.account.description":
     "Show your Modexa account",
