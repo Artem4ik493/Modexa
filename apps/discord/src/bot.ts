@@ -11,7 +11,8 @@ import {
   createBridgeTestInteractionHandler,
   BridgeService,
   listCommandDescriptors,
-  type PlatformIdentityResolver
+  type PlatformIdentityResolver,
+  type CommunityService
 } from "@modexa/core";
 
 import {
@@ -59,6 +60,9 @@ export interface CreateDiscordAdapterOptions {
 
   bridgeService?:
     BridgeService;
+
+  communityService?:
+    CommunityService;
 }
 
 export function createDiscordAdapter(
@@ -84,7 +88,8 @@ export function createDiscordAdapter(
     new CommandRegistry();
 
   createBuiltinCommands(
-    registry
+    registry,
+    options.communityService
   );
 
   if (options.bridgeService) {
