@@ -48,6 +48,47 @@ export const ruMessages = {
   "context.community":
     "сообщество",
 
+  "command.bridge_test.description":
+    "Тестово связать чат Telegram и Discord",
+  "bridge.test.title":
+    "Выберите чат для связи",
+  "bridge.test.source":
+    "Источник: {platform} — {community} / {channel}",
+  "bridge.test.page":
+    "Страница: {page}/{total}",
+  "bridge.test.community_only":
+    "Эту команду можно использовать только в чате сообщества.",
+  "bridge.test.forbidden":
+    "Для создания Bridge-связки нужны права управления сообществом.",
+  "bridge.test.source_unknown":
+    "Текущий чат ещё не зарегистрирован в Modexa. Отправьте сообщение боту и повторите команду.",
+  "bridge.test.no_targets":
+    "Нет доступных чатов другой платформы для связи.",
+  "bridge.test.previous":
+    "← Назад",
+  "bridge.test.next":
+    "Далее →",
+  "bridge.test.page_unavailable":
+    "Страница больше недоступна.",
+  "bridge.test.endpoint_unavailable":
+    "Чат для привязки больше недоступен.",
+  "bridge.test.request_sent":
+    "Запрос отправлен в {target}. Ожидаем подтверждение.",
+  "bridge.test.confirmation":
+    "Запрос на привязку\n\nИсточник: {source}\n\nПодтвердите создание связи с этим чатом.",
+  "bridge.test.confirm":
+    "Подтвердить",
+  "bridge.test.reject":
+    "Отклонить",
+  "bridge.test.success":
+    "Bridge подключён!\n\n{source}\n{target}\n\nСвязка работает.",
+  "bridge.test.confirmed":
+    "Связка подтверждена. Bridge работает.",
+  "bridge.test.rejected":
+    "Запрос на привязку отклонён.",
+  "bridge.test.unknown_action":
+    "Неизвестное действие Bridge.",
+
   "command.settings.description":
     "Показать настройки",
   "settings.community_unavailable":
