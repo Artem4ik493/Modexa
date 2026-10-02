@@ -24,8 +24,10 @@ import {
 } from "../contexts/service.js";
 
 import {
+  IdentityLinkService,
+  IdentityLinkingService,
   IdentityService
-} from "../identity/service.js";
+} from "../identity/index.js";
 
 import {
   MembershipService
@@ -47,6 +49,12 @@ export interface RuntimeServices
   communityAccessService:
     CommunityAccessService;
 
+  identityLinkService:
+    IdentityLinkService;
+
+  identityLinkingService:
+    IdentityLinkingService;
+
   bridgeService:
     BridgeService;
 }
@@ -56,6 +64,15 @@ export function createRuntimeServices(
 ): RuntimeServices {
   const identityService =
     new IdentityService();
+
+  const identityLinkService =
+    new IdentityLinkService();
+
+  const identityLinkingService =
+    new IdentityLinkingService(
+      identityService,
+      identityLinkService
+    );
 
   const communityService =
     new CommunityService();
@@ -99,6 +116,8 @@ export function createRuntimeServices(
 
   return {
     identityService,
+    identityLinkService,
+    identityLinkingService,
     communityService,
     channelService,
     membershipService,
