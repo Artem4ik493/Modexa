@@ -4,6 +4,10 @@ import {
 } from "../access/index.js";
 
 import {
+  BridgeService
+} from "../bridge/service.js";
+
+import {
   ChannelService
 } from "../channels/service.js";
 
@@ -42,6 +46,9 @@ export interface RuntimeServices
 
   communityAccessService:
     CommunityAccessService;
+
+  bridgeService:
+    BridgeService;
 }
 
 export function createRuntimeServices(
@@ -73,7 +80,10 @@ export function createRuntimeServices(
       communityAccessService
     );
 
-  const bridgeService =\n    new BridgeService();\n\n  const identityResolver =
+  const bridgeService =
+    new BridgeService();
+
+  const identityResolver =
     new PlatformIdentityResolver(
       {
         identityService,
@@ -92,6 +102,7 @@ export function createRuntimeServices(
     membershipService,
     accessControlService,
     communityAccessService,
+    bridgeService,
     identityResolver,
     executionContextService
   };
