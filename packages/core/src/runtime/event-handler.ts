@@ -20,6 +20,10 @@ import type {
 } from "../contexts/service.js";
 
 import type {
+  ExecutionContext
+} from "../contexts/types.js";
+
+import type {
   Logger
 } from "../diagnostics/types.js";
 
@@ -46,6 +50,10 @@ import type {
 import {
   createPlatformExecutionContext
 } from "./context.js";
+
+import type {
+  PlatformIdentityResolver
+} from "./identity.js";
 
 /**
  * Platforms can not send or edit a message to empty text.
@@ -86,6 +94,13 @@ export interface PlatformEventHandlerDeps {
   store: InteractionActionStore;
 
   executionContextService: ExecutionContextService;
+
+  /**
+   * Maps platform users, communities and channels to real
+   * Modexa entities. When omitted, synthetic ids
+   * ("<platform>:<externalId>") are used.
+   */
+  identityResolver?: PlatformIdentityResolver;
 
   /**
    * Platform-specific rendering of a bound response
@@ -142,6 +157,42 @@ export function createPlatformEventHandler(
       );
     }
   };
+}
+
+interface BuildContextInput {
+  correlationId: string;
+
+  author: PlatformUser;
+
+  community?: PlatformCommunity;
+
+  channel?: PlatformChannel;
+}
+
+function buildExecutionContext(
+  deps: PlatformEventHandlerDeps,
+  input: BuildContextInput
+): ExecutionContext {
+  const resolved =
+    deps.identityResolver?.resolve({
+      platform: deps.platform,
+      correlationId: input.correlationId,
+      author: input.author,
+      community: input.community,
+      channel: input.channel
+    });
+
+  return createPlatformExecutionContext(
+    deps.executionContextService,
+    {
+      platform: deps.platform,
+      correlationId: input.correlationId,
+      author: input.author,
+      community: input.community,
+      channel: input.channel,
+      resolved
+    }
+  );
 }
 
 async function handleMessage(
@@ -253,23 +304,18 @@ async function runCommand(
     responder,
     logger,
     commandService,
-    store,
-    executionContextService
+    store
   } = deps;
 
   const { correlationId } = input;
 
   const executionContext =
-    createPlatformExecutionContext(
-      executionContextService,
-      {
-        platform,
-        correlationId,
-        author: input.author,
-        community: input.community,
-        channel: input.channel
-      }
-    );
+    buildExecutionContext(deps, {
+      correlationId,
+      author: input.author,
+      community: input.community,
+      channel: input.channel
+    });
 
   logger.debug(
     "execution.context.created",
@@ -356,8 +402,7 @@ async function handleInteraction(
     platform,
     responder,
     logger,
-    dispatcher,
-    executionContextService
+    dispatcher
   } = deps;
 
   const correlationId =
@@ -378,16 +423,12 @@ async function handleInteraction(
   }
 
   const executionContext =
-    createPlatformExecutionContext(
-      executionContextService,
-      {
-        platform,
-        correlationId,
-        author: interaction.user,
-        community: interaction.community,
-        channel: interaction.channel
-      }
-    );
+    buildExecutionContext(deps, {
+      correlationId,
+      author: interaction.user,
+      community: interaction.community,
+      channel: interaction.channel
+    });
 
   const result =
     await dispatcher.dispatch({

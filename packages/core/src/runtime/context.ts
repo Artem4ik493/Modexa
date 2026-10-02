@@ -24,7 +24,11 @@ import type {
   Platform
 } from "../types.js";
 
-const DEFAULT_CHANNEL_TYPES: Record<
+import type {
+  ResolvedPlatformEntities
+} from "./identity.js";
+
+export const DEFAULT_CHANNEL_TYPES: Record<
   Platform,
   ChannelType
 > = {
@@ -42,13 +46,20 @@ export interface PlatformContextInput {
   community?: PlatformCommunity;
 
   channel?: PlatformChannel;
+
+  /**
+   * Real Modexa entities resolved from the platform data.
+   * When omitted, synthetic ids are used:
+   * "<platform>:<externalId>".
+   */
+  resolved?: ResolvedPlatformEntities;
 }
 
 /**
  * Builds an execution context from platform data.
  *
- * Until real Modexa identities are wired in, ids are
- * synthetic: "<platform>:<externalId>".
+ * With `resolved`, the context carries real Modexa users,
+ * communities and channels. Without it, ids are synthetic.
  *
  * The locale comes from the author's platform locale code.
  * Missing or unsupported codes fall back to the default.
@@ -57,6 +68,26 @@ export function createPlatformExecutionContext(
   service: ExecutionContextService,
   input: PlatformContextInput
 ): ExecutionContext {
+  const locale = resolveLocale(
+    input.author.locale
+  );
+
+  if (input.resolved) {
+    return service.create({
+      platform: input.platform,
+
+      correlationId: input.correlationId,
+
+      user: input.resolved.user,
+
+      community: input.resolved.community,
+
+      channel: input.resolved.channel,
+
+      locale
+    });
+  }
+
   const prefix = `${input.platform}:`;
 
   const now = new Date();
@@ -117,8 +148,6 @@ export function createPlatformExecutionContext(
 
     channel,
 
-    locale: resolveLocale(
-      input.author.locale
-    )
+    locale
   });
 }

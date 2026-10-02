@@ -7,6 +7,16 @@ export type {
 } from "./context.js";
 
 export {
+  PlatformIdentityResolver
+} from "./identity.js";
+
+export type {
+  PlatformIdentityServices,
+  ResolvePlatformEntitiesInput,
+  ResolvedPlatformEntities
+} from "./identity.js";
+
+export {
   createPlatformEventHandler
 } from "./event-handler.js";
 
