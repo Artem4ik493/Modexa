@@ -73,7 +73,7 @@ export function createRuntimeServices(
       communityAccessService
     );
 
-  const identityResolver =
+  const bridgeService =\n    new BridgeService();\n\n  const identityResolver =
     new PlatformIdentityResolver(
       {
         identityService,
