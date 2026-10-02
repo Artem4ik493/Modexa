@@ -176,7 +176,7 @@ describe("built-in menu commands", () => {
 
     expect(
       result.response.content
-    ).toContain("Команда не найдена");
+    ).toContain("У вас нет прав для использования этой команды.");
 
     expect(
       result.response.content
