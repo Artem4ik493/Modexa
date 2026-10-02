@@ -6,6 +6,8 @@ import type {
 
 import type { CommandRegistry } from "./commands.js";
 
+import type { CommunityService } from "./communities/service.js";
+
 import type {
   InteractionButton
 } from "./interactions/types.js";
@@ -95,29 +97,85 @@ function handleAccount(
 }
 
 function handleSettings(
-  context: CommandContext
+  context: CommandContext,
+  communityService?: CommunityService
 ): CommandResponse {
   const t = createTranslator(
     context.execution.locale
   );
 
-  if (context.execution.type !== "dm") {
+  if (context.execution.type === "dm") {
     return {
-      content: t(
-        "settings.community_unavailable"
-      ),
+      content: t("settings.dm"),
       buttons: [createBackButton(t)]
     };
   }
 
+  const community = context.execution.community;
+
+  if (!community || !communityService) {
+    return {
+      content: t("settings.community_unavailable"),
+      buttons: [createBackButton(t)]
+    };
+  }
+
+  const mode = context.args[0]?.toLowerCase();
+
+  if (mode === "public" || mode === "private") {
+    if (
+      !context.execution.capabilities.includes(
+        "community.manage"
+      )
+    ) {
+      return {
+        content: t("settings.forbidden"),
+        buttons: [createBackButton(t)]
+      };
+    }
+
+    communityService.setMode(
+      community.id,
+      mode
+    );
+  }
+
   return {
-    content: t("settings.dm"),
-    buttons: [createBackButton(t)]
+    content: [
+      t("settings.community"),
+      t(
+        community.mode === "private"
+          ? "settings.mode.private"
+          : "settings.mode.public"
+      )
+    ].join("\n"),
+    buttons: [
+      {
+        id: "settings-public",
+        label: t("settings.mode.public_button"),
+        action: {
+          type: "command",
+          command: "/settings",
+          args: ["public"]
+        }
+      },
+      {
+        id: "settings-private",
+        label: t("settings.mode.private_button"),
+        action: {
+          type: "command",
+          command: "/settings",
+          args: ["private"]
+        }
+      },
+      createBackButton(t)
+    ]
   };
 }
 
 export function createBuiltinCommands(
-  registry: CommandRegistry
+  registry: CommandRegistry,
+  communityService?: CommunityService
 ): void {
   const commands: CommandDefinition[] = [
     {
@@ -151,7 +209,11 @@ export function createBuiltinCommands(
       name: "settings",
       descriptionKey:
         "command.settings.description",
-      handler: handleSettings
+      handler: (context) =>
+        handleSettings(
+          context,
+          communityService
+        )
     },
     {
       name: "help",
