@@ -8,7 +8,8 @@ import {
   type PlatformChannel,
   type PlatformCommunity,
   type PlatformUser,
-  type PlatformUserRole
+  type PlatformUserRole,
+  type BridgeService
 } from "@modexa/core";
 
 import {
@@ -47,6 +48,8 @@ export interface DiscordAdapterOptions {
   guildId?: string;
 
   logger?: Logger;
+
+  bridgeService?: BridgeService;
 }
 
 export class DiscordAdapter
@@ -99,6 +102,8 @@ export class DiscordAdapter
     this.started = true;
 
     await this.client.login(this.token);
+
+    this.registerKnownBridgeEndpoints();
 
     await this.registerSlashCommands();
   }
