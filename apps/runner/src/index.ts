@@ -18,6 +18,14 @@ import {
   createTelegramAdapter
 } from "../../telegram/src/bot.js";
 
+import {
+  renderTelegramInteraction
+} from "../../telegram/src/interactions.js";
+
+import {
+  renderDiscordInteraction
+} from "../../discord/src/interactions.js";
+
 const logger =
   new CoreLogger("debug");
 
@@ -58,6 +66,9 @@ const services =
 const adapters: PlatformAdapter[] =
   [];
 
+const interactionStore =
+  new InteractionActionStore();
+
 const telegramToken =
   process.env.TELEGRAM_BOT_TOKEN;
 
@@ -71,7 +82,12 @@ if (telegramToken) {
           services.identityResolver,
 
         executionContextService:
-          services.executionContextService
+          services.executionContextService,
+
+        interactionStore,
+
+        bridgeService:
+          services.bridgeService
       }
     )
   );
@@ -119,6 +135,64 @@ if (adapters.length === 0) {
     "No adapters to run: set TELEGRAM_BOT_TOKEN and/or DISCORD_BOT_TOKEN in .env"
   );
 }
+
+services.bridgeService.setMessageGateway({
+  async sendMessage({
+    platform,
+    channelExternalId,
+    response
+  }) {
+    const adapter =
+      adapters.find(
+        (item) =>
+          item.platform === platform
+      );
+
+    if (!adapter) {
+      throw new Error(
+        `No ${platform} adapter is available for Bridge messaging`
+      );
+    }
+
+    const bound =
+      interactionStore.bindResponse(
+        response,
+        { platform }
+      );
+
+    const metadata =
+      platform === "telegram"
+        ? (() => {
+            const replyMarkup =
+              renderTelegramInteraction(
+                bound
+              );
+
+            return replyMarkup
+              ? { telegram: { replyMarkup } }
+              : undefined;
+          })()
+        : (() => {
+            const components =
+              renderDiscordInteraction(
+                bound
+              );
+
+            return components
+              ? { discord: { components } }
+              : undefined;
+          })();
+
+    await adapter.sendAction({
+      type: "message.send",
+      platform,
+      channelExternalId,
+      content:
+        bound.content ?? "…",
+      metadata
+    });
+  }
+});
 
 const registry =
   new AdapterRegistry();
