@@ -150,6 +150,59 @@ describe("CommandService", () => {
     });
   });
 
+  it("denies a command when a required capability is missing", async () => {
+    const registry =
+      new CommandRegistry();
+
+    registry.register({
+      name: "admin-only",
+      requiredCapabilities: [
+        "community.manage"
+      ],
+      handler: () => ({
+        content: "secret"
+      })
+    });
+
+    const service =
+      createService(registry);
+
+    const execution: ExecutionContext = {
+      ...createExecutionContext(),
+      type: "community",
+      community: {
+        id: "community-1",
+        name: "Test",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      capabilities: [
+        "commands",
+        "community.view"
+      ]
+    };
+
+    const result =
+      await service.handle(
+        "/admin-only",
+        {
+          platform: execution.platform,
+          user: execution.user,
+          community: execution.community,
+          channel: execution.channel
+        },
+        execution
+      );
+
+    expect(result).toEqual({
+      handled: true,
+      response: {
+        content:
+          "У вас нет прав для использования этой команды."
+      }
+    });
+  });
+
   it("passes parsed arguments to the handler", async () => {
     const registry =
       new CommandRegistry();
