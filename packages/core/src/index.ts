@@ -20,6 +20,8 @@ export * from "./access/index.js";
 
 export * from "./billing/index.js";
 
+export * from "./bridge/index.js";
+
 export * from "./channels/index.js";
 
 export * from "./adapters/index.js";
