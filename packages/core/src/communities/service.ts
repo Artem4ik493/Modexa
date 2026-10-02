@@ -67,7 +67,7 @@ export class CommunityService {
 
   setMode(
     communityId: CommunityId,
-    mode: Community["mode"],
+    mode: NonNullable<Community["mode"]>,
     now = new Date()
   ): Community {
     const community = this.communities.get(
