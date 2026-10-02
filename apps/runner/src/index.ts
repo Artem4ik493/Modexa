@@ -90,7 +90,13 @@ if (telegramToken) {
           services.bridgeService,
 
         communityService:
-          services.communityService
+          services.communityService,
+
+        identityService:
+          services.identityService,
+
+        identityService:
+          services.identityService
       }
     )
   );
