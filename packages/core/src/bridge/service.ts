@@ -29,6 +29,8 @@ export interface BridgeMessageGateway {
   }): Promise<void>;
 }
 
+const BRIDGE_RELAY_MARKER = "\u2063MODExaBridge\u2063";
+
 export interface CreateBridgeLinkRequestInput {
   sourceEndpointId: BridgeEndpointId;
   targetEndpointId: BridgeEndpointId;
@@ -229,6 +231,26 @@ export class BridgeService {
       );
   }
 
+  isRelayedMessage(
+    content: string
+  ): boolean {
+    return content.startsWith(
+      BRIDGE_RELAY_MARKER
+    );
+  }
+
+  stripRelayMarker(
+    content: string
+  ): string {
+    return content.startsWith(
+      BRIDGE_RELAY_MARKER
+    )
+      ? content.slice(
+          BRIDGE_RELAY_MARKER.length
+        )
+      : content;
+  }
+
   async relayMessage(
     source: BridgeEndpoint,
     author: PlatformUser,
@@ -266,6 +288,7 @@ export class BridgeService {
 
     const response: InteractionResponse = {
       content:
+        BRIDGE_RELAY_MARKER +
         prefix +
         " " +
         name +
