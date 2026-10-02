@@ -389,7 +389,7 @@ describe("InteractionDispatcher", () => {
     );
   });
 
-  it("returns unhandled when the command does not exist", async () => {
+  it("returns handled with a not-found response when the command does not exist", async () => {
     const { store, dispatcher } =
       createDispatcher();
 
@@ -407,9 +407,13 @@ describe("InteractionDispatcher", () => {
         execution: createExecution()
       });
 
-    expect(result.status).toBe(
-      "unhandled"
-    );
+    expect(result).toMatchObject({
+      status: "handled",
+      response: {
+        content:
+          "Команда не найдена. Для просмотра доступных команд для вашей роли user используйте /help."
+      }
+    });
   });
 
   it("returns failed and logs the error when a handler throws", async () => {
