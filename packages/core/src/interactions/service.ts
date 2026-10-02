@@ -42,7 +42,8 @@ export class InteractionService {
       (!response.buttons ||
         response.buttons.length === 0) &&
       (!response.menus ||
-        response.menus.length === 0)
+        response.menus.length === 0) &&
+      !response.close
     ) {
       throw new Error(
         "Interaction response must contain content, buttons, or menus"
