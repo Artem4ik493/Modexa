@@ -13,7 +13,7 @@ import {
   listCommandDescriptors,
   type PlatformIdentityResolver,
   type CommunityService,
-  type IdentityService
+  IdentityService
 } from "@modexa/core";
 
 import {
