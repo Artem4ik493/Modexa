@@ -2,6 +2,8 @@ import type {
   ExecutionContext
 } from "../contexts/types.js";
 import type { IdentityPlatform } from "../identity/types.js";
+import type { Locale } from "../i18n/locale.js";
+import { translate } from "../i18n/translate.js";
 import type {
   InteractionResponse
 } from "../interactions/types.js";
@@ -459,6 +461,28 @@ export class BridgeService {
     return request;
   }
 
+  cancelRequest(
+    requestId: string,
+    now = new Date()
+  ): BridgeLinkRequest {
+    const request = this.getRequest(requestId, now);
+
+    if (!request) {
+      throw new Error("Bridge link request not found");
+    }
+
+    if (request.status !== "pending") {
+      throw new Error(
+        `Bridge link request cannot be cancelled because its status is "${request.status}"`
+      );
+    }
+
+    request.status = "cancelled";
+    request.updatedAt = now;
+
+    return request;
+  }
+
   isLinked(
     firstEndpointId: BridgeEndpointId,
     secondEndpointId: BridgeEndpointId
@@ -479,7 +503,8 @@ export class BridgeService {
   }
 
   async sendConfirmation(
-    request: BridgeLinkRequest
+    request: BridgeLinkRequest,
+    locale: Locale = "ru"
   ): Promise<void> {
     if (!this.gateway) {
       throw new Error(
@@ -537,7 +562,8 @@ export class BridgeService {
 
   async sendLinkSuccess(
     source: BridgeEndpoint,
-    target: BridgeEndpoint
+    target: BridgeEndpoint,
+    locale: Locale = "ru"
   ): Promise<void> {
     if (!this.gateway) {
       throw new Error(
