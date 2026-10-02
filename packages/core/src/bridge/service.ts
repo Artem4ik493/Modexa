@@ -162,7 +162,22 @@ export class BridgeService {
       }
     }
 
-    return undefined;
+    const externalCommunityId =
+      execution.community.id;
+    const externalChannelId =
+      execution.channel.id;
+
+    return [...this.endpoints.values()].find(
+      (endpoint) =>
+        endpoint.platform ===
+          execution.platform &&
+        (
+          endpoint.communityExternalId ===
+            externalCommunityId ||
+          endpoint.channelExternalId ===
+            externalChannelId
+        )
+    );
   }
 
   getRequest(
