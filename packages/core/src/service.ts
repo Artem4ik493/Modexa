@@ -145,7 +145,7 @@ export class CommandService {
         handled: true,
         response: {
           content: translate(
-            "command.forbidden",
+            "command.permission_denied",
             undefined,
             execution.locale
           )
