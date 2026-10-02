@@ -136,7 +136,7 @@ describe("AccessControlService", () => {
         "community-1"
       );
 
-    expect(roles).toHaveLength(3);
+    expect(roles).toHaveLength(4);
 
     expect(
       roles.map((role) => role.name)
