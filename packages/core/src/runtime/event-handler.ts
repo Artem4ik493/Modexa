@@ -567,6 +567,34 @@ async function handleInteraction(
     return;
   }
 
+  if (
+    result.response.close &&
+    interaction.messageExternalId
+  ) {
+    await responder.sendAction({
+      type: "message.delete",
+      platform,
+      channelExternalId:
+        destination,
+      messageExternalId:
+        interaction.messageExternalId
+    });
+
+    logger.info(
+      "interaction.response.closed",
+      {
+        correlationId,
+        platform,
+        adapterId:
+          responder.id,
+        contextType:
+          executionContext.type
+      }
+    );
+
+    return;
+  }
+
   const metadata =
     deps.renderMetadata(
       result.response
