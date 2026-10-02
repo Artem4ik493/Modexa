@@ -52,6 +52,9 @@ export function createIdentityLinkCommand(
     ],
     descriptionKey:
       "command.link.description",
+    requiredCapabilities: [
+      "identity.link"
+    ],
     handler: (context) =>
       handleLink(
         context,
