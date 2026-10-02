@@ -153,7 +153,7 @@ describe("IdentityLinkingService", () => {
     ).toEqual(["telegram", "discord"]);
   });
 
-  it("does not link an identity already owned by another user", () => {
+  it("merges users when the target identity belongs to another user", () => {
     const {
       identityService,
       linkService,
@@ -164,20 +164,27 @@ describe("IdentityLinkingService", () => {
       "2026-01-01T12:00:00.000Z"
     );
 
-    const firstUser =
+    const sourceUser =
       identityService.createUser({
-        displayName: "First User",
+        displayName: "Telegram User",
         now
       });
 
-    const secondUser =
+    const targetUser =
       identityService.createUser({
-        displayName: "Second User",
+        displayName: "Discord User",
         now
       });
 
     identityService.attachIdentity({
-      userId: firstUser.id,
+      userId: sourceUser.id,
+      platform: "telegram",
+      externalId: "123456789",
+      now
+    });
+
+    identityService.attachIdentity({
+      userId: targetUser.id,
       platform: "discord",
       externalId: "987654321",
       now
@@ -185,7 +192,7 @@ describe("IdentityLinkingService", () => {
 
     const session =
       linkService.createLinkSession({
-        userId: secondUser.id,
+        userId: sourceUser.id,
         sourcePlatform: "telegram",
         targetPlatform: "discord",
         expiresAt: new Date(
@@ -194,22 +201,46 @@ describe("IdentityLinkingService", () => {
         now
       });
 
-    expect(() => {
+    const result =
       linkingService.completeLink({
         code: session.code,
         targetExternalId: "987654321",
         now
       });
-    }).toThrow(
-      'Target identity "discord:987654321" is already attached to another user'
+
+    expect(result.session.status).toBe(
+      "completed"
     );
 
     expect(
-      linkService.getSession(
-        session.id,
-        now
-      )?.status
-    ).toBe("pending");
+      identityService.getUserIdentities(
+        sourceUser.id
+      )
+    ).toHaveLength(2);
+
+    expect(
+      identityService.getUserIdentities(
+        sourceUser.id
+      ).map(
+        (identity) => identity.platform
+      )
+    ).toEqual([
+      "telegram",
+      "discord"
+    ]);
+
+    expect(
+      identityService.getUser(
+        targetUser.id
+      )
+    ).toBeUndefined();
+
+    expect(
+      identityService.findUserByIdentity(
+        "discord",
+        "987654321"
+      )
+    ).toEqual(sourceUser);
   });
 
   it("allows linking an identity that already belongs to the same user", () => {
