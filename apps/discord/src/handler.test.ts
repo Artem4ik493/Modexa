@@ -227,7 +227,7 @@ describe("Discord event handler", () => {
 
     expect(
       customIdTokens(edit)
-    ).toHaveLength(2);
+    ).toHaveLength(3);
   });
 
   it("returns to the menu with the back button", async () => {
