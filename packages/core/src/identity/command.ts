@@ -78,7 +78,7 @@ function handleLink(
   ) {
     return {
       content: t(
-        "identity.link.dm_only"
+        "link.error.dm_only"
       )
     };
   }
@@ -105,7 +105,7 @@ function handleLink(
   ) {
     return {
       content: t(
-        "identity.link.already_linked",
+        "link.error.linked",
         {
           platform:
             platformLabel(target)
@@ -124,7 +124,7 @@ function handleLink(
   if (!currentIdentity) {
     return {
       content: t(
-        "identity.link.identity_unavailable"
+        "link.error.identity_unavailable"
       )
     };
   }
@@ -141,7 +141,7 @@ function handleLink(
     if (!session) {
       return {
         content: t(
-          "identity.link.invalid_code"
+          "link.error.invalid_code"
         )
       };
     }
@@ -152,7 +152,7 @@ function handleLink(
     ) {
       return {
         content: t(
-          "identity.link.wrong_platform",
+          "link.error.wrong_platform",
           {
             platform:
               platformLabel(
@@ -177,7 +177,7 @@ function handleLink(
 
       return {
         content: t(
-          "identity.link.completed",
+          "link.success.completed",
           {
             platform:
               platformLabel(
@@ -197,7 +197,7 @@ function handleLink(
         ) {
           return {
             content: t(
-              "identity.link.identity_in_use"
+              "link.error.identity_in_use"
             )
           };
         }
@@ -215,7 +215,7 @@ function handleLink(
         ) {
           return {
             content: t(
-              "identity.link.invalid_code"
+              "link.error.invalid_code"
             )
           };
         }
@@ -242,16 +242,16 @@ function handleLink(
 
   return {
     content: [
-      t("identity.link.created"),
-      t("identity.link.code", {
+      t("link.success.created"),
+      t("link.code", {
         code:
           session.code
       }),
-      t("identity.link.target", {
+      t("link.target", {
         platform:
           platformLabel(target)
       }),
-      t("identity.link.expires")
+      t("link.expires")
     ].join("\n")
   };
 }
