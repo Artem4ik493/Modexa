@@ -4,6 +4,8 @@ import type {
   CommandResponse
 } from "./types.js";
 
+import type { ExecutionCapability } from "./contexts/types.js";
+
 export class CommandRegistry {
   private readonly commands = new Map<string, CommandDefinition>();
 
@@ -36,5 +38,17 @@ export class CommandRegistry {
 
   list(): CommandDefinition[] {
     return [...new Set(this.commands.values())];
+  }
+
+  listAvailable(
+    capabilities: readonly ExecutionCapability[]
+  ): CommandDefinition[] {
+    const available = new Set(capabilities);
+
+    return this.list().filter((command) =>
+      (command.requiredCapabilities ?? []).every(
+        (capability) => available.has(capability)
+      )
+    );
   }
 }
