@@ -11,7 +11,8 @@ export type AdapterEventType =
   | "member.joined"
   | "member.left"
   | "member.banned"
-  | "interaction.created";
+  | "interaction.created"
+  | "command.invoked";
 
 export interface AdapterMessage {
   externalId: string;
@@ -99,6 +100,42 @@ export interface AdapterInteraction {
   >;
 }
 
+/**
+ * A command invoked through a platform-native mechanism
+ * (Discord slash command) instead of a text message.
+ */
+export interface AdapterCommandInvocation {
+  /**
+   * Id of the invocation. Responses can reference it with
+   * `replyToExternalId`.
+   */
+  externalId: string;
+
+  platform: PlatformUser["platform"];
+
+  user: PlatformUser;
+
+  community?: PlatformCommunity;
+
+  channel?: PlatformChannel;
+
+  destinationExternalId: string;
+
+  /**
+   * Command name without the leading slash.
+   */
+  name: string;
+
+  args: string[];
+
+  createdAt: Date;
+
+  metadata?: Record<
+    string,
+    unknown
+  >;
+}
+
 export interface AdapterMessageCreatedEvent {
   type: "message.created";
 
@@ -141,6 +178,12 @@ export interface AdapterInteractionCreatedEvent {
   interaction: AdapterInteraction;
 }
 
+export interface AdapterCommandInvokedEvent {
+  type: "command.invoked";
+
+  invocation: AdapterCommandInvocation;
+}
+
 export type AdapterEvent =
   | AdapterMessageCreatedEvent
   | AdapterMessageUpdatedEvent
@@ -148,4 +191,5 @@ export type AdapterEvent =
   | AdapterMemberJoinedEvent
   | AdapterMemberLeftEvent
   | AdapterMemberBannedEvent
-  | AdapterInteractionCreatedEvent;
+  | AdapterInteractionCreatedEvent
+  | AdapterCommandInvokedEvent;

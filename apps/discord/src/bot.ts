@@ -6,7 +6,8 @@ import {
   ExecutionContextService,
   InteractionActionStore,
   InteractionDispatcher,
-  createBuiltinCommands
+  createBuiltinCommands,
+  listCommandDescriptors
 } from "@modexa/core";
 
 import {
@@ -23,9 +24,23 @@ import {
   createDiscordEventHandler
 } from "./handler.js";
 
+import {
+  buildDiscordSlashCommands
+} from "./slash-commands.js";
+
+export interface CreateDiscordAdapterOptions {
+  /**
+   * Register slash commands on this server only.
+   * Defaults to the DISCORD_GUILD_ID environment variable.
+   * When neither is set, commands are registered globally.
+   */
+  guildId?: string;
+}
+
 export function createDiscordAdapter(
   token: string,
-  logger: CoreLogger
+  logger: CoreLogger,
+  options: CreateDiscordAdapterOptions = {}
 ): DiscordAdapter {
   const client =
     new Client({
@@ -66,7 +81,20 @@ export function createDiscordAdapter(
   const adapter =
     new DiscordAdapter(
       client,
-      token
+      token,
+      {
+        slashCommands:
+          buildDiscordSlashCommands(
+            listCommandDescriptors(
+              registry
+            )
+          ),
+        guildId:
+          options.guildId ??
+          process.env.DISCORD_GUILD_ID ??
+          undefined,
+        logger
+      }
     );
 
   adapter.onEvent(

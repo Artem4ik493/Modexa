@@ -5,6 +5,15 @@ export interface SendMessageAction {
   platform: Platform;
   channelExternalId: string;
   content: string;
+
+  /**
+   * External id of the interaction or command invocation
+   * this message answers. Adapters that must reply through
+   * the original interaction (Discord slash commands) use
+   * it. Other adapters ignore it.
+   */
+  replyToExternalId?: string;
+
   metadata?: Record<string, unknown>;
 }
 

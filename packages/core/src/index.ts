@@ -4,6 +4,8 @@ export * from "./parser.js";
 
 export * from "./commands.js";
 
+export * from "./command-descriptors.js";
+
 export * from "./service.js";
 
 export * from "./built-in.js";

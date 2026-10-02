@@ -3,10 +3,17 @@ import type {
 } from "../adapters/actions.js";
 
 import type {
+  AdapterCommandInvocation,
   AdapterEvent,
   AdapterInteraction,
   AdapterMessage
 } from "../adapters/events.js";
+
+import type {
+  PlatformChannel,
+  PlatformCommunity,
+  PlatformUser
+} from "../adapters/types.js";
 
 import type {
   ExecutionContextService
@@ -106,6 +113,13 @@ export function createPlatformEventHandler(
           );
           return;
 
+        case "command.invoked":
+          await handleCommandInvocation(
+            deps,
+            event.invocation
+          );
+          return;
+
         case "interaction.created":
           await handleInteraction(
             deps,
@@ -134,24 +148,15 @@ async function handleMessage(
   deps: PlatformEventHandlerDeps,
   message: AdapterMessage
 ): Promise<void> {
-  const {
-    platform,
-    responder,
-    logger,
-    commandService,
-    store,
-    executionContextService
-  } = deps;
-
   const correlationId =
-    `${platform}-${message.externalId}`;
+    `${deps.platform}-${message.externalId}`;
 
-  logger.debug(
+  deps.logger.debug(
     "adapter.event.received",
     {
       correlationId,
-      platform,
-      adapterId: responder.id,
+      platform: deps.platform,
+      adapterId: deps.responder.id,
       externalMessageId:
         message.externalId,
       userExternalId:
@@ -169,15 +174,100 @@ async function handleMessage(
     return;
   }
 
+  await runCommand(deps, {
+    correlationId,
+    rawText: message.content,
+    author: message.author,
+    community: message.community,
+    channel: message.channel,
+    destinationExternalId:
+      message.destinationExternalId
+  });
+}
+
+async function handleCommandInvocation(
+  deps: PlatformEventHandlerDeps,
+  invocation: AdapterCommandInvocation
+): Promise<void> {
+  const correlationId =
+    `${deps.platform}-command-${invocation.externalId}`;
+
+  deps.logger.debug(
+    "adapter.event.received",
+    {
+      correlationId,
+      platform: deps.platform,
+      adapterId: deps.responder.id,
+      externalCommandId:
+        invocation.externalId,
+      command: invocation.name,
+      userExternalId:
+        invocation.user.externalId,
+      communityExternalId:
+        invocation.community?.externalId,
+      channelExternalId:
+        invocation.channel?.externalId,
+      destinationExternalId:
+        invocation.destinationExternalId
+    }
+  );
+
+  await runCommand(deps, {
+    correlationId,
+    rawText: `/${[
+      invocation.name,
+      ...invocation.args
+    ].join(" ")}`,
+    author: invocation.user,
+    community: invocation.community,
+    channel: invocation.channel,
+    destinationExternalId:
+      invocation.destinationExternalId,
+    replyToExternalId:
+      invocation.externalId
+  });
+}
+
+interface RunCommandInput {
+  correlationId: string;
+
+  rawText: string;
+
+  author: PlatformUser;
+
+  community?: PlatformCommunity;
+
+  channel?: PlatformChannel;
+
+  destinationExternalId: string;
+
+  replyToExternalId?: string;
+}
+
+async function runCommand(
+  deps: PlatformEventHandlerDeps,
+  input: RunCommandInput
+): Promise<void> {
+  const {
+    platform,
+    responder,
+    logger,
+    commandService,
+    store,
+    executionContextService
+  } = deps;
+
+  const { correlationId } = input;
+
   const executionContext =
     createPlatformExecutionContext(
       executionContextService,
       {
         platform,
         correlationId,
-        author: message.author,
-        community: message.community,
-        channel: message.channel
+        author: input.author,
+        community: input.community,
+        channel: input.channel
       }
     );
 
@@ -191,13 +281,14 @@ async function handleMessage(
       communityId:
         executionContext.community?.id,
       channelId:
-        executionContext.channel?.id
+        executionContext.channel?.id,
+      locale: executionContext.locale
     }
   );
 
   const result =
     await commandService.handle(
-      message.content,
+      input.rawText,
       {
         platform:
           executionContext.platform,
@@ -232,10 +323,12 @@ async function handleMessage(
     type: "message.send",
     platform,
     channelExternalId:
-      message.destinationExternalId,
+      input.destinationExternalId,
     content:
       bound.content ??
       EMPTY_CONTENT_FALLBACK,
+    replyToExternalId:
+      input.replyToExternalId,
     metadata
   });
 
@@ -245,7 +338,7 @@ async function handleMessage(
       correlationId,
       platform,
       adapterId: responder.id,
-      command: message.content
+      command: input.rawText
         .trim()
         .split(/\s+/)[0],
       contextType: executionContext.type,

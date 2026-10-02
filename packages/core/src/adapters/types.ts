@@ -10,6 +10,13 @@ export interface PlatformUser {
   externalId: string;
   username?: string;
   displayName?: string;
+
+  /**
+   * Language code reported by the platform, for example
+   * "ru", "en-US" or "uk". Mapped to a supported Modexa
+   * locale with resolveLocale().
+   */
+  locale?: string;
 }
 
 export interface PlatformCommunity {

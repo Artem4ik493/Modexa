@@ -16,6 +16,10 @@ import type {
   ExecutionContext
 } from "../contexts/types.js";
 
+import {
+  resolveLocale
+} from "../i18n/locale.js";
+
 import type {
   Platform
 } from "../types.js";
@@ -45,6 +49,9 @@ export interface PlatformContextInput {
  *
  * Until real Modexa identities are wired in, ids are
  * synthetic: "<platform>:<externalId>".
+ *
+ * The locale comes from the author's platform locale code.
+ * Missing or unsupported codes fall back to the default.
  */
 export function createPlatformExecutionContext(
   service: ExecutionContextService,
@@ -108,6 +115,10 @@ export function createPlatformExecutionContext(
 
     community,
 
-    channel
+    channel,
+
+    locale: resolveLocale(
+      input.author.locale
+    )
   });
 }
