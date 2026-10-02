@@ -92,6 +92,9 @@ if (telegramToken) {
         communityService:
           services.communityService,
 
+        membershipService:
+          services.membershipService,
+
         identityService:
           services.identityService,
 
