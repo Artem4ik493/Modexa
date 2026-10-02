@@ -55,14 +55,9 @@ import type {
   PlatformIdentityResolver
 } from "./identity.js";
 
-/**
- * Platforms can not send or edit a message to empty text.
- */
-const EMPTY_CONTENT_FALLBACK = "…";
+const EMPTY_CONTENT_FALLBACK =
+  "…";
 
-/**
- * What the shared handler needs from an adapter.
- */
 export interface PlatformResponder {
   readonly id: string;
 
@@ -70,10 +65,6 @@ export interface PlatformResponder {
     action: AdapterAction
   ): Promise<void>;
 
-  /**
-   * Text shown to the user who pressed a button when
-   * the interaction could not be handled.
-   */
   answerInteraction(
     interactionExternalId: string,
     text: string
@@ -93,24 +84,17 @@ export interface PlatformEventHandlerDeps {
 
   store: InteractionActionStore;
 
-  executionContextService: ExecutionContextService;
+  executionContextService:
+    ExecutionContextService;
 
-  /**
-   * Maps platform users, communities and channels to real
-   * Modexa entities. When omitted, synthetic ids
-   * ("<platform>:<externalId>") are used.
-   */
-  identityResolver?: PlatformIdentityResolver;
+  identityResolver?:
+    PlatformIdentityResolver;
 
-  /**
-   * Platform-specific rendering of a bound response
-   * (Telegram reply markup, Discord components, ...).
-   * The result is passed as action metadata.
-   * Return undefined when there is nothing to render.
-   */
   renderMetadata(
     response: BoundInteractionResponse
-  ): Record<string, unknown> | undefined;
+  ):
+    | Record<string, unknown>
+    | undefined;
 }
 
 export function createPlatformEventHandler(
@@ -149,9 +133,12 @@ export function createPlatformEventHandler(
       deps.logger.error(
         `${deps.platform}.event.failed`,
         {
-          platform: deps.platform,
-          adapterId: deps.responder.id,
-          eventType: event.type
+          platform:
+            deps.platform,
+          adapterId:
+            deps.responder.id,
+          eventType:
+            event.type
         },
         error
       );
@@ -175,21 +162,31 @@ function buildExecutionContext(
 ): ExecutionContext {
   const resolved =
     deps.identityResolver?.resolve({
-      platform: deps.platform,
-      correlationId: input.correlationId,
-      author: input.author,
-      community: input.community,
-      channel: input.channel
+      platform:
+        deps.platform,
+      correlationId:
+        input.correlationId,
+      author:
+        input.author,
+      community:
+        input.community,
+      channel:
+        input.channel
     });
 
   return createPlatformExecutionContext(
     deps.executionContextService,
     {
-      platform: deps.platform,
-      correlationId: input.correlationId,
-      author: input.author,
-      community: input.community,
-      channel: input.channel,
+      platform:
+        deps.platform,
+      correlationId:
+        input.correlationId,
+      author:
+        input.author,
+      community:
+        input.community,
+      channel:
+        input.channel,
       resolved
     }
   );
@@ -206,8 +203,10 @@ async function handleMessage(
     "adapter.event.received",
     {
       correlationId,
-      platform: deps.platform,
-      adapterId: deps.responder.id,
+      platform:
+        deps.platform,
+      adapterId:
+        deps.responder.id,
       externalMessageId:
         message.externalId,
       userExternalId:
@@ -221,19 +220,39 @@ async function handleMessage(
     }
   );
 
-  if (!message.content.startsWith("/")) {
+  const executionContext =
+    buildExecutionContext(
+      deps,
+      {
+        correlationId,
+        author:
+          message.author,
+        community:
+          message.community,
+        channel:
+          message.channel
+      }
+    );
+
+  if (
+    !message.content.startsWith("/")
+  ) {
     return;
   }
 
-  await runCommand(deps, {
-    correlationId,
-    rawText: message.content,
-    author: message.author,
-    community: message.community,
-    channel: message.channel,
-    destinationExternalId:
-      message.destinationExternalId
-  });
+  await runCommand(
+    deps,
+    {
+      correlationId,
+      rawText:
+        message.content,
+      destinationExternalId:
+        message.destinationExternalId,
+      replyToExternalId:
+        undefined
+    },
+    executionContext
+  );
 }
 
 async function handleCommandInvocation(
@@ -247,11 +266,14 @@ async function handleCommandInvocation(
     "adapter.event.received",
     {
       correlationId,
-      platform: deps.platform,
-      adapterId: deps.responder.id,
+      platform:
+        deps.platform,
+      adapterId:
+        deps.responder.id,
       externalCommandId:
         invocation.externalId,
-      command: invocation.name,
+      command:
+        invocation.name,
       userExternalId:
         invocation.user.externalId,
       communityExternalId:
@@ -263,32 +285,42 @@ async function handleCommandInvocation(
     }
   );
 
-  await runCommand(deps, {
-    correlationId,
-    rawText: `/${[
-      invocation.name,
-      ...invocation.args
-    ].join(" ")}`,
-    author: invocation.user,
-    community: invocation.community,
-    channel: invocation.channel,
-    destinationExternalId:
-      invocation.destinationExternalId,
-    replyToExternalId:
-      invocation.externalId
-  });
+  const executionContext =
+    buildExecutionContext(
+      deps,
+      {
+        correlationId,
+        author:
+          invocation.user,
+        community:
+          invocation.community,
+        channel:
+          invocation.channel
+      }
+    );
+
+  await runCommand(
+    deps,
+    {
+      correlationId,
+      rawText:
+        `/${[
+          invocation.name,
+          ...invocation.args
+        ].join(" ")}`,
+      destinationExternalId:
+        invocation.destinationExternalId,
+      replyToExternalId:
+        invocation.externalId
+    },
+    executionContext
+  );
 }
 
 interface RunCommandInput {
   correlationId: string;
 
   rawText: string;
-
-  author: PlatformUser;
-
-  community?: PlatformCommunity;
-
-  channel?: PlatformChannel;
 
   destinationExternalId: string;
 
@@ -297,7 +329,8 @@ interface RunCommandInput {
 
 async function runCommand(
   deps: PlatformEventHandlerDeps,
-  input: RunCommandInput
+  input: RunCommandInput,
+  executionContext: ExecutionContext
 ): Promise<void> {
   const {
     platform,
@@ -307,28 +340,26 @@ async function runCommand(
     store
   } = deps;
 
-  const { correlationId } = input;
-
-  const executionContext =
-    buildExecutionContext(deps, {
-      correlationId,
-      author: input.author,
-      community: input.community,
-      channel: input.channel
-    });
+  const {
+    correlationId
+  } = input;
 
   logger.debug(
     "execution.context.created",
     {
       correlationId,
-      platform: executionContext.platform,
-      contextType: executionContext.type,
-      userId: executionContext.user.id,
+      platform:
+        executionContext.platform,
+      contextType:
+        executionContext.type,
+      userId:
+        executionContext.user.id,
       communityId:
         executionContext.community?.id,
       channelId:
         executionContext.channel?.id,
-      locale: executionContext.locale
+      locale:
+        executionContext.locale
     }
   );
 
@@ -338,11 +369,14 @@ async function runCommand(
       {
         platform:
           executionContext.platform,
-        user: executionContext.user,
+        user:
+          executionContext.user,
         community:
           executionContext.community,
-        channel: executionContext.channel,
-        execution: executionContext
+        channel:
+          executionContext.channel,
+        execution:
+          executionContext
       },
       executionContext
     );
@@ -354,19 +388,24 @@ async function runCommand(
     return;
   }
 
-  const bound = store.bindResponse(
-    result.response,
-    {
-      userId: executionContext.user.id,
-      platform
-    }
-  );
+  const bound =
+    store.bindResponse(
+      result.response,
+      {
+        userId:
+          executionContext.user.id,
+        platform
+      }
+    );
 
   const metadata =
-    deps.renderMetadata(bound);
+    deps.renderMetadata(
+      bound
+    );
 
   await responder.sendAction({
-    type: "message.send",
+    type:
+      "message.send",
     platform,
     channelExternalId:
       input.destinationExternalId,
@@ -383,11 +422,14 @@ async function runCommand(
     {
       correlationId,
       platform,
-      adapterId: responder.id,
-      command: input.rawText
-        .trim()
-        .split(/\s+/)[0],
-      contextType: executionContext.type,
+      adapterId:
+        responder.id,
+      command:
+        input.rawText
+          .trim()
+          .split(/\s+/)[0],
+      contextType:
+        executionContext.type,
       hasInteraction:
         metadata !== undefined
     }
@@ -414,8 +456,10 @@ async function handleInteraction(
       {
         correlationId,
         platform,
-        adapterId: responder.id,
-        reason: "no_token"
+        adapterId:
+          responder.id,
+        reason:
+          "no_token"
       }
     );
 
@@ -423,20 +467,31 @@ async function handleInteraction(
   }
 
   const executionContext =
-    buildExecutionContext(deps, {
-      correlationId,
-      author: interaction.user,
-      community: interaction.community,
-      channel: interaction.channel
-    });
+    buildExecutionContext(
+      deps,
+      {
+        correlationId,
+        author:
+          interaction.user,
+        community:
+          interaction.community,
+        channel:
+          interaction.channel
+      }
+    );
 
   const result =
     await dispatcher.dispatch({
-      token: interaction.token,
-      execution: executionContext
+      token:
+        interaction.token,
+      execution:
+        executionContext
     });
 
-  if (result.status !== "handled") {
+  if (
+    result.status !==
+    "handled"
+  ) {
     responder.answerInteraction(
       interaction.externalId,
       result.message
@@ -454,7 +509,8 @@ async function handleInteraction(
       {
         correlationId,
         platform,
-        adapterId: responder.id
+        adapterId:
+          responder.id
       }
     );
 
@@ -470,11 +526,15 @@ async function handleInteraction(
     result.response.content ??
     EMPTY_CONTENT_FALLBACK;
 
-  if (interaction.messageExternalId) {
+  if (
+    interaction.messageExternalId
+  ) {
     await responder.sendAction({
-      type: "message.edit",
+      type:
+        "message.edit",
       platform,
-      channelExternalId: destination,
+      channelExternalId:
+        destination,
       messageExternalId:
         interaction.messageExternalId,
       content,
@@ -482,9 +542,11 @@ async function handleInteraction(
     });
   } else {
     await responder.sendAction({
-      type: "message.send",
+      type:
+        "message.send",
       platform,
-      channelExternalId: destination,
+      channelExternalId:
+        destination,
       content,
       metadata
     });
@@ -495,11 +557,14 @@ async function handleInteraction(
     {
       correlationId,
       platform,
-      adapterId: responder.id,
-      contextType: executionContext.type,
-      mode: interaction.messageExternalId
-        ? "edit"
-        : "send",
+      adapterId:
+        responder.id,
+      contextType:
+        executionContext.type,
+      mode:
+        interaction.messageExternalId
+          ? "edit"
+          : "send",
       hasInteraction:
         metadata !== undefined
     }

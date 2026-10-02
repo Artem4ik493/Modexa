@@ -14,6 +14,8 @@ export const ruMessages = {
 
   "command.ping.description":
     "Проверить, что Modexa работает",
+  "command.forbidden":
+   "У вас недостаточно прав для использования команд в этом сообществе.",
   "command.ping.pong":
     "Понг!",
 
@@ -61,6 +63,7 @@ export const ruMessages = {
     "Нет доступных команд.",
   "help.no_description":
     "Без описания"
+    
 } as const;
 
 export type MessageKey =
@@ -83,6 +86,8 @@ export const enMessages: MessageCatalog = {
 
   "command.ping.description":
     "Check if Modexa is alive",
+  "command.forbidden":
+    "You do not have permission to use commands in this community.",
   "command.ping.pong":
     "Pong!",
 

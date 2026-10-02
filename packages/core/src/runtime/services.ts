@@ -1,4 +1,9 @@
 import {
+  AccessControlService,
+  CommunityAccessService
+} from "../access/index.js";
+
+import {
   ChannelService
 } from "../channels/service.js";
 
@@ -9,6 +14,10 @@ import {
 import type {
   Logger
 } from "../diagnostics/types.js";
+
+import {
+  ExecutionContextService
+} from "../contexts/service.js";
 
 import {
   IdentityService
@@ -25,14 +34,16 @@ import {
 
 export interface RuntimeServices
   extends PlatformIdentityServices {
-  identityResolver: PlatformIdentityResolver;
+  identityResolver:
+    PlatformIdentityResolver;
+
+  executionContextService:
+    ExecutionContextService;
+
+  communityAccessService:
+    CommunityAccessService;
 }
 
-/**
- * Creates the set of services that all platform adapters
- * must share, so that Telegram and Discord work with the
- * same users, communities and memberships.
- */
 export function createRuntimeServices(
   logger?: Logger
 ): RuntimeServices {
@@ -48,13 +59,28 @@ export function createRuntimeServices(
   const membershipService =
     new MembershipService();
 
+  const accessControlService =
+    new AccessControlService();
+
+  const communityAccessService =
+    new CommunityAccessService(
+      membershipService,
+      accessControlService
+    );
+
+  const executionContextService =
+    new ExecutionContextService(
+      communityAccessService
+    );
+
   const identityResolver =
     new PlatformIdentityResolver(
       {
         identityService,
         communityService,
         channelService,
-        membershipService
+        membershipService,
+        accessControlService
       },
       logger
     );
@@ -64,6 +90,9 @@ export function createRuntimeServices(
     communityService,
     channelService,
     membershipService,
-    identityResolver
+    accessControlService,
+    communityAccessService,
+    identityResolver,
+    executionContextService
   };
 }

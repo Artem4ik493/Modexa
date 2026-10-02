@@ -40,6 +40,12 @@ import type {
   Membership
 } from "../memberships/types.js";
 
+import {
+  AccessControlService,
+  COMMUNITY_ROLE_NAMES,
+  createBuiltinCommunityRoles
+} from "../access/index.js";
+
 import type {
   Platform
 } from "../types.js";
@@ -56,6 +62,14 @@ export interface PlatformIdentityServices {
   channelService: ChannelService;
 
   membershipService: MembershipService;
+
+  /**
+   * Optional for backwards-compatible direct resolver usage.
+   *
+   * Runtime services always provide it.
+   */
+  accessControlService?:
+    AccessControlService;
 }
 
 export interface ResolvePlatformEntitiesInput {
@@ -85,7 +99,7 @@ export interface ResolvedPlatformEntities {
  * Modexa entities, creating them on first sight.
  *
  * A new platform identity always creates a NEW Modexa user.
- * Telegram and Discord accounts are never merged here:
+ * Telegram and Discord accounts are never merged automatically:
  * linking is explicit and handled by the identity link flow.
  */
 export class PlatformIdentityResolver {
@@ -97,27 +111,39 @@ export class PlatformIdentityResolver {
   resolve(
     input: ResolvePlatformEntitiesInput
   ): ResolvedPlatformEntities {
-    const user = this.resolveUser(input);
+    const user =
+      this.resolveUser(input);
 
     // A DM has no community, channel or membership.
     if (!input.community) {
-      return { user };
+      return {
+        user
+      };
     }
 
-    const community = this.resolveCommunity(
-      input,
-      input.community
-    );
+    const community =
+      this.resolveCommunity(
+        input,
+        input.community
+      );
 
-    const channel = input.channel
-      ? this.resolveChannel(
-          input,
-          input.channel,
-          community
-        )
-      : undefined;
+    const channel =
+      input.channel
+        ? this.resolveChannel(
+            input,
+            input.channel,
+            community
+          )
+        : undefined;
 
-    const membership = this.resolveMembership(
+    const membership =
+      this.resolveMembership(
+        input,
+        user,
+        community
+      );
+
+    this.syncPlatformRole(
       input,
       user,
       community
@@ -134,9 +160,14 @@ export class PlatformIdentityResolver {
   private resolveUser(
     input: ResolvePlatformEntitiesInput
   ): User {
-    const { identityService } = this.services;
+    const {
+      identityService
+    } = this.services;
 
-    const { author, platform } = input;
+    const {
+      author,
+      platform
+    } = input;
 
     const existing =
       identityService.findUserByIdentity(
@@ -148,27 +179,34 @@ export class PlatformIdentityResolver {
       return existing;
     }
 
-    const user = identityService.createUser({
-      displayName:
-        author.displayName ??
-        author.username ??
-        author.externalId
-    });
+    const user =
+      identityService.createUser({
+        displayName:
+          author.displayName ??
+          author.username ??
+          author.externalId
+      });
 
     identityService.attachIdentity({
-      userId: user.id,
+      userId:
+        user.id,
       platform,
-      externalId: author.externalId,
-      username: author.username,
-      displayName: author.displayName
+      externalId:
+        author.externalId,
+      username:
+        author.username,
+      displayName:
+        author.displayName
     });
 
     this.logger?.info(
       "identity.user.created",
       {
-        correlationId: input.correlationId,
+        correlationId:
+          input.correlationId,
         platform,
-        userId: user.id
+        userId:
+          user.id
       }
     );
 
@@ -179,7 +217,9 @@ export class PlatformIdentityResolver {
     input: ResolvePlatformEntitiesInput,
     external: PlatformCommunity
   ): Community {
-    const { communityService } = this.services;
+    const {
+      communityService
+    } = this.services;
 
     const existing =
       communityService.findByIdentity(
@@ -188,31 +228,71 @@ export class PlatformIdentityResolver {
       );
 
     if (existing) {
+      this.ensureCommunityRoles(
+        existing
+      );
+
       return existing;
     }
 
     const community =
       communityService.createCommunity({
-        name: external.name
+        name:
+          external.name
       });
 
     communityService.attachIdentity({
-      communityId: community.id,
-      platform: input.platform,
-      externalId: external.externalId,
-      name: external.name
+      communityId:
+        community.id,
+      platform:
+        input.platform,
+      externalId:
+        external.externalId,
+      name:
+        external.name
     });
+
+    this.ensureCommunityRoles(
+      community
+    );
 
     this.logger?.info(
       "community.created",
       {
-        correlationId: input.correlationId,
-        platform: input.platform,
-        communityId: community.id
+        correlationId:
+          input.correlationId,
+        platform:
+          input.platform,
+        communityId:
+          community.id
       }
     );
 
     return community;
+  }
+
+  private ensureCommunityRoles(
+    community: Community
+  ): void {
+    const accessControlService =
+      this.services
+        .accessControlService;
+
+    if (!accessControlService) {
+      return;
+    }
+
+    const roles =
+      createBuiltinCommunityRoles(
+        community.id
+      );
+
+    for (const role of roles) {
+      accessControlService
+        .registerCommunityRole(
+          role
+        );
+    }
   }
 
   private resolveChannel(
@@ -220,7 +300,9 @@ export class PlatformIdentityResolver {
     external: PlatformChannel,
     community: Community
   ): Channel {
-    const { channelService } = this.services;
+    const {
+      channelService
+    } = this.services;
 
     const existing =
       channelService.findByIdentity(
@@ -234,27 +316,38 @@ export class PlatformIdentityResolver {
 
     const channel =
       channelService.createChannel({
-        communityId: community.id,
-        name: external.name,
-        type: DEFAULT_CHANNEL_TYPES[
-          input.platform
-        ]
+        communityId:
+          community.id,
+        name:
+          external.name,
+        type:
+          DEFAULT_CHANNEL_TYPES[
+            input.platform
+          ]
       });
 
     channelService.attachIdentity({
-      channelId: channel.id,
-      platform: input.platform,
-      externalId: external.externalId,
-      name: external.name
+      channelId:
+        channel.id,
+      platform:
+        input.platform,
+      externalId:
+        external.externalId,
+      name:
+        external.name
     });
 
     this.logger?.debug(
       "channel.created",
       {
-        correlationId: input.correlationId,
-        platform: input.platform,
-        communityId: community.id,
-        channelId: channel.id
+        correlationId:
+          input.correlationId,
+        platform:
+          input.platform,
+        communityId:
+          community.id,
+        channelId:
+          channel.id
       }
     );
 
@@ -266,7 +359,9 @@ export class PlatformIdentityResolver {
     user: User,
     community: Community
   ): Membership {
-    const { membershipService } = this.services;
+    const {
+      membershipService
+    } = this.services;
 
     const existing =
       membershipService.findMembership(
@@ -277,17 +372,23 @@ export class PlatformIdentityResolver {
     if (!existing) {
       const membership =
         membershipService.createMembership({
-          userId: user.id,
-          communityId: community.id
+          userId:
+            user.id,
+          communityId:
+            community.id
         });
 
       this.logger?.info(
         "membership.created",
         {
-          correlationId: input.correlationId,
-          platform: input.platform,
-          userId: user.id,
-          communityId: community.id
+          correlationId:
+            input.correlationId,
+          platform:
+            input.platform,
+          userId:
+            user.id,
+          communityId:
+            community.id
         }
       );
 
@@ -296,12 +397,99 @@ export class PlatformIdentityResolver {
 
     // The user is writing again, so they are back.
     // A ban is never lifted automatically.
-    if (existing.status === "left") {
+    if (
+      existing.status ===
+      "left"
+    ) {
       return membershipService.reactivate(
         existing.id
       );
     }
 
     return existing;
+  }
+
+  private syncPlatformRole(
+    input: ResolvePlatformEntitiesInput,
+    user: User,
+    community: Community
+  ): void {
+    const accessControlService =
+      this.services
+        .accessControlService;
+
+    if (!accessControlService) {
+      return;
+    }
+
+    const roleName =
+      input.author.platformRole ===
+        "owner" ||
+      input.author.platformRole ===
+        "admin"
+        ? COMMUNITY_ROLE_NAMES.ADMIN
+        : COMMUNITY_ROLE_NAMES.MEMBER;
+
+    const targetRole =
+      createBuiltinCommunityRoles(
+        community.id
+      ).find(
+        (role) =>
+          role.name ===
+          roleName
+      );
+
+    if (!targetRole) {
+      return;
+    }
+
+    const currentRoles =
+      accessControlService
+        .getUserCommunityRoles(
+          user.id,
+          community.id
+        );
+
+    if (
+      currentRoles.some(
+        (role) =>
+          role.id ===
+          targetRole.id
+      )
+    ) {
+      return;
+    }
+
+    for (
+      const role of currentRoles
+    ) {
+      accessControlService
+        .revokeCommunityRole(
+          user.id,
+          role.id
+        );
+    }
+
+    accessControlService
+      .assignCommunityRole(
+        user.id,
+        targetRole.id
+      );
+
+    this.logger?.debug(
+      "access.community_role.synced",
+      {
+        correlationId:
+          input.correlationId,
+        platform:
+          input.platform,
+        userId:
+          user.id,
+        communityId:
+          community.id,
+        role:
+          targetRole.name
+      }
+    );
   }
 }

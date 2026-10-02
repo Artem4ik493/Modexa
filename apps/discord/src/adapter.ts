@@ -7,13 +7,15 @@ import {
   type PlatformAdapter,
   type PlatformChannel,
   type PlatformCommunity,
-  type PlatformUser
+  type PlatformUser,
+  type PlatformUserRole
 } from "@modexa/core";
 
 import {
   Client,
   Events,
   MessageFlags,
+  PermissionsBitField,
   type ApplicationCommandDataResolvable,
   type ButtonInteraction,
   type ChatInputCommandInteraction,
@@ -111,10 +113,6 @@ export class DiscordAdapter
     this.started = false;
   }
 
-  /**
-   * Discord-specific: sets the ephemeral text that
-   * will be shown to the user who pressed the button.
-   */
   answerInteraction(
     interactionExternalId: string,
     text: string
@@ -380,8 +378,6 @@ export class DiscordAdapter
         }
       );
     } catch (error) {
-      // A failed registration must not stop the bot:
-      // text commands and buttons keep working.
       logger?.error(
         "discord.commands.register_failed",
         {
@@ -410,7 +406,6 @@ export class DiscordAdapter
       !("components" in discord) ||
       !Array.isArray(discord.components)
     ) {
-      // An empty list clears old buttons on edit.
       return [];
     }
 
@@ -438,6 +433,287 @@ export class DiscordAdapter
     return channel;
   }
 
+  private hasAdministratorPermission(
+    permissions:
+      | PermissionsBitField
+      | string
+      | undefined
+  ): boolean {
+    if (!permissions) {
+      return false;
+    }
+
+    if (
+      permissions instanceof PermissionsBitField
+    ) {
+      return permissions.has(
+        PermissionsBitField.Flags.Administrator
+      );
+    }
+
+    try {
+      const value =
+        BigInt(permissions);
+
+      return (
+        (value &
+          PermissionsBitField.Flags.Administrator) !==
+        0n
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  private async resolvePlatformRole(
+    guild: Guild | null,
+    userId: string,
+    member?: {
+      permissions?: PermissionsBitField | string;
+    } | null
+  ): Promise<PlatformUserRole> {
+    if (!guild) {
+      return "member";
+    }
+
+    if (
+      guild.ownerId === userId
+    ) {
+      return "owner";
+    }
+
+    if (
+      this.hasAdministratorPermission(
+        member?.permissions
+      )
+    ) {
+      return "admin";
+    }
+
+    try {
+      const resolvedMember =
+        await guild.members.fetch(
+          userId
+        );
+
+      if (
+        this.hasAdministratorPermission(
+          resolvedMember.permissions
+        )
+      ) {
+        return "admin";
+      }
+    } catch {
+      // Fall through to the least privileged role.
+    }
+
+    return "member";
+  }
+
+  private toPlatformUser(
+    user: User,
+    locale?: string,
+    platformRole?: PlatformUserRole
+  ): PlatformUser {
+    return {
+      platform: "discord",
+      externalId: user.id,
+      username: user.username,
+      displayName:
+        user.globalName ??
+        user.username,
+      locale,
+      platformRole
+    };
+  }
+
+  private createPlace(
+    guild: Guild | null,
+    channelId: string,
+    channel: unknown
+  ): {
+    community?: PlatformCommunity;
+    channel?: PlatformChannel;
+  } {
+    if (!guild) {
+      return {};
+    }
+
+    const name =
+      typeof channel === "object" &&
+      channel !== null &&
+      typeof (
+        channel as { name?: unknown }
+      ).name === "string"
+        ? (channel as { name: string })
+            .name
+        : `Discord channel ${channelId}`;
+
+    return {
+      community: {
+        platform: "discord",
+        externalId: guild.id,
+        name: guild.name
+      },
+      channel: {
+        platform: "discord",
+        externalId: channelId,
+        name
+      }
+    };
+  }
+
+  private async createMessageEvent(
+    message: Message
+  ): Promise<AdapterEvent> {
+    const place = this.createPlace(
+      message.guild,
+      message.channelId,
+      message.channel
+    );
+
+    const platformRole =
+      await this.resolvePlatformRole(
+        message.guild,
+        message.author.id,
+        message.member
+      );
+
+    return {
+      type: "message.created",
+
+      message: {
+        externalId: message.id,
+
+        platform: "discord",
+
+        author: this.toPlatformUser(
+          message.author,
+          undefined,
+          platformRole
+        ),
+
+        destinationExternalId:
+          message.channelId,
+
+        community: place.community,
+
+        channel: place.channel,
+
+        content: message.content,
+
+        createdAt:
+          message.createdAt
+      }
+    };
+  }
+
+  private async createCommandEvent(
+    interaction: ChatInputCommandInteraction
+  ): Promise<AdapterEvent> {
+    const place = this.createPlace(
+      interaction.guild,
+      interaction.channelId,
+      interaction.channel
+    );
+
+    const platformRole =
+      await this.resolvePlatformRole(
+        interaction.guild,
+        interaction.user.id,
+        interaction.member &&
+        "permissions" in interaction.member
+          ? interaction.member
+          : undefined
+      );
+
+    return {
+      type: "command.invoked",
+
+      invocation: {
+        externalId: interaction.id,
+
+        platform: "discord",
+
+        user: this.toPlatformUser(
+          interaction.user,
+          interaction.locale,
+          platformRole
+        ),
+
+        community: place.community,
+
+        channel: place.channel,
+
+        destinationExternalId:
+          interaction.channelId,
+
+        name: interaction.commandName,
+
+        args: [],
+
+        createdAt:
+          interaction.createdAt
+      }
+    };
+  }
+
+  private async createInteractionEvent(
+    interaction: ButtonInteraction,
+    token: string
+  ): Promise<AdapterEvent> {
+    const place = this.createPlace(
+      interaction.guild,
+      interaction.channelId,
+      interaction.channel
+    );
+
+    const platformRole =
+      await this.resolvePlatformRole(
+        interaction.guild,
+        interaction.user.id,
+        interaction.member &&
+        "permissions" in interaction.member
+          ? interaction.member
+          : undefined
+      );
+
+    return {
+      type: "interaction.created",
+
+      interaction: {
+        externalId: interaction.id,
+
+        platform: "discord",
+
+        user: this.toPlatformUser(
+          interaction.user,
+          interaction.locale,
+          platformRole
+        ),
+
+        community: place.community,
+
+        channel: place.channel,
+
+        destinationExternalId:
+          interaction.channelId,
+
+        messageExternalId:
+          interaction.message.id,
+
+        token,
+
+        createdAt: new Date(),
+
+        metadata: {
+          customId:
+            interaction.customId
+        }
+      }
+    };
+  }
+
   private registerHandlers(): void {
     this.client.on(
       Events.MessageCreate,
@@ -448,7 +724,7 @@ export class DiscordAdapter
 
         try {
           await this.emitEvent(
-            this.createMessageEvent(
+            await this.createMessageEvent(
               message
             )
           );
@@ -487,8 +763,6 @@ export class DiscordAdapter
     interaction: ChatInputCommandInteraction
   ): Promise<void> {
     try {
-      // Discord requires an acknowledgement
-      // within 3 seconds.
       await interaction.deferReply();
     } catch {
       return;
@@ -501,7 +775,7 @@ export class DiscordAdapter
 
     try {
       await this.emitEvent(
-        this.createCommandEvent(
+        await this.createCommandEvent(
           interaction
         )
       );
@@ -514,8 +788,6 @@ export class DiscordAdapter
         );
 
       if (pending) {
-        // Nobody replied: do not leave the
-        // "thinking" state hanging.
         this.pendingReplies.delete(
           interaction.id
         );
@@ -558,8 +830,6 @@ export class DiscordAdapter
     }
 
     try {
-      // Discord requires an acknowledgement
-      // within 3 seconds.
       await interaction.deferUpdate();
     } catch {
       return;
@@ -567,7 +837,7 @@ export class DiscordAdapter
 
     try {
       await this.emitEvent(
-        this.createInteractionEvent(
+        await this.createInteractionEvent(
           interaction,
           token
         )
@@ -595,177 +865,6 @@ export class DiscordAdapter
         }
       }
     }
-  }
-
-  private toPlatformUser(
-    user: User,
-    locale?: string
-  ): PlatformUser {
-    return {
-      platform: "discord",
-      externalId: user.id,
-      username: user.username,
-      displayName:
-        user.globalName ??
-        user.username,
-      locale
-    };
-  }
-
-  private createPlace(
-    guild: Guild | null,
-    channelId: string,
-    channel: unknown
-  ): {
-    community?: PlatformCommunity;
-    channel?: PlatformChannel;
-  } {
-    if (!guild) {
-      return {};
-    }
-
-    const name =
-      typeof channel === "object" &&
-      channel !== null &&
-      typeof (
-        channel as { name?: unknown }
-      ).name === "string"
-        ? (channel as { name: string })
-            .name
-        : `Discord channel ${channelId}`;
-
-    return {
-      community: {
-        platform: "discord",
-        externalId: guild.id,
-        name: guild.name
-      },
-      channel: {
-        platform: "discord",
-        externalId: channelId,
-        name
-      }
-    };
-  }
-
-  private createMessageEvent(
-    message: Message
-  ): AdapterEvent {
-    const place = this.createPlace(
-      message.guild,
-      message.channelId,
-      message.channel
-    );
-
-    return {
-      type: "message.created",
-
-      message: {
-        externalId: message.id,
-
-        platform: "discord",
-
-        author: this.toPlatformUser(
-          message.author
-        ),
-
-        destinationExternalId:
-          message.channelId,
-
-        community: place.community,
-
-        channel: place.channel,
-
-        content: message.content,
-
-        createdAt:
-          message.createdAt
-      }
-    };
-  }
-
-  private createCommandEvent(
-    interaction: ChatInputCommandInteraction
-  ): AdapterEvent {
-    const place = this.createPlace(
-      interaction.guild,
-      interaction.channelId,
-      interaction.channel
-    );
-
-    return {
-      type: "command.invoked",
-
-      invocation: {
-        externalId: interaction.id,
-
-        platform: "discord",
-
-        user: this.toPlatformUser(
-          interaction.user,
-          interaction.locale
-        ),
-
-        community: place.community,
-
-        channel: place.channel,
-
-        destinationExternalId:
-          interaction.channelId,
-
-        name: interaction.commandName,
-
-        args: [],
-
-        createdAt:
-          interaction.createdAt
-      }
-    };
-  }
-
-  private createInteractionEvent(
-    interaction: ButtonInteraction,
-    token: string
-  ): AdapterEvent {
-    const place = this.createPlace(
-      interaction.guild,
-      interaction.channelId,
-      interaction.channel
-    );
-
-    return {
-      type: "interaction.created",
-
-      interaction: {
-        externalId: interaction.id,
-
-        platform: "discord",
-
-        user: this.toPlatformUser(
-          interaction.user,
-          interaction.locale
-        ),
-
-        community: place.community,
-
-        channel: place.channel,
-
-        destinationExternalId:
-          interaction.channelId,
-
-        messageExternalId:
-          interaction.message.id,
-
-        token,
-
-        createdAt: new Date(),
-
-        metadata: {
-          customId:
-            interaction.customId
-        }
-      }
-    };
   }
 
   private async emitEvent(

@@ -4,7 +4,8 @@ import {
   type PlatformAdapter,
   type PlatformChannel,
   type PlatformCommunity,
-  type PlatformUser
+  type PlatformUser,
+  type PlatformUserRole
 } from "@modexa/core";
 
 import {
@@ -296,59 +297,45 @@ export class TelegramAdapter
     return undefined;
   }
 
-  private registerHandlers(): void {
-    this.bot.on(
-      "message",
-      async (ctx) => {
-        const event =
-          this.createMessageEvent(
-            ctx
-          );
+  private async resolvePlatformRole(
+    ctx: Context,
+    userId: number
+  ): Promise<PlatformUserRole> {
+    const chat =
+      ctx.chat;
 
-        await this.emitEvent(
-          event
+    if (
+      !chat ||
+      chat.type === "private"
+    ) {
+      return "member";
+    }
+
+    try {
+      const member =
+        await this.bot.api.getChatMember(
+          chat.id,
+          userId
         );
+
+      switch (member.status) {
+        case "creator":
+        case "administrator":
+          return "admin";
+
+        default:
+          return "member";
       }
-    );
-
-    this.bot.on(
-      "callback_query:data",
-      async (ctx) => {
-        const interactionId =
-          ctx.callbackQuery.id;
-
-        try {
-          await this.emitEvent(
-            this.createInteractionEvent(
-              ctx
-            )
-          );
-        } finally {
-          const text =
-            this.pendingAnswers.get(
-              interactionId
-            );
-
-          this.pendingAnswers.delete(
-            interactionId
-          );
-
-          try {
-            await ctx.answerCallbackQuery(
-              text
-            );
-          } catch {
-            // The callback query may already
-            // have expired on Telegram's side.
-          }
-        }
-      }
-    );
+    } catch {
+      // If Telegram does not allow us to inspect the
+      // membership, keep the least privileged role.
+      return "member";
+    }
   }
 
-  private createMessageEvent(
+  private async createMessageEvent(
     ctx: Context
-  ): AdapterEvent {
+  ): Promise<AdapterEvent> {
     const message =
       ctx.message;
 
@@ -369,6 +356,12 @@ export class TelegramAdapter
 
     const author =
       message.from;
+
+    const platformRole =
+      await this.resolvePlatformRole(
+        ctx,
+        author.id
+      );
 
     return {
       type:
@@ -394,7 +387,9 @@ export class TelegramAdapter
             author.username,
 
           displayName:
-            author.first_name
+            author.first_name,
+
+          platformRole
         },
 
         destinationExternalId:
@@ -424,9 +419,9 @@ export class TelegramAdapter
     };
   }
 
-  private createInteractionEvent(
+  private async createInteractionEvent(
     ctx: Context
-  ): AdapterEvent {
+  ): Promise<AdapterEvent> {
     const callbackQuery =
       ctx.callbackQuery;
 
@@ -474,6 +469,12 @@ export class TelegramAdapter
           }
         : undefined;
 
+    const platformRole =
+      await this.resolvePlatformRole(
+        ctx,
+        user.id
+      );
+
     return {
       type:
         "interaction.created",
@@ -498,7 +499,9 @@ export class TelegramAdapter
             user.username,
 
           displayName:
-            user.first_name
+            user.first_name,
+
+          platformRole
         },
 
         community:
@@ -592,6 +595,56 @@ export class TelegramAdapter
           ? chat.title
           : "Telegram"
     };
+  }
+
+  private registerHandlers(): void {
+    this.bot.on(
+      "message",
+      async (ctx) => {
+        const event =
+          await this.createMessageEvent(
+            ctx
+          );
+
+        await this.emitEvent(
+          event
+        );
+      }
+    );
+
+    this.bot.on(
+      "callback_query:data",
+      async (ctx) => {
+        const interactionId =
+          ctx.callbackQuery.id;
+
+        try {
+          await this.emitEvent(
+            await this.createInteractionEvent(
+              ctx
+            )
+          );
+        } finally {
+          const text =
+            this.pendingAnswers.get(
+              interactionId
+            );
+
+          this.pendingAnswers.delete(
+            interactionId
+          );
+
+          try {
+            await ctx.answerCallbackQuery(
+              text
+            );
+          } catch {
+            // The callback query may already
+            // have expired on Telegram's side.
+          }
+        }
+      }
+    );
   }
 
   private async emitEvent(

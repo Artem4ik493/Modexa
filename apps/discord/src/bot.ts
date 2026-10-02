@@ -39,16 +39,24 @@ export interface CreateDiscordAdapterOptions {
 
   /**
    * Shared resolver that maps Discord users and servers to
-   * real Modexa entities. When omitted, synthetic ids
-   * ("discord:<id>") are used.
+   * real Modexa entities.
    */
-  identityResolver?: PlatformIdentityResolver;
+  identityResolver?:
+    PlatformIdentityResolver;
+
+  /**
+   * Shared execution context service.
+   * Runner passes the same instance to every adapter.
+   */
+  executionContextService?:
+    ExecutionContextService;
 }
 
 export function createDiscordAdapter(
   token: string,
   logger: CoreLogger,
-  options: CreateDiscordAdapterOptions = {}
+  options:
+    CreateDiscordAdapterOptions = {}
 ): DiscordAdapter {
   const client =
     new Client({
@@ -58,8 +66,9 @@ export function createDiscordAdapter(
         GatewayIntentBits.DirectMessages,
         GatewayIntentBits.MessageContent
       ],
-      // Required to receive direct messages.
-      partials: [Partials.Channel]
+      partials: [
+        Partials.Channel
+      ]
     });
 
   const registry =
@@ -97,22 +106,27 @@ export function createDiscordAdapter(
               registry
             )
           ),
+
         guildId:
           options.guildId ??
-          process.env.DISCORD_GUILD_ID ??
+          process.env
+            .DISCORD_GUILD_ID ??
           undefined,
+
         logger
       }
     );
 
   adapter.onEvent(
     createDiscordEventHandler({
-      responder: adapter,
+      responder:
+        adapter,
       logger,
       commandService,
       dispatcher,
       store,
       executionContextService:
+        options.executionContextService ??
         new ExecutionContextService(),
       identityResolver:
         options.identityResolver

@@ -5,11 +5,24 @@ import type { User } from "../identity/types.js";
 
 export type AdapterId = string;
 
+export type PlatformUserRole =
+  | "owner"
+  | "admin"
+  | "member";
+
 export interface PlatformUser {
   platform: Platform;
   externalId: string;
   username?: string;
   displayName?: string;
+
+  /**
+   * Role reported by the platform.
+   *
+   * This is platform state, not a Modexa permission.
+   * Core maps it to Modexa community roles.
+   */
+  platformRole?: PlatformUserRole;
 
   /**
    * Language code reported by the platform, for example

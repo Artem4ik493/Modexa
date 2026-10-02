@@ -18,9 +18,15 @@ import {
   createDiagnosticContext
 } from "./diagnostics/context.js";
 
+import {
+  translate
+} from "./i18n/translate.js";
+
 export interface CommandServiceResult {
   handled: boolean;
-  response: CommandResponse | null;
+  response:
+    | CommandResponse
+    | null;
 }
 
 export class CommandService {
@@ -81,11 +87,41 @@ export class CommandService {
       "command.parsed",
       {
         ...diagnostics,
-        command: parsed.name,
+        command:
+          parsed.name,
         argumentCount:
           parsed.args.length
       }
     );
+
+    if (
+      execution.type ===
+        "community" &&
+      !execution.capabilities.includes(
+        "commands"
+      )
+    ) {
+      this.logger?.debug(
+        "command.forbidden",
+        {
+          ...diagnostics,
+          command:
+            parsed.name
+        }
+      );
+
+      return {
+        handled: true,
+        response: {
+          content:
+            translate(
+              "command.forbidden",
+              undefined,
+              execution.locale
+            )
+        }
+      };
+    }
 
     const commandContext:
       CommandContext = {
@@ -123,7 +159,8 @@ export class CommandService {
         "command.not_found",
         {
           ...diagnostics,
-          command: parsed.name
+          command:
+            parsed.name
         }
       );
 
@@ -137,7 +174,8 @@ export class CommandService {
       "command.executed",
       {
         ...diagnostics,
-        command: parsed.name,
+        command:
+          parsed.name,
         contextType:
           execution.type
       }

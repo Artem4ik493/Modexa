@@ -25,16 +25,24 @@ import {
 export interface CreateTelegramAdapterOptions {
   /**
    * Shared resolver that maps Telegram users and chats to
-   * real Modexa entities. When omitted, synthetic ids
-   * ("telegram:<id>") are used.
+   * real Modexa entities.
    */
-  identityResolver?: PlatformIdentityResolver;
+  identityResolver?:
+    PlatformIdentityResolver;
+
+  /**
+   * Shared execution context service.
+   * Runner passes the same instance to every adapter.
+   */
+  executionContextService?:
+    ExecutionContextService;
 }
 
 export function createTelegramAdapter(
   token: string,
   logger: CoreLogger,
-  options: CreateTelegramAdapterOptions = {}
+  options:
+    CreateTelegramAdapterOptions = {}
 ): TelegramAdapter {
   const bot =
     new Bot(token);
@@ -70,12 +78,14 @@ export function createTelegramAdapter(
 
   adapter.onEvent(
     createTelegramEventHandler({
-      responder: adapter,
+      responder:
+        adapter,
       logger,
       commandService,
       dispatcher,
       store,
       executionContextService:
+        options.executionContextService ??
         new ExecutionContextService(),
       identityResolver:
         options.identityResolver

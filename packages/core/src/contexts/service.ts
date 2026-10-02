@@ -1,6 +1,14 @@
-import type { CommunityAccessService } from "../access/community-access.js";
+import type {
+  CommunityAccessService
+} from "../access/community-access.js";
 
-import { DEFAULT_LOCALE } from "../i18n/locale.js";
+import type {
+  Permission
+} from "../access/types.js";
+
+import {
+  DEFAULT_LOCALE
+} from "../i18n/locale.js";
 
 import type {
   ExecutionCapability,
@@ -8,56 +16,128 @@ import type {
   CreateExecutionContextInput
 } from "./types.js";
 
-const DM_CAPABILITIES: ExecutionCapability[] = [
-  "commands",
-  "account.manage",
-  "identity.link",
-  "billing"
-];
+const DM_CAPABILITIES:
+  ExecutionCapability[] = [
+    "commands",
+    "account.manage",
+    "identity.link",
+    "billing"
+  ];
 
-const COMMUNITY_CAPABILITIES: ExecutionCapability[] = [
-  "commands",
-  "community.view",
-  "community.manage",
-  "member.view",
-  "member.manage",
-  "moderation",
-  "bridge",
-  "automations",
-  "billing"
-];
+const COMMUNITY_CAPABILITIES:
+  ExecutionCapability[] = [
+    "commands",
+    "community.view",
+    "community.manage",
+    "member.view",
+    "member.manage",
+    "moderation",
+    "bridge",
+    "automations",
+    "billing"
+  ];
+
+const COMMUNITY_CAPABILITY_PERMISSIONS:
+  Array<
+    readonly [
+      Permission,
+      ExecutionCapability
+    ]
+  > = [
+    [
+      "community.view",
+      "community.view"
+    ],
+    [
+      "community.manage",
+      "community.manage"
+    ],
+    [
+      "member.view",
+      "member.view"
+    ],
+    [
+      "member.manage",
+      "member.manage"
+    ],
+    [
+      "commands.use",
+      "commands"
+    ],
+    [
+      "bridge.view",
+      "bridge"
+    ],
+    [
+      "bridge.manage",
+      "bridge"
+    ],
+    [
+      "moderation.warn",
+      "moderation"
+    ],
+    [
+      "moderation.mute",
+      "moderation"
+    ],
+    [
+      "moderation.kick",
+      "moderation"
+    ],
+    [
+      "moderation.ban",
+      "moderation"
+    ]
+  ];
 
 export class ExecutionContextService {
   constructor(
-    private readonly communityAccess?: CommunityAccessService
+    private readonly communityAccess?:
+      CommunityAccessService
   ) {}
 
   create(
     input: CreateExecutionContextInput
   ): ExecutionContext {
     const locale =
-      input.locale ?? DEFAULT_LOCALE;
+      input.locale ??
+      DEFAULT_LOCALE;
 
     if (!input.community) {
       return {
         type: "dm",
-        platform: input.platform,
-        correlationId: input.correlationId,
-        user: input.user,
+        platform:
+          input.platform,
+        correlationId:
+          input.correlationId,
+        user:
+          input.user,
         locale,
-        capabilities: [...DM_CAPABILITIES]
+        capabilities:
+          [...DM_CAPABILITIES]
       };
     }
 
+    const capabilities =
+      this.getCommunityCapabilities(
+        input.user.id,
+        input.community.id
+      );
+
     return {
       type: "community",
-      platform: input.platform,
-      correlationId: input.correlationId,
-      user: input.user,
-      community: input.community,
-      channel: input.channel,
+      platform:
+        input.platform,
+      correlationId:
+        input.correlationId,
+      user:
+        input.user,
+      community:
+        input.community,
+      channel:
+        input.channel,
       locale,
-      capabilities: [...COMMUNITY_CAPABILITIES]
+      capabilities
     };
   }
 
@@ -74,7 +154,8 @@ export class ExecutionContextService {
     context: ExecutionContext
   ): boolean {
     return (
-      context.type === "community" &&
+      context.type ===
+        "community" &&
       this.hasCapability(
         context,
         "moderation"
@@ -86,7 +167,8 @@ export class ExecutionContextService {
     context: ExecutionContext
   ): boolean {
     return (
-      context.type === "community" &&
+      context.type ===
+        "community" &&
       this.hasCapability(
         context,
         "community.manage"
@@ -98,7 +180,8 @@ export class ExecutionContextService {
     context: ExecutionContext
   ): boolean {
     return (
-      context.type === "community" &&
+      context.type ===
+        "community" &&
       this.hasCapability(
         context,
         "member.manage"
@@ -122,7 +205,8 @@ export class ExecutionContextService {
       | "commands.use"
   ): boolean {
     if (
-      context.type !== "community" ||
+      context.type !==
+        "community" ||
       !context.community ||
       !this.communityAccess
     ) {
@@ -134,5 +218,51 @@ export class ExecutionContextService {
       context.community.id,
       permission
     );
+  }
+
+  private getCommunityCapabilities(
+    userId: string,
+    communityId: string
+  ): ExecutionCapability[] {
+    /**
+     * ExecutionContextService is still usable directly in
+     * isolated Core tests and low-level consumers that don't
+     * construct the full runtime.
+     *
+     * The real runtime always supplies CommunityAccessService,
+     * so production authorization is permission-based.
+     */
+    if (!this.communityAccess) {
+      return [
+        ...COMMUNITY_CAPABILITIES
+      ];
+    }
+
+    const capabilities =
+      new Set<ExecutionCapability>();
+
+    for (
+      const [
+        permission,
+        capability
+      ] of
+        COMMUNITY_CAPABILITY_PERMISSIONS
+    ) {
+      if (
+        this.communityAccess.can(
+          userId,
+          communityId,
+          permission
+        )
+      ) {
+        capabilities.add(
+          capability
+        );
+      }
+    }
+
+    return [
+      ...capabilities
+    ];
   }
 }

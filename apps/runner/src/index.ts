@@ -50,7 +50,7 @@ logger.addHandler(
 );
 
 // One set of services for all adapters: Telegram and Discord
-// must see the same users, communities and memberships.
+// must see the same users, communities, memberships and permissions.
 const services =
   createRuntimeServices(logger);
 
@@ -67,7 +67,10 @@ if (telegramToken) {
       logger,
       {
         identityResolver:
-          services.identityResolver
+          services.identityResolver,
+
+        executionContextService:
+          services.executionContextService
       }
     )
   );
@@ -92,7 +95,10 @@ if (discordToken) {
       logger,
       {
         identityResolver:
-          services.identityResolver
+          services.identityResolver,
+
+        executionContextService:
+          services.executionContextService
       }
     )
   );
@@ -130,15 +136,23 @@ console.log("================================");
 console.log("");
 console.log("Status: STARTING");
 console.log(
-  `Adapters: ${adapters.map((adapter) => adapter.id).join(", ")}`
+  `Adapters: ${adapters
+    .map(
+      (adapter) =>
+        adapter.id
+    )
+    .join(", ")}`
 );
 console.log("");
 
 const consoleInterface =
   createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    prompt: "modexa> "
+    input:
+      process.stdin,
+    output:
+      process.stdout,
+    prompt:
+      "modexa> "
   });
 
 let stopping = false;
@@ -151,27 +165,33 @@ async function shutdown(): Promise<void> {
   stopping = true;
 
   console.log("");
-  console.log("Status: STOPPING");
+  console.log(
+    "Status: STOPPING"
+  );
 
   const results =
     await Promise.allSettled(
       registry
         .list()
-        .map((adapter) =>
-          adapter.stop()
+        .map(
+          (adapter) =>
+            adapter.stop()
         )
     );
 
   results.forEach(
     (result, index) => {
       if (
-        result.status === "rejected"
+        result.status ===
+        "rejected"
       ) {
         logger.error(
           "adapter.shutdown.failed",
           {
             adapterId:
-              registry.list()[index]?.id
+              registry.list()[
+                index
+              ]?.id
           },
           result.reason
         );
@@ -179,9 +199,12 @@ async function shutdown(): Promise<void> {
     }
   );
 
-  console.log("Status: STOPPED");
+  console.log(
+    "Status: STOPPED"
+  );
 
   consoleInterface.close();
+
   process.exit(0);
 }
 
@@ -189,7 +212,9 @@ consoleInterface.on(
   "line",
   async (input) => {
     const command =
-      input.trim().toLowerCase();
+      input
+        .trim()
+        .toLowerCase();
 
     if (!command) {
       consoleInterface.prompt();
@@ -198,7 +223,9 @@ consoleInterface.on(
 
     if (command === "status") {
       console.log("");
-      console.log("Status: RUNNING");
+      console.log(
+        "Status: RUNNING"
+      );
 
       for (const adapter of adapters) {
         console.log(
@@ -223,10 +250,18 @@ consoleInterface.on(
 
     if (command === "help") {
       console.log("");
-      console.log("Available local commands:");
-      console.log("  status  - show adapters");
-      console.log("  stop    - stop Modexa");
-      console.log("  help    - show this help");
+      console.log(
+        "Available local commands:"
+      );
+      console.log(
+        "  status  - show adapters"
+      );
+      console.log(
+        "  stop    - stop Modexa"
+      );
+      console.log(
+        "  help    - show this help"
+      );
       console.log("");
 
       consoleInterface.prompt();
@@ -266,41 +301,55 @@ for (const adapter of adapters) {
   logger.info(
     "adapter.starting",
     {
-      adapterId: adapter.id,
-      platform: adapter.platform
+      adapterId:
+        adapter.id,
+      platform:
+        adapter.platform
     }
   );
 
   void adapter
     .start()
-    .catch((error) => {
-      failed.add(adapter.id);
-
-      logger.error(
-        "adapter.start.failed",
-        {
-          adapterId: adapter.id,
-          platform: adapter.platform
-        },
-        error
-      );
-
-      if (
-        failed.size === adapters.length
-      ) {
-        console.error("");
-        console.error("Status: FAILED");
-        console.error(
-          "No adapter could be started."
+    .catch(
+      (error) => {
+        failed.add(
+          adapter.id
         );
 
-        consoleInterface.close();
-        process.exit(1);
+        logger.error(
+          "adapter.start.failed",
+          {
+            adapterId:
+              adapter.id,
+            platform:
+              adapter.platform
+          },
+          error
+        );
+
+        if (
+          failed.size ===
+          adapters.length
+        ) {
+          console.error("");
+          console.error(
+            "Status: FAILED"
+          );
+          console.error(
+            "No adapter could be started."
+          );
+
+          consoleInterface.close();
+
+          process.exit(1);
+        }
       }
-    });
+    );
 }
 
-console.log("Status: RUNNING");
+console.log(
+  "Status: RUNNING"
+);
 console.log(
   'Type "help" for local commands.'
 );
