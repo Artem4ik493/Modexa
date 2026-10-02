@@ -11,7 +11,8 @@ import {
   createBridgeTestInteractionHandler,
   BridgeService,
   type PlatformIdentityResolver,
-  type CommunityService
+  type CommunityService,
+  type IdentityService
 } from "@modexa/core";
 
 import {
@@ -49,6 +50,9 @@ export interface CreateTelegramAdapterOptions {
 
   communityService?:
     CommunityService;
+
+  identityService?:
+    IdentityService;
 }
 
 export function createTelegramAdapter(
@@ -71,7 +75,9 @@ export function createTelegramAdapter(
   if (options.bridgeService) {
     registry.register(
       createBridgeTestCommand(
-        options.bridgeService
+        options.bridgeService,
+        options.identityService ??
+          new IdentityService()
       )
     );
   }
