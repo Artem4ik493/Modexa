@@ -24,6 +24,24 @@ export interface DatabaseOptions {
   path: string;
 }
 
+export interface PersistedUser {
+  id: string;
+  displayName: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PersistedIdentity {
+  id: string;
+  userId: string;
+  platform: "telegram" | "discord";
+  externalId: string;
+  username?: string;
+  displayName?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export class ModexaDatabase {
   private readonly database: DatabaseSync;
 
@@ -80,6 +98,84 @@ export class ModexaDatabase {
           (item) =>
             item.permission as Permission
         )
+    };
+  }
+
+  createUser(user: PersistedUser): void {
+    this.database.prepare(
+      `INSERT INTO users
+       (id, display_name, created_at, updated_at)
+       VALUES (?, ?, ?, ?)`
+    ).run(
+      user.id,
+      user.displayName,
+      user.createdAt.toISOString(),
+      user.updatedAt.toISOString()
+    );
+  }
+
+  getUser(userId: string): PersistedUser | undefined {
+    const row = this.database.prepare(
+      `SELECT id, display_name, created_at, updated_at
+       FROM users WHERE id = ?`
+    ).get(userId) as {
+      id: string;
+      display_name: string;
+      created_at: string;
+      updated_at: string;
+    } | undefined;
+
+    if (!row) return undefined;
+
+    return {
+      id: row.id,
+      displayName: row.display_name,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
+    };
+  }
+
+  createIdentity(identity: PersistedIdentity): void {
+    this.database.prepare(
+      `INSERT INTO identities
+       (id, user_id, platform, external_id, username, display_name, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      identity.id,
+      identity.userId,
+      identity.platform,
+      identity.externalId,
+      identity.username ?? null,
+      identity.displayName ?? null,
+      identity.createdAt.toISOString(),
+      identity.updatedAt.toISOString()
+    );
+  }
+
+  findUserByIdentity(
+    platform: "telegram" | "discord",
+    externalId: string
+  ): PersistedUser | undefined {
+    const row = this.database.prepare(
+      `SELECT u.id, u.display_name, u.created_at, u.updated_at
+       FROM users u
+       INNER JOIN identities i ON i.user_id = u.id
+       WHERE i.platform = ? AND i.external_id = ?
+       LIMIT 1`
+    ).get(platform, externalId) as {
+      id: string;
+      display_name: string;
+      created_at: string;
+      updated_at: string;
+    } | undefined;
+
+    if (!row) return undefined;
+
+    return {
+      id: row.id,
+      displayName: row.display_name,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
     };
   }
 
