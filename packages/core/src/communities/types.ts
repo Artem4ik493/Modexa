@@ -5,9 +5,14 @@ export type CommunityPlatform =
   | "telegram"
   | "discord";
 
+export type CommunityMode =
+  | "public"
+  | "private";
+
 export interface Community {
   id: CommunityId;
   name: string;
+  mode?: CommunityMode;
   createdAt: Date;
   updatedAt: Date;
 }
