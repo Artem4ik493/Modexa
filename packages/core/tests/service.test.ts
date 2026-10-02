@@ -112,7 +112,7 @@ describe("CommandService", () => {
     });
   });
 
-  it("does not handle an unknown command", async () => {
+  it("returns a not-found response for an unknown command", async () => {
     const registry =
       new CommandRegistry();
 
@@ -142,8 +142,11 @@ describe("CommandService", () => {
       );
 
     expect(result).toEqual({
-      handled: false,
-      response: null
+      handled: true,
+      response: {
+        content:
+          "Команда не найдена. Для просмотра доступных команд для вашей роли user используйте /help."
+      }
     });
   });
 
