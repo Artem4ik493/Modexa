@@ -267,6 +267,25 @@ async function handleMessage(
     );
 
   if (
+    deps.bridgeService &&
+    message.content &&
+    !message.content.startsWith("/")
+  ) {
+    const source =
+      deps.bridgeService.findEndpointForExecution(
+        executionContext
+      );
+
+    if (source) {
+      await deps.bridgeService.relayMessage(
+        source,
+        message.author,
+        message.content
+      );
+    }
+  }
+
+  if (
     !message.content.startsWith("/")
   ) {
     return;
