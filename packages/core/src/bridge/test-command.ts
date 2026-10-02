@@ -253,7 +253,7 @@ function buildCommunityResponse(
       action: {
         type: "callback" as const,
         data:
-          `bridge.test.community:${scope}:${community.platform}:${community.externalId}`
+          `bridge.test.community:${scope}:${community.platform}:${community.externalId}:${safePage}`
       }
     })
   );
@@ -362,6 +362,18 @@ function buildChannelResponse(
           `bridge.test.select:${endpoint.id}`
       }
     }));
+
+  if (safePage > 0) {
+    buttons.push({
+      id: "bridge-channel-prev",
+      label: t("bridge.test.previous"),
+      action: {
+        type: "callback" as const,
+        data:
+          `bridge.test.channels:${scope}:${communityPlatform}:${communityExternalId}:${communityPage}:${safePage - 1}`
+      }
+    });
+  }
 
   if (safePage < pageCount - 1) {
     buttons.push({
@@ -624,7 +636,8 @@ export function createBridgeTestInteractionHandler(
     if (
       data.startsWith(
         "bridge.test.channels:"
-      ) {
+      )
+    ) {
       const parts = data.slice("bridge.test.channels:".length).split(":");
       const scope = parts[0] as BridgeSelectionScope;
       const platform = parts[1] as IdentityPlatform;
@@ -672,9 +685,9 @@ export function createBridgeTestInteractionHandler(
         parts[0] as BridgeSelectionScope;
       const platform =
         parts[1] as IdentityPlatform;
+      const communityPage = Number(parts[parts.length - 1]);
       const communityExternalId =
-        parts.slice(2).join(":");
-      const communityPage = 0;
+        parts.slice(2, -1).join(":");
 
       const source =
         bridgeService.findEndpointForExecution(
@@ -687,7 +700,8 @@ export function createBridgeTestInteractionHandler(
           scope !== "account") ||
         (platform !== "telegram" &&
           platform !== "discord") ||
-        !communityExternalId
+        !communityExternalId ||
+        !Number.isInteger(communityPage)
       ) {
         return {
           content: t(
