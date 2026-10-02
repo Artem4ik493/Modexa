@@ -140,7 +140,10 @@ export function createDiscordAdapter(
             .DISCORD_GUILD_ID ??
           undefined,
 
-        logger
+        logger,
+
+        bridgeService:
+          options.bridgeService
       }
     );
 
