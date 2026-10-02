@@ -123,6 +123,10 @@ export const ruMessages = {
     "← Назад",
   "bridge.test.next":
     "Далее →",
+  "bridge.test.back":
+    "← Назад",
+  "bridge.test.close":
+    "Закрыть",
   "bridge.test.page_unavailable":
     "Страница больше недоступна.",
   "bridge.test.endpoint_unavailable":
@@ -302,6 +306,10 @@ export const enMessages: MessageCatalog = {
     "← Back",
   "bridge.test.next":
     "Next →",
+  "bridge.test.back":
+    "← Back",
+  "bridge.test.close":
+    "Close",
   "bridge.test.page_unavailable":
     "This page is no longer available.",
   "bridge.test.endpoint_unavailable":
