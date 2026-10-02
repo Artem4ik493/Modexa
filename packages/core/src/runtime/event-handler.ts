@@ -55,6 +55,10 @@ import type {
   PlatformIdentityResolver
 } from "./identity.js";
 
+import type {
+  BridgeService
+} from "../bridge/service.js";
+
 const EMPTY_CONTENT_FALLBACK =
   "…";
 
@@ -89,6 +93,9 @@ export interface PlatformEventHandlerDeps {
 
   identityResolver?:
     PlatformIdentityResolver;
+
+  bridgeService?:
+    BridgeService;
 
   renderMetadata(
     response: BoundInteractionResponse
@@ -173,6 +180,31 @@ function buildExecutionContext(
       channel:
         input.channel
     });
+
+  if (
+    deps.bridgeService &&
+    resolved?.community &&
+    resolved.channel &&
+    input.community &&
+    input.channel
+  ) {
+    deps.bridgeService.registerEndpoint({
+      platform:
+        deps.platform,
+      communityExternalId:
+        input.community.externalId,
+      communityName:
+        input.community.name,
+      channelExternalId:
+        input.channel.externalId,
+      channelName:
+        input.channel.name,
+      communityId:
+        resolved.community.id,
+      channelId:
+        resolved.channel.id
+    });
+  }
 
   return createPlatformExecutionContext(
     deps.executionContextService,
