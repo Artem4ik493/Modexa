@@ -263,15 +263,29 @@ export function createBridgeTestInteractionHandler(
         "bridge.test.page:"
       )
     ) {
-      const [
-        sourceId,
-        pageText
-      ] = data
-        .slice(
+      const pageData =
+        data.slice(
           "bridge.test.page:"
             .length
-        )
-        .split(":");
+        );
+
+      const separator =
+        pageData.lastIndexOf(":");
+
+      const sourceId =
+        separator >= 0
+          ? pageData.slice(
+              0,
+              separator
+            )
+          : pageData;
+
+      const pageText =
+        separator >= 0
+          ? pageData.slice(
+              separator + 1
+            )
+          : "";
 
       const source =
         bridgeService.getEndpoint(
