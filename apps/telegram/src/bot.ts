@@ -15,6 +15,7 @@ import {
   BridgeService,
   type PlatformIdentityResolver,
   type CommunityService,
+  type MembershipService,
   IdentityService
 } from "@modexa/core";
 
@@ -53,6 +54,9 @@ export interface CreateTelegramAdapterOptions {
 
   communityService?:
     CommunityService;
+
+  membershipService?:
+    MembershipService;
 
   identityService?:
     IdentityService;
@@ -100,7 +104,8 @@ export function createTelegramAdapter(
       createBridgeTestCommand(
         options.bridgeService,
         options.identityService ??
-          new IdentityService()
+          new IdentityService(),
+        options.membershipService
       )
     );
   }
@@ -127,7 +132,8 @@ export function createTelegramAdapter(
     dispatcher.registerCallback(
       "bridge.test.",
       createBridgeTestInteractionHandler(
-        options.bridgeService
+        options.bridgeService,
+        options.membershipService
       )
     );
   }
