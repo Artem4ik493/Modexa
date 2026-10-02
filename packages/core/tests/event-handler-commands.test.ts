@@ -156,12 +156,19 @@ describe("command.invoked", () => {
     );
   });
 
-  it("does not reply to unknown commands", async () => {
+  it("replies when a command is not found", async () => {
     const { actions, handler } = setup();
 
     await handler(invocationEvent("nope"));
 
-    expect(actions).toHaveLength(0);
+    expect(actions).toHaveLength(1);
+    expect(actions[0]).toMatchObject({
+      type: "message.send",
+      platform: "discord",
+      channelExternalId: "900",
+      content:
+        "Команда не найдена. Для просмотра доступных команд для вашей роли user используйте /help."
+    });
   });
 
   it("does not set replyToExternalId for text messages", async () => {
