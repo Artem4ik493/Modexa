@@ -7,6 +7,9 @@ import {
   InteractionActionStore,
   InteractionDispatcher,
   createBuiltinCommands,
+  createBridgeTestCommand,
+  createBridgeTestInteractionHandler,
+  BridgeService,
   listCommandDescriptors,
   type PlatformIdentityResolver
 } from "@modexa/core";
@@ -50,6 +53,12 @@ export interface CreateDiscordAdapterOptions {
    */
   executionContextService?:
     ExecutionContextService;
+
+  interactionStore?:
+    InteractionActionStore;
+
+  bridgeService?:
+    BridgeService;
 }
 
 export function createDiscordAdapter(
@@ -78,6 +87,14 @@ export function createDiscordAdapter(
     registry
   );
 
+  if (options.bridgeService) {
+    registry.register(
+      createBridgeTestCommand(
+        options.bridgeService
+      )
+    );
+  }
+
   const commandService =
     new CommandService(
       new CommandParser(),
@@ -86,6 +103,7 @@ export function createDiscordAdapter(
     );
 
   const store =
+    options.interactionStore ??
     new InteractionActionStore();
 
   const dispatcher =
@@ -94,6 +112,15 @@ export function createDiscordAdapter(
       commandService,
       logger
     );
+
+  if (options.bridgeService) {
+    dispatcher.registerCallback(
+      "bridge.test.",
+      createBridgeTestInteractionHandler(
+        options.bridgeService
+      )
+    );
+  }
 
   const adapter =
     new DiscordAdapter(
@@ -129,7 +156,9 @@ export function createDiscordAdapter(
         options.executionContextService ??
         new ExecutionContextService(),
       identityResolver:
-        options.identityResolver
+        options.identityResolver,
+      bridgeService:
+        options.bridgeService
     })
   );
 
