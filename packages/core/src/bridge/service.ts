@@ -225,7 +225,8 @@ export class BridgeService {
   async relayMessage(
     source: BridgeEndpoint,
     author: PlatformUser,
-    content: string
+    content: string,
+    replyTo?: PlatformUser
   ): Promise<void> {
     if (!this.gateway || !content.trim()) {
       return;
@@ -249,9 +250,23 @@ export class BridgeService {
         : author.displayName ??
           author.externalId;
 
+    const replyName = replyTo
+      ? replyTo.username
+        ? "@" + replyTo.username
+        : replyTo.displayName ??
+          replyTo.externalId
+      : undefined;
+
     const response: InteractionResponse = {
       content:
-        prefix + " " + name + " > " + content
+        prefix +
+        " " +
+        name +
+        (replyName
+          ? " в ответ на " + replyName
+          : "") +
+        " > " +
+        content
     };
 
     await Promise.all(
