@@ -53,7 +53,31 @@ export const ruMessages = {
   "command.bridge_test.description":
     "Тестово связать чат Telegram и Discord",
   "bridge.test.title":
-    "Выберите чат для связи",
+    "Выбор чатов для привязки:",
+  "bridge.test.scope.any":
+    "Любые доступные",
+  "bridge.test.scope.account":
+    "Доступные моему аккаунту",
+  "bridge.test.communities.title":
+    "Выберите группу или сервер:",
+  "bridge.test.channels.title":
+    "Выберите чат для привязки:",
+  "bridge.test.no_accounts":
+    "У вас нет связанных аккаунтов Telegram и Discord, свяжите их на сайте Modexa.",
+  "bridge.test.no_chats":
+    "У вас нет доступных чатов.",
+  "bridge.test.private_source.telegram":
+    "Эта группа в Telegram приватная, просмотр чата и установка связи недоступны.",
+  "bridge.test.private_source.discord":
+    "Этот сервер в Discord приватный, просмотр чатов и установка связи недоступны.",
+  "bridge.test.no_communities.telegram":
+    "Нет доступных групп Telegram.",
+  "bridge.test.no_communities.discord":
+    "Нет доступных серверов Discord.",
+  "bridge.test.private_target.telegram":
+    "Группа приватная, невозможно установить связь.",
+  "bridge.test.private_target.discord":
+    "Сервер приватный, невозможно установить связь.",
   "bridge.test.source":
     "Источник: {platform} — {community} / {channel}",
   "bridge.test.page":
@@ -180,7 +204,31 @@ export const enMessages: MessageCatalog = {
   "command.bridge_test.description":
     "Test-link a Telegram and Discord chat",
   "bridge.test.title":
-    "Choose a chat to link",
+    "Choose chats to link:",
+  "bridge.test.scope.any":
+    "Any available",
+  "bridge.test.scope.account":
+    "Available to my account",
+  "bridge.test.communities.title":
+    "Choose a group or server:",
+  "bridge.test.channels.title":
+    "Choose a chat to link:",
+  "bridge.test.no_accounts":
+    "You do not have linked Telegram and Discord accounts. Link them on the Modexa website.",
+  "bridge.test.no_chats":
+    "You have no available chats.",
+  "bridge.test.private_source.telegram":
+    "This Telegram group is private. Chat viewing and linking are unavailable.",
+  "bridge.test.private_source.discord":
+    "This Discord server is private. Channel viewing and linking are unavailable.",
+  "bridge.test.no_communities.telegram":
+    "No Telegram groups are available.",
+  "bridge.test.no_communities.discord":
+    "No Discord servers are available.",
+  "bridge.test.private_target.telegram":
+    "The group is private. A bridge cannot be created.",
+  "bridge.test.private_target.discord":
+    "The server is private. A bridge cannot be created.",
   "bridge.test.source":
     "Source: {platform} — {community} / {channel}",
   "bridge.test.page":
