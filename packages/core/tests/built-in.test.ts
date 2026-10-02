@@ -118,6 +118,55 @@ describe("built-in commands", () => {
     );
   });
 
+  it("returns the updated community mode in settings", async () => {
+    const registry = new CommandRegistry();
+    const communityService = new CommunityService();
+
+    createBuiltinCommands(
+      registry,
+      communityService
+    );
+
+    const community =
+      communityService.createCommunity({
+        name: "Test Community"
+      });
+
+    const execution = {
+      type: "community" as const,
+      platform: "telegram" as const,
+      correlationId: "test",
+      user: {
+        id: "user-1",
+        displayName: "Admin",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      community,
+      capabilities: [
+        "commands" as const,
+        "community.manage" as const
+      ]
+    };
+
+    const result =
+      await registry.execute(
+        "settings",
+        {
+          platform: "telegram",
+          user: execution.user,
+          community,
+          args: ["private"],
+          rawText: "/settings private",
+          execution
+        }
+      );
+
+    expect(result?.content).toContain(
+      "Режим: приватный"
+    );
+  });
+
   it("generates help from the command registry", async () => {
     const registry = new CommandRegistry();
 
