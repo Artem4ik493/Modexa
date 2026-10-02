@@ -92,7 +92,13 @@ export class BridgeService {
         endpoint.channelName;
       existing.communityId =
         endpoint.communityId ??
-        existing.communityId;
+        existing.communityId ??
+        this.communityService
+          ?.findByIdentity(
+            endpoint.platform,
+            endpoint.communityExternalId
+          )
+          ?.id;
       existing.channelId =
         endpoint.channelId ??
         existing.channelId;
@@ -103,8 +109,18 @@ export class BridgeService {
       return existing;
     }
 
+    const resolvedCommunityId =
+      endpoint.communityId ??
+      this.communityService
+        ?.findByIdentity(
+          endpoint.platform,
+          endpoint.communityExternalId
+        )
+        ?.id;
+
     const created: BridgeEndpoint = {
       ...endpoint,
+      communityId: resolvedCommunityId,
       id,
       updatedAt:
         endpoint.updatedAt ??
