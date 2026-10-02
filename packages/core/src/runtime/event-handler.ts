@@ -267,6 +267,16 @@ async function handleMessage(
   if (
     deps.bridgeService &&
     message.content &&
+    deps.bridgeService.isRelayedMessage(
+      message.content
+    )
+  ) {
+    return;
+  }
+
+  if (
+    deps.bridgeService &&
+    message.content &&
     !message.content.startsWith("/")
   ) {
     const source =
