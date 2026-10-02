@@ -4,11 +4,14 @@ import {
   CommandService,
   CoreLogger,
   ExecutionContextService,
+  IdentityLinkService,
+  IdentityLinkingService,
   InteractionActionStore,
   InteractionDispatcher,
   createBuiltinCommands,
   createBridgeTestCommand,
   createBridgeTestInteractionHandler,
+  createIdentityLinkCommand,
   BridgeService,
   listCommandDescriptors,
   type PlatformIdentityResolver,
@@ -67,6 +70,12 @@ export interface CreateDiscordAdapterOptions {
 
   identityService?:
     IdentityService;
+
+  identityLinkService?:
+    IdentityLinkService;
+
+  identityLinkingService?:
+    IdentityLinkingService;
 }
 
 export function createDiscordAdapter(
@@ -95,6 +104,20 @@ export function createDiscordAdapter(
     registry,
     options.communityService
   );
+
+  if (
+    options.identityService &&
+    options.identityLinkService &&
+    options.identityLinkingService
+  ) {
+    registry.register(
+      createIdentityLinkCommand(
+        options.identityService,
+        options.identityLinkService,
+        options.identityLinkingService
+      )
+    );
+  }
 
   if (options.bridgeService) {
     registry.register(
