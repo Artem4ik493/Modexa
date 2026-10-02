@@ -46,6 +46,7 @@ export class CommunityService {
     const community: Community = {
       id: `community-${this.nextCommunityId++}`,
       name: input.name,
+      mode: "public",
       createdAt: now,
       updatedAt: now
     };
@@ -62,6 +63,27 @@ export class CommunityService {
     communityId: CommunityId
   ): Community | undefined {
     return this.communities.get(communityId);
+  }
+
+  setMode(
+    communityId: CommunityId,
+    mode: Community["mode"],
+    now = new Date()
+  ): Community {
+    const community = this.communities.get(
+      communityId
+    );
+
+    if (!community) {
+      throw new Error(
+        `Community "${communityId}" does not exist`
+      );
+    }
+
+    community.mode = mode;
+    community.updatedAt = now;
+
+    return community;
   }
 
   getCommunities(): Community[] {
