@@ -25,8 +25,8 @@ import type {
 } from "../identity/service.js";
 
 import type {
-  CommunityService
-} from "../communities/service.js";
+  MembershipService
+} from "../memberships/service.js";
 
 import type {
   BridgeService
@@ -90,7 +90,11 @@ function hasLinkedAccounts(
 
 function getTargetEndpoints(
   bridgeService: BridgeService,
-  source: BridgeEndpoint
+  source: BridgeEndpoint,
+  identityService: IdentityService,
+  userId: string,
+  membershipService?: MembershipService,
+  scope: BridgeSelectionScope = "any"
 ): BridgeEndpoint[] {
   return bridgeService
     .listEndpoints(targetPlatform(source))
@@ -103,7 +107,14 @@ function getTargetEndpoints(
         ) &&
         !bridgeService.isEndpointPrivate(
           endpoint
-        )
+        ) &&
+        (scope === "any" ||
+          (membershipService !== undefined &&
+            endpoint.communityId !== undefined &&
+            membershipService.isActiveMember(
+              userId,
+              endpoint.communityId
+            )))
     );
 }
 
@@ -196,7 +207,11 @@ function buildCommunityResponse(
   const endpoints =
     getTargetEndpoints(
       bridgeService,
-      source
+      source,
+      identityService,
+      context.execution.user.id,
+      membershipService,
+      scope
     );
 
   if (endpoints.length === 0) {
@@ -419,6 +434,7 @@ function buildChannelResponse(
 function createHandler(
   bridgeService: BridgeService,
   identityService: IdentityService,
+  membershipService: MembershipService | undefined,
   context: CommandContext
 ): CommandResponse {
   const t = createTranslator(
@@ -492,7 +508,11 @@ function createHandler(
   if (
     getTargetEndpoints(
       bridgeService,
-      source
+      source,
+      identityService,
+      context.execution.user.id,
+      membershipService,
+      "any"
     ).length === 0
   ) {
     return {
@@ -509,7 +529,8 @@ function createHandler(
 
 export function createBridgeTestCommand(
   bridgeService: BridgeService,
-  identityService: IdentityService
+  identityService: IdentityService,
+  membershipService?: MembershipService
 ): CommandDefinition {
   return {
     name: "bridge-test",
@@ -520,13 +541,15 @@ export function createBridgeTestCommand(
       createHandler(
         bridgeService,
         identityService,
+        membershipService,
         context
       )
   };
 }
 
 export function createBridgeTestInteractionHandler(
-  bridgeService: BridgeService
+  bridgeService: BridgeService,
+  membershipService?: MembershipService
 ): (
   context: InteractionHandlerContext
 ) => Promise<InteractionResponse> | InteractionResponse {
