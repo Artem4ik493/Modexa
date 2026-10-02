@@ -11,6 +11,10 @@ import type {
   InteractionResponse
 } from "../interactions/types.js";
 import type {
+  CommunityService
+} from "../communities/service.js";
+
+import type {
   BridgeEndpoint,
   BridgeLink,
   BridgeLinkRequest,
@@ -34,6 +38,9 @@ export interface CreateBridgeLinkRequestInput {
 }
 
 export class BridgeService {
+  constructor(
+    private readonly communityService?: CommunityService
+  ) {}
   private readonly endpoints = new Map<
     BridgeEndpointId,
     BridgeEndpoint
@@ -299,6 +306,26 @@ export class BridgeService {
     if (!source || !target) {
       throw new Error(
         "Bridge endpoint does not exist"
+      );
+    }
+
+    if (
+      this.isEndpointPrivate(source)
+    ) {
+      throw new Error(
+        source.platform === "telegram"
+          ? "Telegram community is private and cannot be linked"
+          : "Discord server is private and cannot be linked"
+      );
+    }
+
+    if (
+      this.isEndpointPrivate(target)
+    ) {
+      throw new Error(
+        target.platform === "telegram"
+          ? "Telegram group is private and cannot be linked"
+          : "Discord server is private and cannot be linked"
       );
     }
 
@@ -689,6 +716,26 @@ export class BridgeService {
         response: message
       })
     ]);
+  }
+
+  isEndpointPrivate(
+    endpoint: BridgeEndpoint
+  ): boolean {
+    if (!this.communityService) {
+      return false;
+    }
+
+    const community =
+      endpoint.communityId
+        ? this.communityService.getCommunity(
+            endpoint.communityId
+          )
+        : this.communityService.findByIdentity(
+            endpoint.platform,
+            endpoint.communityExternalId
+          );
+
+    return community?.mode === "private";
   }
 
   private createEndpointId(
