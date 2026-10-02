@@ -172,15 +172,13 @@ export function createDiscordAdapter(
       logger
     );
 
-  if (options.bridgeService) {
-    dispatcher.registerCallback(
-      "bridge.test.",
-      createBridgeTestInteractionHandler(
-        options.bridgeService,
-        options.membershipService
-      )
-    );
-  }
+  dispatcher.registerCallback(
+    "bridge.test.",
+    createBridgeTestInteractionHandler(
+      bridgeService,
+      membershipService
+    )
+  );
 
   dispatcher.registerCallback(
     "menu.close",
