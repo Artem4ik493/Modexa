@@ -539,7 +539,7 @@ export class BridgeService {
         buttons: [
           {
             id: "bridge-confirm",
-            label: "Подтвердить",
+            label: translate("bridge.test.confirm", undefined, locale),
             action: {
               type: "callback",
               data:
@@ -548,7 +548,7 @@ export class BridgeService {
           },
           {
             id: "bridge-reject",
-            label: "Отклонить",
+            label: translate("bridge.test.reject", undefined, locale),
             action: {
               type: "callback",
               data:
