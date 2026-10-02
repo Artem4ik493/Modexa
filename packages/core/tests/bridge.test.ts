@@ -195,6 +195,60 @@ describe("BridgeService", () => {
     });
   });
 
+  it("marks relayed messages so they are not bridged back", async () => {
+    const service = new BridgeService();
+    const sendMessage = vi.fn().mockResolvedValue(undefined);
+
+    service.setMessageGateway({
+      sendMessage
+    });
+
+    const telegram = service.registerEndpoint({
+      platform: "telegram",
+      communityExternalId: "tg",
+      communityName: "TG",
+      channelExternalId: "tg",
+      channelName: "TG"
+    });
+
+    const discord = service.registerEndpoint({
+      platform: "discord",
+      communityExternalId: "ds",
+      communityName: "DS",
+      channelExternalId: "ds",
+      channelName: "general"
+    });
+
+    const request = service.createLinkRequest({
+      sourceEndpointId: telegram.id,
+      targetEndpointId: discord.id,
+      requestedByUserId: "user-1"
+    });
+
+    await service.confirmRequest(
+      request.id,
+      createExecution("discord", "ds", "ds")
+    );
+
+    await service.relayMessage(
+      telegram,
+      {
+        platform: "telegram",
+        externalId: "user-1",
+        displayName: "Artem"
+      },
+      "Привет"
+    );
+
+    const relayed =
+      sendMessage.mock.calls[0]?.[0].response.content ?? "";
+
+    expect(service.isRelayedMessage(relayed)).toBe(true);
+    expect(
+      service.stripRelayMarker(relayed)
+    ).toContain("[TG] Artem > Привет");
+  });
+
   it("sends link success to both linked endpoints", async () => {
     const service = new BridgeService();
     const sendMessage = vi.fn().mockResolvedValue(undefined);
