@@ -173,14 +173,20 @@ describe("BridgeService", () => {
         username: "artem4ik493",
         displayName: "Artem"
       },
-      "Привет"
+      "Привет",
+      {
+        platform: "telegram",
+        externalId: "user-2",
+        username: "replyuser",
+        displayName: "Reply User"
+      }
     );
 
     expect(sendMessage).toHaveBeenCalledWith({
       platform: "discord",
       channelExternalId: "ds",
       response: {
-        content: "[TG] @artem4ik493 > Привет"
+        content: "[TG] @artem4ik493 в ответ на @replyuser > Привет"
       }
     });
   });
