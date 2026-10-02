@@ -81,7 +81,9 @@ export function createRuntimeServices(
     );
 
   const bridgeService =
-    new BridgeService();
+    new BridgeService(
+      communityService
+    );
 
   const identityResolver =
     new PlatformIdentityResolver(
