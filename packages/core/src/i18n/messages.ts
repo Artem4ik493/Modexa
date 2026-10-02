@@ -141,6 +141,8 @@ export const enMessages: MessageCatalog = {
     "Check if Modexa is alive",
   "command.forbidden":
     "You do not have permission to use commands in this community.",
+  "command.not_found":
+    "Command not found. To view commands available for your role {role}, use /help.",
   "command.ping.pong":
     "Pong!",
 
