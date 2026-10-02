@@ -278,7 +278,8 @@ async function handleMessage(
       await deps.bridgeService.relayMessage(
         source,
         message.author,
-        message.content
+        message.content,
+        message.replyTo
       );
     }
   }
