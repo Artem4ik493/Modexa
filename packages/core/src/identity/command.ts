@@ -166,8 +166,6 @@ function handleLink(
     try {
       linkingService.completeLink({
         code,
-        targetPlatform:
-          currentPlatform,
         targetExternalId:
           currentIdentity.externalId,
         targetUsername:
