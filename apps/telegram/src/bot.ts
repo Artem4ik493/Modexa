@@ -4,11 +4,14 @@ import {
   CommandService,
   CoreLogger,
   ExecutionContextService,
+  IdentityLinkService,
+  IdentityLinkingService,
   InteractionActionStore,
   InteractionDispatcher,
   createBuiltinCommands,
   createBridgeTestCommand,
   createBridgeTestInteractionHandler,
+  createIdentityLinkCommand,
   BridgeService,
   type PlatformIdentityResolver,
   type CommunityService,
@@ -53,6 +56,12 @@ export interface CreateTelegramAdapterOptions {
 
   identityService?:
     IdentityService;
+
+  identityLinkService?:
+    IdentityLinkService;
+
+  identityLinkingService?:
+    IdentityLinkingService;
 }
 
 export function createTelegramAdapter(
@@ -71,6 +80,20 @@ export function createTelegramAdapter(
     registry,
     options.communityService
   );
+
+  if (
+    options.identityService &&
+    options.identityLinkService &&
+    options.identityLinkingService
+  ) {
+    registry.register(
+      createIdentityLinkCommand(
+        options.identityService,
+        options.identityLinkService,
+        options.identityLinkingService
+      )
+    );
+  }
 
   if (options.bridgeService) {
     registry.register(
