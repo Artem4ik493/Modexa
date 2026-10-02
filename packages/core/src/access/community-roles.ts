@@ -2,6 +2,7 @@ import type { CommunityId } from "../communities/types.js";
 import type { CommunityRole } from "./types.js";
 
 export const COMMUNITY_ROLE_NAMES = {
+  OWNER: "OWNER",
   ADMIN: "ADMIN",
   MODERATOR: "MODERATOR",
   MEMBER: "MEMBER"
@@ -11,6 +12,25 @@ export function createBuiltinCommunityRoles(
   communityId: CommunityId
 ): CommunityRole[] {
   return [
+    {
+      id: `${communityId}:owner`,
+      communityId,
+      name: COMMUNITY_ROLE_NAMES.OWNER,
+      permissions: [
+        "community.view",
+        "community.manage",
+        "member.view",
+        "member.manage",
+        "moderation.warn",
+        "moderation.mute",
+        "moderation.kick",
+        "moderation.ban",
+        "commands.use",
+        "commands.manage",
+        "bridge.view",
+        "bridge.manage"
+      ]
+    },
     {
       id: `${communityId}:admin`,
       communityId,
