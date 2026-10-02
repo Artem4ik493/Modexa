@@ -138,6 +138,11 @@ export function createTelegramAdapter(
     );
   }
 
+  dispatcher.registerCallback(
+    "menu.close",
+    () => ({ close: true })
+  );
+
   const adapter =
     new TelegramAdapter(
       bot
