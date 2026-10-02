@@ -180,6 +180,172 @@ describe("PlatformIdentityResolver", () => {
     ).toHaveLength(0);
   });
 
+  it("syncs a platform admin to the Modexa ADMIN role", () => {
+    const {
+      resolver,
+      accessControlService,
+      communityAccessService
+    } = createResolver();
+
+    const result = resolver.resolve({
+      platform: "telegram",
+      author: {
+        ...telegramAuthor,
+        platformRole: "admin"
+      },
+      community: telegramGroup,
+      channel: telegramGroup
+    });
+
+    const roles =
+      accessControlService.getUserCommunityRoles(
+        result.user.id,
+        result.community!.id
+      );
+
+    expect(roles).toHaveLength(1);
+    expect(roles[0].name).toBe(
+      COMMUNITY_ROLE_NAMES.ADMIN
+    );
+
+    expect(
+      communityAccessService.can(
+        result.user.id,
+        result.community!.id,
+        "commands.manage"
+      )
+    ).toBe(true);
+
+    expect(
+      communityAccessService.can(
+        result.user.id,
+        result.community!.id,
+        "moderation.ban"
+      )
+    ).toBe(true);
+  });
+
+  it("syncs a platform owner to the Modexa ADMIN role", () => {
+    const {
+      resolver,
+      accessControlService
+    } = createResolver();
+
+    const result = resolver.resolve({
+      platform: "discord",
+      author: {
+        platform: "discord",
+        externalId: "owner-1",
+        displayName: "Owner",
+        platformRole: "owner"
+      },
+      community: {
+        platform: "discord",
+        externalId: "guild-1",
+        name: "Guild"
+      }
+    });
+
+    const roles =
+      accessControlService.getUserCommunityRoles(
+        result.user.id,
+        result.community!.id
+      );
+
+    expect(roles).toHaveLength(1);
+    expect(roles[0].name).toBe(
+      COMMUNITY_ROLE_NAMES.ADMIN
+    );
+  });
+
+  it("syncs a platform member to the Modexa MEMBER role", () => {
+    const {
+      resolver,
+      accessControlService,
+      communityAccessService
+    } = createResolver();
+
+    const result = resolver.resolve({
+      platform: "telegram",
+      author: {
+        ...telegramAuthor,
+        platformRole: "member"
+      },
+      community: telegramGroup
+    });
+
+    const roles =
+      accessControlService.getUserCommunityRoles(
+        result.user.id,
+        result.community!.id
+      );
+
+    expect(roles).toHaveLength(1);
+    expect(roles[0].name).toBe(
+      COMMUNITY_ROLE_NAMES.MEMBER
+    );
+
+    expect(
+      communityAccessService.can(
+        result.user.id,
+        result.community!.id,
+        "commands.use"
+      )
+    ).toBe(true);
+
+    expect(
+      communityAccessService.can(
+        result.user.id,
+        result.community!.id,
+        "commands.manage"
+      )
+    ).toBe(false);
+  });
+
+  it("updates the Modexa community role when the platform role changes", () => {
+    const {
+      resolver,
+      accessControlService
+    } = createResolver();
+
+    const input = {
+      platform: "telegram" as const,
+      author: {
+        ...telegramAuthor,
+        platformRole: "admin" as const
+      },
+      community: telegramGroup
+    };
+
+    const first = resolver.resolve(input);
+
+    expect(
+      accessControlService.getUserCommunityRoles(
+        first.user.id,
+        first.community!.id
+      )[0].name
+    ).toBe(COMMUNITY_ROLE_NAMES.ADMIN);
+
+    const second = resolver.resolve({
+      ...input,
+      author: {
+        ...input.author,
+        platformRole: "member"
+      }
+    });
+
+    const roles =
+      accessControlService.getUserCommunityRoles(
+        second.user.id,
+        second.community!.id
+      );
+
+    expect(roles).toHaveLength(1);
+    expect(roles[0].name).toBe(
+      COMMUNITY_ROLE_NAMES.MEMBER
+    );
+  });
+
   it("creates community, channel and active membership in a group", () => {
     const { resolver, membershipService } =
       createResolver();
