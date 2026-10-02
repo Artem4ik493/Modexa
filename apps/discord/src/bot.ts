@@ -16,6 +16,7 @@ import {
   listCommandDescriptors,
   type PlatformIdentityResolver,
   type CommunityService,
+  type MembershipService,
   IdentityService
 } from "@modexa/core";
 
@@ -67,6 +68,9 @@ export interface CreateDiscordAdapterOptions {
 
   communityService?:
     CommunityService;
+
+  membershipService?:
+    MembershipService;
 
   identityService?:
     IdentityService;
@@ -124,7 +128,8 @@ export function createDiscordAdapter(
       createBridgeTestCommand(
         options.bridgeService,
         options.identityService ??
-          new IdentityService()
+          new IdentityService(),
+        options.membershipService
       )
     );
   }
@@ -151,7 +156,8 @@ export function createDiscordAdapter(
     dispatcher.registerCallback(
       "bridge.test.",
       createBridgeTestInteractionHandler(
-        options.bridgeService
+        options.bridgeService,
+        options.membershipService
       )
     );
   }
