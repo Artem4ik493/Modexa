@@ -190,7 +190,7 @@ describe("BridgeService", () => {
       platform: "discord",
       channelExternalId: "ds",
       response: {
-        content: "[TG] @artem4ik493 в ответ на @replyuser > Привет"
+        content: "\u2063MODExaBridge\u2063[TG] @artem4ik493 в ответ на @replyuser > Привет"
       }
     });
   });
