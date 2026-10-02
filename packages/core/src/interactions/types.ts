@@ -55,6 +55,9 @@ export interface InteractionResponse {
   buttons?: InteractionButton[];
 
   menus?: InteractionMenu[];
+
+  /** Remove the current interactive message when handled. */
+  close?: boolean;
 }
 
 export interface InteractionRequest {
@@ -124,4 +127,6 @@ export interface BoundInteractionResponse {
   buttons?: BoundInteractionButton[];
 
   menus?: BoundInteractionMenu[];
+
+  close?: boolean;
 }
