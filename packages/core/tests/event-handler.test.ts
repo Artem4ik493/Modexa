@@ -254,7 +254,7 @@ describe("Platform event handler", () => {
     expect(content).toContain("Аккаунт");
     expect(content).toContain("telegram:42");
 
-    expect(tokensOf(actions[1])).toHaveLength(1);
+    expect(tokensOf(actions[1])).toHaveLength(2);
   });
 
   it("returns to the menu with the back button", async () => {
@@ -274,7 +274,7 @@ describe("Platform event handler", () => {
     await handler(
       interactionEvent(
         "telegram",
-        tokensOf(actions[1])[0]
+        tokensOf(actions[1])[1]
       )
     );
 
