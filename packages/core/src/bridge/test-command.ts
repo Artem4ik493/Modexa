@@ -172,6 +172,14 @@ function buildScopeResponse(
           data: "bridge.test.scope:account"
         }
       },
+      {
+        id: "bridge-back-menu",
+        label: t("menu.back"),
+        action: {
+          type: "command",
+          command: "/menu"
+        }
+      },
       closeButton(t)
     ]
   };
