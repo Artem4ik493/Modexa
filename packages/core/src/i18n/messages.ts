@@ -16,6 +16,8 @@ export const ruMessages = {
     "Проверить, что Modexa работает",
   "command.forbidden":
     "У вас недостаточно прав для использования команд в этом сообществе.",
+  "command.permission_denied":
+    "У вас нет прав для использования этой команды.",
   "command.not_found":
     "Команда не найдена. Для просмотра доступных команд для вашей роли {role} используйте /help.",
   "command.ping.pong":
@@ -201,6 +203,8 @@ export const enMessages: MessageCatalog = {
     "Check if Modexa is alive",
   "command.forbidden":
     "You do not have permission to use commands in this community.",
+  "command.permission_denied":
+    "You do not have permission to use this command.",
   "command.not_found":
     "Command not found. To view commands available for your role {role}, use /help.",
   "command.ping.pong":
