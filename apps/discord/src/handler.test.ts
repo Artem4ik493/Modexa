@@ -191,7 +191,7 @@ describe("Discord event handler", () => {
 
     expect(
       customIdTokens(actions[0])
-    ).toHaveLength(2);
+    ).toHaveLength(3);
   });
 
   it("edits the message when a button is pressed", async () => {
@@ -272,7 +272,7 @@ describe("Discord event handler", () => {
     ).content;
 
     expect(content).toContain(
-      "личном чате"
+      "нет прав для использования этой команды"
     );
 
     expect(content).not.toContain(
