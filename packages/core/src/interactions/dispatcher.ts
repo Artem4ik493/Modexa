@@ -224,6 +224,27 @@ export class InteractionDispatcher {
     }
   }
 
+  private findPrefixedCallback(
+    data: string
+  ): InteractionHandler | undefined {
+    let best:
+      | InteractionHandler
+      | undefined;
+    let bestLength = -1;
+
+    for (const [prefix, handler] of this.callbacks) {
+      if (
+        data.startsWith(prefix) &&
+        prefix.length > bestLength
+      ) {
+        best = handler;
+        bestLength = prefix.length;
+      }
+    }
+
+    return best;
+  }
+
   private async execute(
     action: StoredInteractionAction,
     execution: ExecutionContext
