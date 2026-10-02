@@ -1,6 +1,9 @@
 import type {
   ExecutionContext
 } from "../contexts/types.js";
+import type {
+  PlatformUser
+} from "../adapters/types.js";
 import type { IdentityPlatform } from "../identity/types.js";
 import type { Locale } from "../i18n/locale.js";
 import { translate } from "../i18n/translate.js";
@@ -193,6 +196,73 @@ export class BridgeService {
     return [
       ...this.links.values()
     ];
+  }
+
+  getLinkedEndpoints(
+    endpointId: BridgeEndpointId
+  ): BridgeEndpoint[] {
+    const targetIds =
+      new Set<BridgeEndpointId>();
+
+    for (const link of this.links.values()) {
+      if (link.sourceEndpointId === endpointId) {
+        targetIds.add(link.targetEndpointId);
+      }
+
+      if (link.targetEndpointId === endpointId) {
+        targetIds.add(link.sourceEndpointId);
+      }
+    }
+
+    return [...targetIds]
+      .map((id) => this.getEndpoint(id))
+      .filter(
+        (endpoint): endpoint is BridgeEndpoint =>
+          endpoint !== undefined
+      );
+  }
+
+  async relayMessage(
+    source: BridgeEndpoint,
+    author: PlatformUser,
+    content: string
+  ): Promise<void> {
+    if (!this.gateway || !content.trim()) {
+      return;
+    }
+
+    const targets =
+      this.getLinkedEndpoints(source.id);
+
+    if (targets.length === 0) {
+      return;
+    }
+
+    const prefix =
+      source.platform === "telegram"
+        ? "[TG]"
+        : "[DS]";
+
+    const name =
+      author.username
+        ? "@" + author.username
+        : author.displayName ??
+          author.externalId;
+
+    const response: InteractionResponse = {
+      content:
+        prefix + " " + name + " > " + content
+    };
+
+    await Promise.all(
+      targets.map((target) =>
+        this.gateway!.sendMessage({
+          platform: target.platform,
+          channelExternalId: target.channelExternalId,
+          response
+        })
+      )
+    );
   }
 
   createLinkRequest(
@@ -588,13 +658,22 @@ export class BridgeService {
       buttons: []
     };
 
-    await this.gateway.sendMessage({
-      platform:
-        source.platform,
-      channelExternalId:
-        source.channelExternalId,
-      response: message
-    });
+    await Promise.all([
+      this.gateway.sendMessage({
+        platform:
+          source.platform,
+        channelExternalId:
+          source.channelExternalId,
+        response: message
+      }),
+      this.gateway.sendMessage({
+        platform:
+          target.platform,
+        channelExternalId:
+          target.channelExternalId,
+        response: message
+      })
+    ]);
   }
 
   private createEndpointId(
