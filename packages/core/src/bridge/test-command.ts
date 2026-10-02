@@ -422,8 +422,9 @@ export function createBridgeTestInteractionHandler(
       );
 
       return {
-        content:
-          "Запрос на привязку отклонён."
+        content: createTranslator(
+          context.execution.locale
+        )("bridge.test.rejected")
       };
     }
 
