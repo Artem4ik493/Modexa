@@ -93,6 +93,7 @@ describe("buildDiscordSlashCommands", () => {
 
     expect(names.sort()).toEqual([
       "account",
+      "bridge-test",
       "bridgetest",
       "commands",
       "help",
