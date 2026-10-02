@@ -195,7 +195,9 @@ export class InteractionActionStore {
       content: response.content,
       buttons,
       menus,
-      close: response.close
+      ...(response.close
+        ? { close: true }
+        : {})
     };
   }
 
