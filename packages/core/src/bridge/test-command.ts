@@ -286,8 +286,9 @@ export function createBridgeTestInteractionHandler(
         !Number.isInteger(page)
       ) {
         return {
-          content:
-            "Страница больше недоступна."
+          content: createTranslator(
+            context.execution.locale
+          )("bridge.test.page_unavailable")
         };
       }
 
@@ -322,8 +323,9 @@ export function createBridgeTestInteractionHandler(
 
       if (!source || !target) {
         return {
-          content:
-            "Чат для привязки больше недоступен."
+          content: createTranslator(
+            context.execution.locale
+          )("bridge.test.endpoint_unavailable")
         };
       }
 
@@ -339,7 +341,8 @@ export function createBridgeTestInteractionHandler(
 
       try {
         await bridgeService.sendConfirmation(
-          request
+          request,
+          context.execution.locale ?? "ru"
         );
       } catch (error) {
         bridgeService.cancelRequest(
@@ -350,8 +353,11 @@ export function createBridgeTestInteractionHandler(
       }
 
       return {
-        content:
-          `Запрос отправлен в ${endpointLabel(target)}. Ожидаем подтверждение.`
+        content: createTranslator(
+          context.execution.locale
+        )("bridge.test.request_sent", {
+          target: endpointLabel(target)
+        })
       };
     }
 
@@ -374,12 +380,14 @@ export function createBridgeTestInteractionHandler(
 
       await bridgeService.sendLinkSuccess(
         result.source,
-        result.target
+        result.target,
+        context.execution.locale ?? "ru"
       );
 
       return {
-        content:
-          "Связка подтверждена. Bridge работает."
+        content: createTranslator(
+          context.execution.locale
+        )("bridge.test.confirmed")
       };
     }
 
@@ -406,8 +414,9 @@ export function createBridgeTestInteractionHandler(
     }
 
     return {
-      content:
-        "Неизвестное действие Bridge."
+      content: createTranslator(
+        context.execution.locale
+      )("bridge.test.unknown_action")
     };
   };
 }
