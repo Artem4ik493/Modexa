@@ -227,7 +227,7 @@ describe("Telegram event handler", () => {
 
     expect(
       callbackTokens(edit)
-    ).toHaveLength(1);
+    ).toHaveLength(2);
   });
 
   it("returns to the menu with the back button", async () => {
@@ -243,7 +243,7 @@ describe("Telegram event handler", () => {
 
     await handler(
       interactionEvent(
-        callbackTokens(actions[1])[0]
+        callbackTokens(actions[1])[1]
       )
     );
 
