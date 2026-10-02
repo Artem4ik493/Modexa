@@ -15,8 +15,8 @@ import {
   BridgeService,
   listCommandDescriptors,
   type PlatformIdentityResolver,
-  type CommunityService,
-  type MembershipService,
+  CommunityService,
+  MembershipService,
   IdentityService
 } from "@modexa/core";
 
@@ -104,35 +104,55 @@ export function createDiscordAdapter(
   const registry =
     new CommandRegistry();
 
+  const communityService =
+    options.communityService ??
+    new CommunityService();
+
+  const membershipService =
+    options.membershipService ??
+    new MembershipService();
+
+  const identityService =
+    options.identityService ??
+    new IdentityService();
+
+  const identityLinkService =
+    options.identityLinkService ??
+    new IdentityLinkService();
+
+  const identityLinkingService =
+    options.identityLinkingService ??
+    new IdentityLinkingService(
+      identityService,
+      identityLinkService
+    );
+
+  const bridgeService =
+    options.bridgeService ??
+    new BridgeService(
+      communityService
+    );
+
   createBuiltinCommands(
     registry,
-    options.communityService
+    communityService
   );
 
-  if (
-    options.identityService &&
-    options.identityLinkService &&
-    options.identityLinkingService
-  ) {
-    registry.register(
-      createIdentityLinkCommand(
-        options.identityService,
-        options.identityLinkService,
-        options.identityLinkingService
-      )
-    );
-  }
+  registry.register(
+    createIdentityLinkCommand(
+      identityService,
+      identityLinkService,
+      identityLinkingService
+    )
+  );
 
-  if (options.bridgeService) {
-    registry.register(
-      createBridgeTestCommand(
-        options.bridgeService,
-        options.identityService ??
-          new IdentityService(),
-        options.membershipService
-      )
-    );
-  }
+  registry.register(
+    createBridgeTestCommand(
+      bridgeService,
+      identityService,
+      membershipService
+    )
+  );
 
   const commandService =
     new CommandService(
@@ -188,7 +208,7 @@ export function createDiscordAdapter(
         logger,
 
         bridgeService:
-          options.bridgeService
+          bridgeService
       }
     );
 
@@ -206,7 +226,7 @@ export function createDiscordAdapter(
       identityResolver:
         options.identityResolver,
       bridgeService:
-        options.bridgeService
+        bridgeService
     })
   );
 
