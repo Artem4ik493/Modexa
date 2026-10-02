@@ -130,10 +130,41 @@ export class IdentityService {
       this.identityIndex.get(identityKey);
 
     if (!identityId && this.database) {
-      return this.database.findUserByIdentity(
-        platform,
-        externalId
-      ) as User | undefined;
+      const persistedIdentity =
+        this.database.getIdentityByExternalId(
+          platform,
+          externalId
+        );
+
+      if (!persistedIdentity) {
+        return undefined;
+      }
+
+      const persistedUser =
+        this.database.getUser(
+          persistedIdentity.userId
+        );
+
+      if (!persistedUser) {
+        return undefined;
+      }
+
+      this.users.set(
+        persistedUser.id,
+        persistedUser
+      );
+
+      this.identities.set(
+        persistedIdentity.id,
+        persistedIdentity
+      );
+
+      this.identityIndex.set(
+        identityKey,
+        persistedIdentity.id
+      );
+
+      return persistedUser;
     }
 
     if (!identityId) {
