@@ -543,8 +543,7 @@ export function createBridgeTestInteractionHandler(
 
     if (data === CLOSE_ACTION) {
       return {
-        content: "",
-        buttons: []
+        close: true
       };
     }
 
