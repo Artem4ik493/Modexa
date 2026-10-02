@@ -150,6 +150,11 @@ function handleSettings(
     );
   }
 
+  const canManage =
+    context.execution.capabilities.includes(
+      "community.manage"
+    );
+
   return {
     content: [
       t("settings.community"),
@@ -159,27 +164,29 @@ function handleSettings(
           : "settings.mode.public"
       )
     ].join("\n"),
-    buttons: [
-      {
-        id: "settings-public",
-        label: t("settings.mode.public_button"),
-        action: {
-          type: "command",
-          command: "/settings",
-          args: ["public"]
-        }
-      },
-      {
-        id: "settings-private",
-        label: t("settings.mode.private_button"),
-        action: {
-          type: "command",
-          command: "/settings",
-          args: ["private"]
-        }
-      },
-      createBackButton(t)
-    ]
+    buttons: canManage
+      ? [
+          {
+            id: "settings-public",
+            label: t("settings.mode.public_button"),
+            action: {
+              type: "command" as const,
+              command: "/settings",
+              args: ["public"]
+            }
+          },
+          {
+            id: "settings-private",
+            label: t("settings.mode.private_button"),
+            action: {
+              type: "command" as const,
+              command: "/settings",
+              args: ["private"]
+            }
+          },
+          createBackButton(t)
+        ]
+      : [createBackButton(t)]
   };
 }
 
@@ -213,6 +220,7 @@ export function createBuiltinCommands(
       name: "account",
       descriptionKey:
         "command.account.description",
+      requiredCapabilities: ["account.manage"],
       handler: handleAccount
     },
     {
@@ -236,7 +244,7 @@ export function createBuiltinCommands(
         );
 
         const commandList = registry
-          .list()
+          .listAvailable(context.execution.capabilities)
           .map((command) => {
             const aliases =
               command.aliases &&
