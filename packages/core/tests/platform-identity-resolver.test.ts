@@ -17,8 +17,11 @@ import {
 } from "../src/memberships/service.js";
 
 import {
+  AccessControlService,
+  COMMUNITY_ROLE_NAMES,
+  CommunityAccessService,
   PlatformIdentityResolver
-} from "../src/runtime/identity.js";
+} from "../src/index.js";
 
 function createResolver() {
   const identityService =
