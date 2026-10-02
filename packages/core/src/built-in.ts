@@ -189,7 +189,7 @@ function handleSettings(
     content: [
       t("settings.community"),
       t(
-        community.mode === "private"
+        currentMode === "private"
           ? "settings.mode.private"
           : "settings.mode.public"
       )
