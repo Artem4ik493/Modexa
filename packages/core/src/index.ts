@@ -55,3 +55,5 @@ export * from "./audit/index.js";
 export * from "./ranking/index.js";
 
 export * from "./welcome/index.js";
+
+export * from "./custom-commands/index.js";
