@@ -18,6 +18,10 @@ export interface SystemRoleAssignmentStore {
     userId: UserId,
     roleId: string
   ): void;
+
+  getUserSystemRoleIds?(
+    userId: UserId
+  ): string[];
 }
 
 export interface CommunityRoleStore {
@@ -208,7 +212,21 @@ export class AccessControlService {
   getUserSystemRoles(
     userId: UserId
   ): SystemRole[] {
-    return this.userSystemRoles
+    const persistedIds =
+      this.systemRoleStore?.getUserSystemRoleIds?.(userId) ?? [];
+
+    const persistedAssignments =
+      persistedIds.map((roleId) => ({
+        userId,
+        roleId
+      }));
+
+    const allAssignments = [
+      ...this.userSystemRoles,
+      ...persistedAssignments
+    ];
+
+    return allAssignments
       .filter(
         (assignment) =>
           assignment.userId === userId
