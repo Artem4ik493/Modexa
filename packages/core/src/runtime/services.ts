@@ -89,15 +89,6 @@ export function createRuntimeServices(
   const identityLinkService =
     new IdentityLinkService();
 
-  const communityService =
-    new CommunityService(database);
-
-  const channelService =
-    new ChannelService();
-
-  const membershipService =
-    new MembershipService();
-
   const billingService =
     new BillingService();
 
@@ -108,6 +99,18 @@ export function createRuntimeServices(
       entitlements: plan.entitlements
     });
   }
+
+  const communityService =
+    new CommunityService(
+      database,
+      billingService
+    );
+
+  const channelService =
+    new ChannelService();
+
+  const membershipService =
+    new MembershipService();
 
   const accessControlService =
     new AccessControlService(database, database);
