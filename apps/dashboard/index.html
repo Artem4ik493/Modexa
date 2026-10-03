@@ -38,6 +38,11 @@ main{padding:30px;max-width:1500px;width:100%;margin:auto}.top{display:flex;just
     <button class="nav active" data-page="overview">Обзор</button>
     <button class="nav" data-page="communities">Сообщества</button>
     <button class="nav" data-page="moderation">Модерация</button>
+    <button class="nav" data-page="automod">AutoMod</button>
+    <button class="nav" data-page="audit">Audit</button>
+    <button class="nav" data-page="ranking">Ranking</button>
+    <button class="nav" data-page="welcome">Welcome</button>
+    <button class="nav" data-page="commands">Commands</button>
     <button class="nav" data-page="automations">Автоматизации</button>
     <button class="nav" data-page="bridge">Bridge</button>
     <button class="nav" data-page="billing">Billing</button>
@@ -66,6 +71,12 @@ main{padding:30px;max-width:1500px;width:100%;margin:auto}.top{display:flex;just
 
   <section class="page" id="communities"><div class="card"><div class="section-title"><h2>Мои Discord-серверы</h2><span class="muted" id="communityCount">—</span></div><div id="communityList"></div></div></section>
 
+  <section class="page" id="automod"><div class="card"><div class="section-title"><h2>AutoMod</h2><span class="pill">Juniper-style</span></div><div class="grid"><div class="card"><b>Links / Invites</b><p class="muted">Фильтрация внешних ссылок, Discord-инвайтов и phishing-паттернов.</p></div><div class="card"><b>Bad Words</b><p class="muted">Регулярные и словарные фильтры с whitelist.</p></div><div class="card"><b>Flood / Repeated Text</b><p class="muted">Окна, пороги и автоматические infractions.</p></div><div class="card"><b>Caps / Emotes / Mentions / Zalgo</b><p class="muted">Расширенные контентные фильтры.</p></div></div></div></section>
+  <section class="page" id="audit"><div class="card"><div class="section-title"><h2>Audit Log</h2><span class="muted">200 последних событий</span></div><div style="overflow:auto"><table class="table"><thead><tr><th>Время</th><th>Действие</th><th>Actor</th><th>Target</th><th>Причина</th></tr></thead><tbody id="auditTable"><tr><td colspan="5" class="empty">Выберите сервер.</td></tr></tbody></table></div></div></section>
+  <section class="page" id="ranking"><div class="card"><div class="section-title"><h2>Member Ranking</h2><span class="pill">EXP + levels + rewards</span></div><div class="empty">Рейтинг, XP, cookies, voice activity и level rewards подключены в Core. Здесь будет их управление.</div></div></section>
+  <section class="page" id="welcome"><div class="card"><div class="section-title"><h2>Welcome & Rejoin</h2><span class="pill">Notifications</span></div><div class="empty">Welcome/leave templates, starting roles и восстановление ролей/ника при rejoin.</div></div></section>
+  <section class="page" id="commands"><div class="card"><div class="section-title"><h2>Commands</h2><span class="pill">Custom + built-in</span></div><div class="empty">Custom Commands поддерживают aliases, message/alias/role actions, роли/каналы доступа и cooldown.</div></div></section>
+
   <section class="page" id="moderation"><div class="card"><div class="section-title"><h2>Последние moderation cases</h2><span class="pill">SQLite</span></div><div style="overflow:auto"><table class="table"><thead><tr><th>ID</th><th>Действие</th><th>Платформа</th><th>Статус</th><th>Причина</th></tr></thead><tbody id="modTable"><tr><td colspan="5" class="empty">Выберите сообщество на странице «Сообщества».</td></tr></tbody></table></div></div></section>
 
   <section class="page" id="automations"><div class="card"><div class="section-title"><h2>Автоматизации</h2><span class="muted">Core engine</span></div><div class="empty">Автоматизации подключаются из команд и API. Здесь будет визуальный редактор триггер → действие.</div></div></section>
@@ -76,14 +87,15 @@ main{padding:30px;max-width:1500px;width:100%;margin:auto}.top{display:flex;just
 </div>
 <script>
 const API=location.protocol==='file:'?'http://localhost:3000':'';
-const titles={overview:'Обзор',communities:'Сообщества',moderation:'Модерация',automations:'Автоматизации',bridge:'Bridge',billing:'Billing',settings:'Настройки'};
-let communities=[];
+const titles={overview:'Обзор',communities:'Сообщества',moderation:'Модерация',automod:'AutoMod',audit:'Audit',ranking:'Ranking',welcome:'Welcome',commands:'Commands',automations:'Автоматизации',bridge:'Bridge',billing:'Billing',settings:'Настройки'};
+let communities=[];let selectedCommunity=null;
+function selectCommunity(id){selectedCommunity=id;showPage('moderation');loadModeration(id);}
 function esc(v){return String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function showPage(id){
  document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===id));
  document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('active',x.dataset.page===id));
  document.getElementById('pageTitle').textContent=titles[id];
- if(id==='moderation'&&communities[0]) loadModeration(communities[0].id);
+ if((id==='moderation'||id==='audit')&&communities[0]){loadModeration(communities[0].communityId||communities[0].id);if(id==='audit')loadAudit(communities[0].communityId||communities[0].id);}
 }
 let authKey=localStorage.getItem('modexa_api_key')||'';
 let discordUser=null;
@@ -127,7 +139,13 @@ async function logout(){
 function renderCommunities(target){
  const el=document.getElementById(target);
  if(!communities.length){el.innerHTML='<div class="empty">У вас нет серверов, где есть права владельца или администратора.</div>';return;}
- el.innerHTML=communities.map(c=>`<div class="community"><div class="avatar">${esc(c.name[0]||'M')}</div><div class="grow"><div class="name">${esc(c.name)}</div><div class="meta">${esc(c.id)} · ${esc(c.mode)}</div></div><span class="pill"><span class="dot"></span>Connected</span></div>`).join('');
+ el.innerHTML=communities.map(c=>`<div class="community" onclick="selectCommunity('${esc(c.communityId||c.id)}')" style="cursor:pointer"><div class="avatar">${esc(c.name[0]||'M')}</div><div class="grow"><div class="name">${esc(c.name)}</div><div class="meta">${esc(c.id)} · ${c.botInstalled?'Modexa connected':'Bot not installed'}</div></div><span class="pill">${c.botInstalled?'<span class="dot"></span>Connected':'Invite bot'}</span></div>`).join('');
+}
+async function loadAudit(id){
+ try{
+  const data=await get('/api/audit?communityId='+encodeURIComponent(id));
+  document.getElementById('auditTable').innerHTML=data.items.map(x=>`<tr><td>${esc(new Date(x.createdAt).toLocaleString('ru-RU'))}</td><td>${esc(x.action)}</td><td>${esc(x.actorUserId||'—')}</td><td>${esc(x.targetUserId||'—')}</td><td>${esc(x.reason||'—')}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">Событий нет.</td></tr>';
+ }catch(e){document.getElementById('auditTable').innerHTML='<tr><td colspan="5" class="empty">Не удалось загрузить audit.</td></tr>';}
 }
 async function loadModeration(id){
  try{
