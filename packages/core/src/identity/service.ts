@@ -19,6 +19,7 @@ export interface AttachIdentityInput {
   externalId: string;
   username?: string;
   displayName?: string;
+  avatarUrl?: string;
   now?: Date;
 }
 
@@ -54,6 +55,7 @@ export class IdentityService {
     const user: User = {
       id: `user-${this.nextUserId++}`,
       displayName: input.displayName,
+      avatarUrl: input.avatarUrl,
       createdAt: now,
       updatedAt: now
     };
