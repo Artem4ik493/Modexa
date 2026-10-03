@@ -200,7 +200,7 @@ export class ModexaDatabase {
   getAuditEntries(communityId: string, limit = 100): Array<{
     id: string;
     communityId: string;
-    action: string;
+    action: AuditAction;
     actorUserId?: string;
     targetUserId?: string;
     channelId?: string;
