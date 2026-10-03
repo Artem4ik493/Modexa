@@ -160,7 +160,7 @@ function renderMemberDetails(
       t("member.joined", {
         date: formatDate(
           membership?.joinedAt,
-          context.execution.locale
+          context.execution.locale ?? "ru"
         )
       }),
       t("member.platform_roles", {
