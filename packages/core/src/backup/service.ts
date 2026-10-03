@@ -22,8 +22,7 @@ export class BackupService {
     };
   }
 
-  restoreSnapshot(base64: string): void {
-    const snapshot = Buffer.from(base64, "base64").toString("utf8");
-    this.database.importSnapshot(snapshot);
+  restoreSnapshot(_base64: string): void {
+    throw new Error("Restore requires restarting Modexa with a replacement database file");
   }
 }
