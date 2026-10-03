@@ -29,6 +29,12 @@ import type {
   BridgeLink
 } from "../bridge/types.js";
 
+import type {
+  ModerationCase,
+  ModerationCaseStatus,
+  ModerationActionType
+} from "../moderation/types.js";
+
 export interface DatabaseOptions {
   path: string;
 }
@@ -785,6 +791,80 @@ export class ModexaDatabase {
         newUserId
       );
     }
+  }
+
+  upsertModerationCase(item: ModerationCase): void {
+    this.database.prepare(`INSERT INTO moderation_cases
+      (id, action, actor_user_id, target_user_id, community_id, platform,
+       community_external_id, user_external_id, duration_seconds, reason,
+       status, created_at, revoked_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        status = excluded.status,
+        revoked_at = excluded.revoked_at,
+        reason = excluded.reason,
+        duration_seconds = excluded.duration_seconds`
+    ).run(
+      item.id, item.action, item.actorUserId, item.targetUserId,
+      item.communityId, item.platform, item.communityExternalId,
+      item.userExternalId, item.durationSeconds ?? null,
+      item.reason ?? null, item.status, item.createdAt.toISOString(),
+      item.revokedAt?.toISOString() ?? null
+    );
+  }
+
+  getModerationCases(communityId: string): ModerationCase[] {
+    const rows = this.database.prepare(`
+      SELECT id, action, actor_user_id, target_user_id, community_id, platform,
+             community_external_id, user_external_id, duration_seconds, reason,
+             status, created_at, revoked_at
+      FROM moderation_cases
+      WHERE community_id = ?
+      ORDER BY created_at DESC
+    `).all(communityId) as Array<Record<string, unknown>>;
+
+    return rows.map((row) => ({
+      id: row.id as string,
+      action: row.action as ModerationActionType,
+      actorUserId: row.actor_user_id as string,
+      targetUserId: row.target_user_id as string,
+      communityId: row.community_id as string,
+      platform: row.platform as "telegram" | "discord",
+      communityExternalId: row.community_external_id as string,
+      userExternalId: row.user_external_id as string,
+      ...(row.duration_seconds !== null && row.duration_seconds !== undefined
+        ? { durationSeconds: Number(row.duration_seconds) }
+        : {}),
+      ...(row.reason ? { reason: row.reason as string } : {}),
+      status: row.status as ModerationCaseStatus,
+      createdAt: new Date(row.created_at as string),
+      ...(row.revoked_at ? { revokedAt: new Date(row.revoked_at as string) } : {})
+    }));
+  }
+
+  getModerationCase(caseId: string): ModerationCase | undefined {
+    const row = this.database.prepare(`
+      SELECT id, action, actor_user_id, target_user_id, community_id, platform,
+             community_external_id, user_external_id, duration_seconds, reason,
+             status, created_at, revoked_at
+      FROM moderation_cases WHERE id = ?
+    `).get(caseId) as Record<string, unknown> | undefined;
+    if (!row) return undefined;
+    return {
+      id: row.id as string,
+      action: row.action as ModerationActionType,
+      actorUserId: row.actor_user_id as string,
+      targetUserId: row.target_user_id as string,
+      communityId: row.community_id as string,
+      platform: row.platform as "telegram" | "discord",
+      communityExternalId: row.community_external_id as string,
+      userExternalId: row.user_external_id as string,
+      ...(row.duration_seconds !== null && row.duration_seconds !== undefined ? { durationSeconds: Number(row.duration_seconds) } : {}),
+      ...(row.reason ? { reason: row.reason as string } : {}),
+      status: row.status as ModerationCaseStatus,
+      createdAt: new Date(row.created_at as string),
+      ...(row.revoked_at ? { revokedAt: new Date(row.revoked_at as string) } : {})
+    };
   }
 
   private ensureMigrations(): void {
