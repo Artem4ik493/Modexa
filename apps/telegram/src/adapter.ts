@@ -110,6 +110,11 @@ export class TelegramAdapter
             action.metadata
           );
 
+        const parseMode =
+          this.getParseMode(
+            action.metadata
+          );
+
         if (imageUrl) {
           await this.bot.api.sendPhoto(
             Number(
@@ -119,6 +124,12 @@ export class TelegramAdapter
             {
               caption:
                 action.content,
+              ...(parseMode
+                ? {
+                    parse_mode:
+                      parseMode
+                  }
+                : {}),
               ...(replyMarkup
                 ? {
                     reply_markup:
@@ -133,12 +144,20 @@ export class TelegramAdapter
               action.channelExternalId
             ),
             action.content,
-            replyMarkup
-              ? {
-                  reply_markup:
-                    replyMarkup
-                }
-              : undefined
+            {
+              ...(parseMode
+                ? {
+                    parse_mode:
+                      parseMode
+                  }
+                : {}),
+              ...(replyMarkup
+                ? {
+                    reply_markup:
+                      replyMarkup
+                  }
+                : {})
+            }
           );
         }
 
@@ -151,6 +170,11 @@ export class TelegramAdapter
             action.metadata
           );
 
+        const parseMode =
+          this.getParseMode(
+            action.metadata
+          );
+
         try {
           await this.bot.api.editMessageText(
             Number(
@@ -160,12 +184,20 @@ export class TelegramAdapter
               action.messageExternalId
             ),
             action.content,
-            replyMarkup
-              ? {
-                  reply_markup:
-                    replyMarkup
-                }
-              : undefined
+            {
+              ...(parseMode
+                ? {
+                    parse_mode:
+                      parseMode
+                  }
+                : {}),
+              ...(replyMarkup
+                ? {
+                    reply_markup:
+                      replyMarkup
+                  }
+                : {})
+            }
           );
         } catch (error) {
           if (
@@ -291,6 +323,26 @@ export class TelegramAdapter
     this.eventHandlers.push(
       handler
     );
+  }
+
+  private getParseMode(
+    metadata:
+      | Record<string, unknown>
+      | undefined
+  ): "Markdown" | undefined {
+    const telegram =
+      metadata?.telegram;
+
+    if (
+      !telegram ||
+      typeof telegram !== "object" ||
+      !("parseMode" in telegram) ||
+      telegram.parseMode !== "Markdown"
+    ) {
+      return undefined;
+    }
+
+    return "Markdown";
   }
 
   private getImageUrl(

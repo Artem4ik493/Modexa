@@ -80,7 +80,7 @@ describe("IdentityLinkingService", () => {
       "completed"
     );
 
-    expect(result.identity.userId).toBe(
+    expect(result.identity.userId).not.toBe(
       user.id
     );
 
@@ -139,9 +139,20 @@ describe("IdentityLinkingService", () => {
       now
     });
 
+    const linkedUser =
+      identityService.findUserByIdentity(
+        "telegram",
+        "123456789"
+      );
+
+    expect(linkedUser).toBeDefined();
+    expect(linkedUser?.id).not.toBe(
+      user.id
+    );
+
     const identities =
       identityService.getUserIdentities(
-        user.id
+        linkedUser!.id
       );
 
     expect(identities).toHaveLength(2);
@@ -212,15 +223,29 @@ describe("IdentityLinkingService", () => {
       "completed"
     );
 
+    const linkedUser =
+      identityService.findUserByIdentity(
+        "telegram",
+        "123456789"
+      );
+
+    expect(linkedUser).toBeDefined();
+    expect(linkedUser?.id).not.toBe(
+      sourceUser.id
+    );
+    expect(linkedUser?.id).not.toBe(
+      targetUser.id
+    );
+
     expect(
       identityService.getUserIdentities(
-        sourceUser.id
+        linkedUser!.id
       )
     ).toHaveLength(2);
 
     expect(
       identityService.getUserIdentities(
-        sourceUser.id
+        linkedUser!.id
       ).map(
         (identity) => identity.platform
       )
@@ -228,6 +253,12 @@ describe("IdentityLinkingService", () => {
       "telegram",
       "discord"
     ]);
+
+    expect(
+      identityService.getUser(
+        sourceUser.id
+      )
+    ).toBeUndefined();
 
     expect(
       identityService.getUser(
@@ -240,7 +271,7 @@ describe("IdentityLinkingService", () => {
         "discord",
         "987654321"
       )
-    ).toEqual(sourceUser);
+    ).toEqual(linkedUser);
   });
 
   it("allows linking an identity that already belongs to the same user", () => {
@@ -288,9 +319,20 @@ describe("IdentityLinkingService", () => {
       "completed"
     );
 
+    const linkedUser =
+      identityService.findUserByIdentity(
+        "discord",
+        "987654321"
+      );
+
+    expect(linkedUser).toBeDefined();
+    expect(linkedUser?.id).not.toBe(
+      user.id
+    );
+
     expect(
       identityService.getUserIdentities(
-        user.id
+        linkedUser!.id
       )
     ).toHaveLength(1);
   });

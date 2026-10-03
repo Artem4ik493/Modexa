@@ -37,6 +37,9 @@ export function createTelegramEventHandler(
           ...(replyMarkup ? { replyMarkup } : {}),
           ...(response.imageUrl
             ? { imageUrl: response.imageUrl }
+            : {}),
+          ...(response.format === "markdown"
+            ? { parseMode: "Markdown" }
             : {})
         }
       };

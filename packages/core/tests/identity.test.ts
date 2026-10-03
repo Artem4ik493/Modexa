@@ -9,7 +9,7 @@ describe("IdentityService", () => {
       displayName: "Artem"
     });
 
-    expect(user.id).toBe("user-1");
+    expect(user.id).toMatch(/^mx_[0-9a-f-]{36}$/);
     expect(user.displayName).toBe("Artem");
     expect(user.createdAt).toBeInstanceOf(Date);
     expect(user.updatedAt).toBeInstanceOf(Date);

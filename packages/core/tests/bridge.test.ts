@@ -190,7 +190,7 @@ describe("BridgeService", () => {
       platform: "discord",
       channelExternalId: "ds",
       response: {
-        content: "\u2063MODExaBridge\u2063[TG] @artem4ik493 в ответ на @replyuser > Привет"
+        content: "\u2063\u200B\u2063[TG] @artem4ik493 в ответ на @replyuser > Привет"
       }
     });
   });
@@ -246,6 +246,7 @@ describe("BridgeService", () => {
       sendMessage.mock.calls[0]?.[0].response.content ?? "";
 
     expect(service.isRelayedMessage(relayed)).toBe(true);
+    expect(relayed).not.toContain("MODExaBridge");
     expect(
       service.stripRelayMarker(relayed)
     ).toContain("[TG] Artem > Привет");
