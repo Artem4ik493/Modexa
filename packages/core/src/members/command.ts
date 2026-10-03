@@ -22,6 +22,11 @@ export interface MemberDirectory {
   listMembers(
     communityExternalId: string
   ): Promise<PlatformMemberDetails[]>;
+
+  findMemberByUsername?(
+    communityExternalId: string,
+    username: string
+  ): Promise<PlatformMemberDetails | undefined>;
 }
 
 function formatDate(date: Date | undefined, locale: string): string {
@@ -42,7 +47,8 @@ function ensureLocalMember(
   details: PlatformMemberDetails,
   communityId: string,
   identityService: IdentityService,
-  membershipService: MembershipService
+  membershipService: MembershipService,
+  accessControlService?: AccessControlService
 ) {
   const existing =
     identityService.findUserByIdentity(
@@ -91,6 +97,34 @@ function ensureLocalMember(
       communityId,
       now: details.joinedAt
     });
+  }
+
+  if (
+    accessControlService &&
+    accessControlService.getUserCommunityRoles(
+      user.id,
+      communityId
+    ).length === 0
+  ) {
+    const roles = accessControlService
+      .getCommunityRoles(communityId);
+
+    const roleName =
+      details.user.platformRole === "owner" ||
+      details.user.platformRole === "admin"
+        ? "ADMIN"
+        : "MEMBER";
+
+    const role = roles.find(
+      (candidate) => candidate.name === roleName
+    );
+
+    if (role) {
+      accessControlService.assignCommunityRole(
+        user.id,
+        role.id
+      );
+    }
   }
 
   return user;
@@ -211,12 +245,36 @@ export function createMemberCommand(
           ?.replace(/^@/, "")
           .trim();
 
-      const user = target
+      let user = target
         ? identityService.findUserByUsername(
             target,
             context.execution.platform
           )
         : context.user;
+
+      let native: PlatformMemberDetails | undefined;
+
+      if (
+        !user &&
+        target &&
+        memberDirectory?.findMemberByUsername
+      ) {
+        native =
+          await memberDirectory.findMemberByUsername(
+            context.community.id,
+            target
+          );
+
+        if (native) {
+          user = ensureLocalMember(
+            native,
+            context.community.id,
+            identityService,
+            membershipService,
+            accessControlService
+          );
+        }
+      }
 
       if (!user) {
         return {
@@ -225,8 +283,6 @@ export function createMemberCommand(
           })
         };
       }
-
-      let native: PlatformMemberDetails | undefined;
 
       const identity =
         identityService
@@ -316,7 +372,8 @@ export function createMembersCommand(
             details,
             context.community.id,
             identityService,
-            membershipService
+            membershipService,
+            accessControlService
           );
         } catch {
           // A platform member can already belong to another
