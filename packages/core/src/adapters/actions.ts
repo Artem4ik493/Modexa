@@ -62,6 +62,14 @@ export interface KickMemberAction {
   metadata?: Record<string, unknown>;
 }
 
+export interface ClearMessagesAction {
+  type: "channel.clear";
+  platform: Platform;
+  channelExternalId: string;
+  count: number;
+  metadata?: Record<string, unknown>;
+}
+
 export interface UnmuteMemberAction {
   type: "member.unmute";
   platform: Platform;
@@ -95,5 +103,6 @@ export type AdapterAction =
   | MuteMemberAction
   | KickMemberAction
   | BanMemberAction
+  | ClearMessagesAction
   | UnmuteMemberAction
   | UnbanMemberAction;
