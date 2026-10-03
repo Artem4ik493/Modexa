@@ -180,6 +180,66 @@ export class IdentityService {
     return this.users.get(identity.userId);
   }
 
+  findUserByUsername(
+    username: string,
+    platform?: IdentityPlatform
+  ): User | undefined {
+    const normalized =
+      username.replace(/^@/, "").toLowerCase();
+
+    const identity =
+      [...this.identities.values()].find(
+        (item) =>
+          item.username?.toLowerCase() ===
+            normalized &&
+          (platform === undefined ||
+            item.platform === platform)
+      );
+
+    if (identity) {
+      return this.users.get(
+        identity.userId
+      );
+    }
+
+    if (this.database) {
+      const rows =
+        this.database.findUsersByUsername(
+          normalized,
+          platform
+        );
+
+      const persisted =
+        rows[0];
+
+      if (!persisted) {
+        return undefined;
+      }
+
+      this.users.set(
+        persisted.user.id,
+        persisted.user
+      );
+
+      this.identities.set(
+        persisted.identity.id,
+        persisted.identity
+      );
+
+      this.identityIndex.set(
+        this.getIdentityKey(
+          persisted.identity.platform,
+          persisted.identity.externalId
+        ),
+        persisted.identity.id
+      );
+
+      return persisted.user;
+    }
+
+    return undefined;
+  }
+
   getUserIdentities(
     userId: UserId
   ): ExternalIdentity[] {
