@@ -4,12 +4,32 @@ import {
   InteractionActionStore,
   BackupService,
   BillingService,
-  ModexaDatabase
+  ModexaDatabase,
+  CardImageService
 } from "../src/index.js";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 describe("Modexa security and infrastructure", () => {
+  it("builds branded image-card URLs for user and community stats", () => {
+    const cards = new CardImageService();
+    const stats = cards.stats({
+      communityName: "Test",
+      members: 10,
+      activeCases: 2,
+      totalCases: 5
+    });
+    const profile = cards.profile({
+      displayName: "User",
+      userId: "mx_1",
+      accounts: "discord: @user"
+    });
+
+    expect(stats).toContain("quickchart.io/chart");
+    expect(stats).toContain("format=png");
+    expect(profile).toContain("quickchart.io/chart");
+  });
+
   it("matches AutoMod keyword, link, caps and flood rules", () => {
     const auto = new AutoModService();
 
