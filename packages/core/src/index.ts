@@ -44,3 +44,6 @@ export * from "./moderation/index.js";
 
 export * from "./automations/index.js";
 export * from "./backup/index.js";
+
+export * from "./commands/settings.js";
+export * from "./commands/features.js";
