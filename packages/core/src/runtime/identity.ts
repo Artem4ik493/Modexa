@@ -424,12 +424,6 @@ export class PlatformIdentityResolver {
       return;
     }
 
-    const existingMemberships =
-      this.services.membershipService
-        .getCommunityMemberships(
-          community.id
-        );
-
     const currentRoles =
       accessControlService
         .getUserCommunityRoles(
@@ -464,13 +458,10 @@ export class PlatformIdentityResolver {
     }
 
     const roleName =
-      input.author.platformRole ===
-        "owner"
-        ? COMMUNITY_ROLE_NAMES.OWNER
-        : existingMemberships.length === 1 ||
-            input.author.platformRole === "admin"
-          ? COMMUNITY_ROLE_NAMES.ADMIN
-          : COMMUNITY_ROLE_NAMES.MEMBER;
+      input.author.platformRole === "owner" ||
+      input.author.platformRole === "admin"
+        ? COMMUNITY_ROLE_NAMES.ADMIN
+        : COMMUNITY_ROLE_NAMES.MEMBER;
 
     const targetRole =
       createBuiltinCommunityRoles(
