@@ -301,6 +301,30 @@ export function createMemberCommand(
             context.community.id,
             identity.externalId
           );
+
+        if (native) {
+          ensureLocalMember(
+            native,
+            context.community.id,
+            identityService,
+            membershipService,
+            accessControlService
+          );
+        }
+      }
+
+      if (
+        target &&
+        !membershipService.findMembership(
+          user.id,
+          context.community.id
+        )
+      ) {
+        return {
+          content: t("member.not_found", {
+            username: target
+          })
+        };
       }
 
       return renderMemberDetails(
