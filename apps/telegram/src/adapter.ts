@@ -105,18 +105,42 @@ export class TelegramAdapter
             action.metadata
           );
 
-        await this.bot.api.sendMessage(
-          Number(
-            action.channelExternalId
-          ),
-          action.content,
-          replyMarkup
-            ? {
-                reply_markup:
-                  replyMarkup
-              }
-            : undefined
-        );
+        const imageUrl =
+          this.getImageUrl(
+            action.metadata
+          );
+
+        if (imageUrl) {
+          await this.bot.api.sendPhoto(
+            Number(
+              action.channelExternalId
+            ),
+            imageUrl,
+            {
+              caption:
+                action.content,
+              ...(replyMarkup
+                ? {
+                    reply_markup:
+                      replyMarkup
+                  }
+                : {})
+            }
+          );
+        } else {
+          await this.bot.api.sendMessage(
+            Number(
+              action.channelExternalId
+            ),
+            action.content,
+            replyMarkup
+              ? {
+                  reply_markup:
+                    replyMarkup
+                }
+              : undefined
+          );
+        }
 
         return;
       }
@@ -267,6 +291,26 @@ export class TelegramAdapter
     this.eventHandlers.push(
       handler
     );
+  }
+
+  private getImageUrl(
+    metadata:
+      | Record<string, unknown>
+      | undefined
+  ): string | undefined {
+    const telegram =
+      metadata?.telegram;
+
+    if (
+      !telegram ||
+      typeof telegram !== "object" ||
+      !("imageUrl" in telegram) ||
+      typeof telegram.imageUrl !== "string"
+    ) {
+      return undefined;
+    }
+
+    return telegram.imageUrl;
   }
 
   private getReplyMarkup(
