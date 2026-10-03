@@ -30,11 +30,16 @@ export function createModerationRestoreCommands(
       const identity = identities.getUserIdentities(target.id).find((i) => i.platform === context.platform);
       const community = communities.getCommunityIdentities(context.community.id).find((i) => i.platform === context.platform);
       if (!identity || !community) return { content: "Не найден внешний аккаунт участника." };
-      moderation.revokeCase(context.user.id, item.id);
       const action: AdapterAction = name === "unmute"
         ? { type: "member.unmute", platform: context.platform, communityExternalId: community.externalId, userExternalId: identity.externalId }
         : { type: "member.unban", platform: context.platform, communityExternalId: community.externalId, userExternalId: identity.externalId };
-      try { await executeAction(action); } catch (error) { return { content: "❌ Не удалось выполнить действие: " + (error instanceof Error ? error.message : "ошибка") }; }
+      try {
+        await executeAction(action);
+      } catch (error) {
+        return { content: "❌ Не удалось выполнить действие: " + (error instanceof Error ? error.message : "ошибка") };
+      }
+
+      moderation.revokeCase(context.user.id, item.id);
       return { content: "✅ " + (name === "unmute" ? "Мут снят." : "Участник разбанен.") };
     }
   }));
