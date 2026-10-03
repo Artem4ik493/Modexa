@@ -150,6 +150,10 @@ export class DiscordAdapter
             components:
               this.getComponents(
                 action.metadata
+              ) as never,
+            embeds:
+              this.getImageEmbeds(
+                action.metadata
               ) as never
           });
 
@@ -165,6 +169,10 @@ export class DiscordAdapter
           content: action.content,
           components:
             this.getComponents(
+              action.metadata
+            ) as never,
+          embeds:
+            this.getImageEmbeds(
               action.metadata
             ) as never
         });
@@ -496,6 +504,34 @@ export class DiscordAdapter
         error
       );
     }
+  }
+
+  private getImageEmbeds(
+    metadata:
+      | Record<string, unknown>
+      | undefined
+  ): Array<{
+    image: { url: string };
+  }> {
+    const discord =
+      metadata?.discord;
+
+    if (
+      !discord ||
+      typeof discord !== "object" ||
+      !("imageUrl" in discord) ||
+      typeof discord.imageUrl !== "string"
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        image: {
+          url: discord.imageUrl
+        }
+      }
+    ];
   }
 
   private getComponents(
