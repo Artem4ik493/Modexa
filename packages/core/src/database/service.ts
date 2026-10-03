@@ -102,6 +102,46 @@ export class ModexaDatabase {
     };
   }
 
+  getNextUserId(): number {
+    const row =
+      this.database.prepare(
+        `SELECT id FROM users
+         ORDER BY CAST(substr(id, 6) AS INTEGER) DESC
+         LIMIT 1`
+      ).get() as {
+        id: string;
+      } | undefined;
+
+    if (!row) return 1;
+
+    const value =
+      Number(row.id.slice(5));
+
+    return Number.isFinite(value)
+      ? value + 1
+      : 1;
+  }
+
+  getNextIdentityId(): number {
+    const row =
+      this.database.prepare(
+        `SELECT id FROM identities
+         ORDER BY CAST(substr(id, 10) AS INTEGER) DESC
+         LIMIT 1`
+      ).get() as {
+        id: string;
+      } | undefined;
+
+    if (!row) return 1;
+
+    const value =
+      Number(row.id.slice(9));
+
+    return Number.isFinite(value)
+      ? value + 1
+      : 1;
+  }
+
   createUser(user: PersistedUser): void {
     this.database.prepare(
       `INSERT INTO users
