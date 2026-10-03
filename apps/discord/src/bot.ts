@@ -25,6 +25,8 @@ import {
   IdentityService,
   AccessControlService,
   ModexaDatabase,
+  ModerationService,
+  createModerationCommands,
   type MemberDirectory
 } from "@modexa/core";
 
@@ -94,6 +96,9 @@ export interface CreateDiscordAdapterOptions {
 
   database?:
     ModexaDatabase;
+
+  moderationService?:
+    ModerationService;
 }
 
 export function createDiscordAdapter(
@@ -226,6 +231,10 @@ export function createDiscordAdapter(
       options.database
     );
 
+  const moderationService =
+    options.moderationService ??
+    new ModerationService(accessControlService);
+
   createBuiltinCommands(
     registry,
     communityService,
@@ -278,6 +287,17 @@ export function createDiscordAdapter(
       memberDirectoryProxy
     )
   );
+
+  for (const command of createModerationCommands(
+    identityService,
+    membershipService,
+    communityService,
+    moderationService,
+    memberDirectoryProxy,
+    (action) => adapter.sendAction(action)
+  )) {
+    registry.register(command);
+  }
 
   const commandService =
     new CommandService(
@@ -332,7 +352,9 @@ export function createDiscordAdapter(
     () => ({ close: true })
   );
 
-  const adapter =
+  let adapter: DiscordAdapter;
+
+  adapter =
     new DiscordAdapter(
       client,
       token,
