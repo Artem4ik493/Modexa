@@ -47,3 +47,5 @@ export * from "./backup/index.js";
 
 export * from "./commands/settings.js";
 export * from "./commands/features.js";
+
+export * from "./images/cards.js";
