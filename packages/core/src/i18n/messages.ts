@@ -144,7 +144,17 @@ const MESSAGE_KEYS = [
   "member.platform",
   "member.roles",
   "member.no_roles",
-  "member.joined"
+  "member.joined",
+  "member.platform_roles",
+  "member.no_platform_roles",
+  "member.platform_joined",
+  "member.platform_status",
+  "command.members.description",
+  "members.community_only",
+  "members.title",
+  "members.empty",
+  "members.page",
+  "members.page_not_found"
 ] as const;
 
 export type MessageKey =
