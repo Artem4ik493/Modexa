@@ -103,6 +103,7 @@ describe("Modexa security and infrastructure", () => {
       expect(artifact.compressed).toBe(true);
       expect(artifact.data.length).toBeGreaterThan(0);
       expect(() => backup.restoreSnapshot(artifact.data)).toThrow(/restarting Modexa/);
+      database.close();
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
