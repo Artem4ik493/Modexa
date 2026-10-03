@@ -84,7 +84,7 @@ export function createRuntimeServices(
     new MembershipService();
 
   const accessControlService =
-    new AccessControlService(database);
+    new AccessControlService(database, database);
 
   accessControlService.registerSystemRole(
     MODEXA_OWNER_ROLE
