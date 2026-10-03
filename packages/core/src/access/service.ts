@@ -13,6 +13,11 @@ export interface SystemRoleAssignmentStore {
     userId: UserId,
     roleId: string
   ): boolean;
+
+  assignSystemRole?(
+    userId: UserId,
+    roleId: string
+  ): void;
 }
 
 export interface CommunityRoleStore {
@@ -112,6 +117,11 @@ export class AccessControlService {
       userId,
       roleId
     });
+
+    this.systemRoleStore?.assignSystemRole?.(
+      userId,
+      roleId
+    );
   }
 
   revokeSystemRole(
