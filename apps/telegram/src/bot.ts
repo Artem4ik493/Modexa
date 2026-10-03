@@ -123,7 +123,10 @@ export function createTelegramAdapter(
 
   const accessControlService =
     options.accessControlService ??
-    new AccessControlService();
+    new AccessControlService(
+      options.database,
+      options.database
+    );
 
   createBuiltinCommands(
     registry,
