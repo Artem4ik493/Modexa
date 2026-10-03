@@ -149,10 +149,8 @@ export class DiscordAdapter
             pending.id
           );
 
-          const imageEmbeds =
-            this.getImageEmbeds(
-              action.metadata
-            );
+          const embeds =
+            this.getEmbeds(action.metadata);
 
           await pending.editReply({
             content: action.content,
@@ -160,9 +158,7 @@ export class DiscordAdapter
               this.getComponents(
                 action.metadata
               ) as never,
-            ...(imageEmbeds.length > 0
-              ? { embeds: imageEmbeds }
-              : {})
+            ...(embeds.length > 0 ? { embeds } : {})
           });
 
           return;
@@ -173,10 +169,8 @@ export class DiscordAdapter
             action.channelExternalId
           );
 
-        const imageEmbeds =
-          this.getImageEmbeds(
-            action.metadata
-          );
+        const embeds =
+          this.getEmbeds(action.metadata);
 
         await channel.send({
           content: action.content,
@@ -205,10 +199,8 @@ export class DiscordAdapter
 
         await message.edit({
           content: action.content,
-          components:
-            this.getComponents(
-              action.metadata
-            ) as never
+          components: this.getComponents(action.metadata) as never,
+          ...(this.getEmbeds(action.metadata).length > 0 ? { embeds: this.getEmbeds(action.metadata) } : { embeds: [] })
         });
 
         return;
@@ -953,32 +945,33 @@ export class DiscordAdapter
     }
   }
 
-  private getImageEmbeds(
+  private getEmbeds(
     metadata:
       | Record<string, unknown>
       | undefined
-  ): Array<{
-    image: { url: string };
-  }> {
-    const discord =
-      metadata?.discord;
+  ): Array<Record<string, unknown>> {
+    const discord = metadata?.discord;
+    if (!discord || typeof discord !== "object") return [];
 
-    if (
-      !discord ||
-      typeof discord !== "object" ||
-      !("imageUrl" in discord) ||
-      typeof discord.imageUrl !== "string"
-    ) {
-      return [];
+    const embedValue = "embed" in discord ? discord.embed : undefined;
+    const imageUrl = "imageUrl" in discord && typeof discord.imageUrl === "string" ? discord.imageUrl : undefined;
+
+    if (!embedValue || typeof embedValue !== "object") {
+      return imageUrl ? [{ image: { url: imageUrl } }] : [];
     }
 
-    return [
-      {
-        image: {
-          url: discord.imageUrl
-        }
+    const source = embedValue as Record<string, unknown>;
+    const embed: Record<string, unknown> = {};
+    for (const key of ["title", "description", "color", "fields", "footer", "thumbnailUrl", "imageUrl"]) {
+      if (key in source && source[key] !== undefined) {
+        if (key === "footer") embed.footer = { text: String(source[key]) };
+        else if (key === "thumbnailUrl") embed.thumbnail = { url: String(source[key]) };
+        else if (key === "imageUrl") embed.image = { url: String(source[key]) };
+        else embed[key] = source[key];
       }
-    ];
+    }
+    if (imageUrl && !embed.image) embed.image = { url: imageUrl };
+    return Object.keys(embed).length > 0 ? [embed] : [];
   }
 
   private getComponents(
