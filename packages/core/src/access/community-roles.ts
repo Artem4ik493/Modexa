@@ -25,6 +25,7 @@ export function createBuiltinCommunityRoles(
         "moderation.mute",
         "moderation.kick",
         "moderation.ban",
+      "moderation.clear",
         "commands.use",
         "commands.manage",
         "bridge.view",
