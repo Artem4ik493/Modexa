@@ -146,7 +146,7 @@ describe("member commands", () => {
       "Page: 2/2"
     );
     expect(response.content).toContain(
-      "User 10"
+      "User 3"
     );
     expect(response.content).toContain(
       "Target User"
