@@ -36,3 +36,9 @@ pnpm --filter @modexa/api dev
 Health: `/health`
 
 Dashboard: open `apps/dashboard/index.html` while the API is running.
+
+## Public bot
+
+Modexa is designed as a public bot: communities can connect it to Telegram or Discord and use the command suite without being tied to one private server. Administrators can enable or disable individual commands with `/command <команда> <on|off>` and inspect the current configuration with `/settings`.
+
+Included user-facing features include help/command discovery, bot info, server info, user profiles, usage statistics, warnings, mute lists, moderation, roles, bridge and automation foundations.
