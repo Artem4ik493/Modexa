@@ -142,7 +142,10 @@ export interface BoundInteractionMenu
   options: BoundInteractionMenuOption[];
 }
 
-export interface BoundInteractionResponse {\n  content?: string;\n  embed?: InteractionEmbed;\n
+export interface BoundInteractionResponse {
+  content?: string;
+  embed?: InteractionEmbed;
+
   format?: "plain" | "markdown";
 
   imageUrl?: string;
