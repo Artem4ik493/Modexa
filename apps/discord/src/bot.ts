@@ -10,6 +10,7 @@ import {
   InteractionDispatcher,
   createBuiltinCommands,
   createBridgeTestCommand,
+  createMemberCommand,
   createBridgeTestInteractionHandler,
   createIdentityLinkCommand,
   BridgeService,
@@ -151,6 +152,14 @@ export function createDiscordAdapter(
       bridgeService,
       identityService,
       membershipService
+    )
+  );
+
+  registry.register(
+    createMemberCommand(
+      identityService,
+      membershipService,
+      new (requireAccessControlStub())()
     )
   );
 
