@@ -107,6 +107,7 @@ const MESSAGE_KEYS = [
   "system.maintenance.on",
   "system.maintenance.off",
   "system.maintenance.toggle",
+  "system.maintenance.active",
   "command.member.description",
   "member.community_only",
   "member.not_found",
