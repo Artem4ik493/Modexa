@@ -135,7 +135,20 @@ export function buildDiscordSlashCommands(
                   }
                 ]
               }
-            : ["warn", "mute", "kick", "ban"].includes(name)
+            : name === "command"
+            ? {
+                options: [
+                  { name: "command", description: "Command name", type: 3, required: true },
+                  { name: "state", description: "on or off", type: 3, required: true }
+                ]
+              }
+            : name === "user"
+              ? {
+                  options: [
+                    { name: "user", description: "Member", type: 6, required: false }
+                  ]
+                }
+              : ["warn", "mute", "kick", "ban"].includes(name)
               ? {
                   options: [
                     {
