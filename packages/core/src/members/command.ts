@@ -251,6 +251,17 @@ export function createMemberCommand(
           )
         : context.user;
 
+      if (
+        !user &&
+        target
+      ) {
+        user =
+          identityService.findUserByIdentity(
+            context.execution.platform,
+            target
+          );
+      }
+
       let native: PlatformMemberDetails | undefined;
 
       if (
