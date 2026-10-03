@@ -133,6 +133,17 @@ export class ExecutionContextService {
         input.community.id
       );
 
+    if (
+      this.accessControl?.hasSystemRole(
+        input.user.id,
+        MODEXA_OWNER_ROLE_ID
+      )
+    ) {
+      capabilities.push(
+        "system.manage"
+      );
+    }
+
     return {
       type: "community",
       platform:
