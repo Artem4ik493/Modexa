@@ -2,10 +2,37 @@ import { randomUUID } from "node:crypto";
 import type { Automation, AutomationAction, AutomationTrigger } from "./types.js";
 import type { BillingService } from "../billing/service.js";
 
+export interface AutomationStateStore {
+  getRuntimeState<T>(key: string): T | undefined;
+  setRuntimeState(key: string, value: unknown, now?: Date): void;
+}
+
+const STATE_KEY = "automations";
+
+type StoredAutomation = Omit<Automation, "createdAt" | "updatedAt" | "nextRunAt" | "lastRunAt"> & {
+  createdAt: string;
+  updatedAt: string;
+  nextRunAt?: string;
+  lastRunAt?: string;
+};
+
 export class AutomationService {
   private readonly automations = new Map<string, Automation>();
 
-  constructor(private readonly billingService?: BillingService) {}
+  constructor(
+    private readonly billingService?: BillingService,
+    private readonly store?: AutomationStateStore
+  ) {
+    for (const item of store?.getRuntimeState<StoredAutomation[]>(STATE_KEY) ?? []) {
+      this.automations.set(item.id, {
+        ...item,
+        createdAt: new Date(item.createdAt),
+        updatedAt: new Date(item.updatedAt),
+        ...(item.nextRunAt ? { nextRunAt: new Date(item.nextRunAt) } : {}),
+        ...(item.lastRunAt ? { lastRunAt: new Date(item.lastRunAt) } : {})
+      });
+    }
+  }
 
   create(input: {
     communityId: string;
@@ -19,6 +46,7 @@ export class AutomationService {
     if (input.trigger.type === "interval" && input.trigger.intervalSeconds < 60) {
       throw new Error("Automation interval must be at least 60 seconds");
     }
+
     const now = input.now ?? new Date();
     const item: Automation = {
       id: `automation-${randomUUID()}`,
@@ -34,11 +62,16 @@ export class AutomationService {
       createdAt: now,
       updatedAt: now
     };
+
     this.automations.set(item.id, item);
+    this.persist(now);
     return item;
   }
 
-  get(id: string): Automation | undefined { return this.automations.get(id); }
+  get(id: string): Automation | undefined {
+    return this.automations.get(id);
+  }
+
   list(communityId?: string): Automation[] {
     return [...this.automations.values()]
       .filter((item) => !communityId || item.communityId === communityId)
@@ -49,6 +82,7 @@ export class AutomationService {
     const item = this.require(id);
     item.enabled = enabled;
     item.updatedAt = now;
+    this.persist(now);
     return item;
   }
 
@@ -59,6 +93,7 @@ export class AutomationService {
       item.nextRunAt = new Date(now.getTime() + item.trigger.intervalSeconds * 1000);
     }
     item.updatedAt = now;
+    this.persist(now);
     return item;
   }
 
@@ -74,6 +109,20 @@ export class AutomationService {
         item.enabled &&
         item.trigger.type === "message" &&
         content.toLowerCase().includes(item.trigger.pattern.toLowerCase())
+    );
+  }
+
+  private persist(now = new Date()): void {
+    this.store?.setRuntimeState(
+      STATE_KEY,
+      [...this.automations.values()].map((item) => ({
+        ...item,
+        createdAt: item.createdAt.toISOString(),
+        updatedAt: item.updatedAt.toISOString(),
+        ...(item.nextRunAt ? { nextRunAt: item.nextRunAt.toISOString() } : {}),
+        ...(item.lastRunAt ? { lastRunAt: item.lastRunAt.toISOString() } : {})
+      })),
+      now
     );
   }
 
