@@ -1228,24 +1228,33 @@ export class DiscordAdapter
         : interaction.commandName === "role"
           ? (() => {
               const target =
-                interaction.options.getUser(
-                  "user"
-                );
+                interaction.options.getUser("user");
               const role =
-                interaction.options.getString(
-                  "role"
-                );
+                interaction.options.getString("role");
 
               return [
-                ...(target
-                  ? [target.id]
-                  : []),
-                ...(role
-                  ? [role]
-                  : [])
+                ...(target ? [target.id] : []),
+                ...(role ? [role] : [])
               ];
             })()
-          : [];
+          : ["warn", "mute", "kick", "ban"].includes(
+              interaction.commandName
+            )
+            ? (() => {
+                const target =
+                  interaction.options.getUser("user");
+                const duration =
+                  interaction.options.getString("duration");
+                const reason =
+                  interaction.options.getString("reason");
+
+                return [
+                  ...(target ? [target.id] : []),
+                  ...(duration ? [duration] : []),
+                  ...(reason ? [reason] : [])
+                ];
+              })()
+            : [];
 
     return {
       type: "command.invoked",
