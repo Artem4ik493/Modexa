@@ -20,6 +20,10 @@ import type {
 } from "./interactions/dispatcher.js";
 
 import type {
+  InteractionResponse
+} from "./interactions/types.js";
+
+import type {
   InteractionButton
 } from "./interactions/types.js";
 
@@ -362,8 +366,19 @@ function handleSettings(
     };
   }
 
-  const category =
+  let category =
     context.args[0]?.toLowerCase();
+
+  if (
+    category === "public" ||
+    category === "private"
+  ) {
+    category = "general";
+    context.args = [
+      "general",
+      context.args[0]
+    ];
+  }
 
   if (
     category === "bridges"
