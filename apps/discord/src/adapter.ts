@@ -153,7 +153,7 @@ export class DiscordAdapter
             this.getEmbeds(action.metadata);
 
           await pending.editReply({
-            content: action.content,
+            ...(embeds.length > 0 ? {} : { content: action.content }),
             components:
               this.getComponents(
                 action.metadata
@@ -173,7 +173,7 @@ export class DiscordAdapter
           this.getEmbeds(action.metadata);
 
         await channel.send({
-          content: action.content,
+          ...(embeds.length > 0 ? {} : { content: action.content }),
           components:
             this.getComponents(
               action.metadata
