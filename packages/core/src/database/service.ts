@@ -197,6 +197,29 @@ export class ModexaDatabase {
     );
   }
 
+  updateIdentityProfile(
+    identityId: string,
+    username?: string,
+    displayName?: string,
+    avatarUrl?: string,
+    now = new Date()
+  ): void {
+    this.database.prepare(
+      `UPDATE identities
+       SET username = ?,
+           display_name = ?,
+           avatar_url = ?,
+           updated_at = ?
+       WHERE id = ?`
+    ).run(
+      username ?? null,
+      displayName ?? null,
+      avatarUrl ?? null,
+      now.toISOString(),
+      identityId
+    );
+  }
+
   getIdentityByExternalId(
     platform: "telegram" | "discord",
     externalId: string
