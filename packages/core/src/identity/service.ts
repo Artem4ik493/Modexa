@@ -448,6 +448,7 @@ export class IdentityService {
 
     this.identities.delete(identity.id);
     this.identityIndex.delete(identityKey);
+    this.database?.deleteIdentity(identity.id);
 
     const user = this.users.get(identity.userId);
 

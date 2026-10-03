@@ -26,6 +26,7 @@ const DM_CAPABILITIES:
     "commands",
     "account.manage",
     "identity.link",
+    "identity.unlink",
     "billing"
   ];
 

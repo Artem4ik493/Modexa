@@ -227,70 +227,39 @@ function handleAccount(
   identityService?: IdentityService
 ): CommandResponse {
   const { execution } = context;
+  const t = createTranslator(execution.locale);
 
-  const t = createTranslator(
-    execution.locale
-  );
-
-  if (
-    !execution.capabilities.includes(
-      "account.manage"
-    )
-  ) {
-    return {
-      content: t("account.dm_only")
-    };
+  if (!execution.capabilities.includes("account.manage")) {
+    return { content: t("account.dm_only") };
   }
 
-  const identity =
-    identityService
-      ?.getUserIdentities(
-        execution.user.id
-      )
-      .find(
-        (item) =>
-          item.platform ===
-          execution.platform
-      );
+  const identities =
+    identityService?.getUserIdentities(execution.user.id) ?? [];
 
-  const linkedIdentity =
-    identityService
-      ?.getUserIdentities(
-        execution.user.id
-      )
-      .find(
-        (item) =>
-          item.platform !==
-          execution.platform
-      );
+  const identity = identities.find(
+    (item) => item.platform === execution.platform
+  );
 
-  const username =
-    identity?.username
-      ? `@${identity.username}`
-      : "—";
+  const linkedIdentity = identities.find(
+    (item) => item.platform !== execution.platform
+  );
+
+  const username = identity?.username
+    ? `@${identity.username}`
+    : "—";
 
   const platformId =
-    identity?.externalId ??
-    execution.user.id;
+    identity?.externalId ?? execution.user.id;
 
   return {
     content: [
       t("account.title"),
-      t("account.name", {
-        name: execution.user.displayName
-      }),
-      t("account.username", {
-        username
-      }),
+      t("account.name", { name: execution.user.displayName }),
+      t("account.username", { username }),
       t("account.platform", {
-        platform:
-          platformLabel(
-            execution.platform
-          )
+        platform: platformLabel(execution.platform)
       }),
-      t("account.platform_id", {
-        id: platformId
-      }),
+      t("account.platform_id", { id: platformId }),
       t("account.status", {
         status: t(
           linkedIdentity
@@ -301,14 +270,10 @@ function handleAccount(
       ...(linkedIdentity
         ? [
             t("account.linked_account", {
-              platform:
-                platformLabel(
-                  linkedIdentity.platform
-                ),
-              username:
-                linkedIdentity.username
-                  ? `@${linkedIdentity.username}`
-                  : linkedIdentity.externalId
+              platform: platformLabel(linkedIdentity.platform),
+              username: linkedIdentity.username
+                ? `@${linkedIdentity.username}`
+                : linkedIdentity.externalId
             })
           ]
         : []),
@@ -321,17 +286,103 @@ function handleAccount(
       })
     ].join("\n"),
     buttons: [
-      {
-        id: "account-link",
-        label: t("account.link"),
-        action: {
-          type: "command",
-          command: "/link"
-        }
-      },
+      linkedIdentity
+        ? {
+            id: "account-unlink",
+            label: t("account.unlink"),
+            action: {
+              type: "callback" as const,
+              data: `account.unlink:${linkedIdentity.id}`
+            }
+          }
+        : {
+            id: "account-link",
+            label: t("account.link"),
+            action: {
+              type: "command" as const,
+              command: "/link"
+            }
+          },
       createBackButton(t),
       createCloseButton(t)
     ]
+  };
+}
+
+export function createAccountInteractionHandler(
+  identityService: IdentityService
+): (
+  context: InteractionHandlerContext
+) => Promise<InteractionResponse> {
+  return async (context) => {
+    const data =
+      context.action.type === "callback"
+        ? context.action.data
+        : "";
+
+    const t = createTranslator(context.execution.locale);
+
+    if (!data.startsWith("account.unlink:")) {
+      return {
+        content: t("interaction.unhandled")
+      };
+    }
+
+    if (context.execution.type !== "dm") {
+      return {
+        content: t("account.dm_only")
+      };
+    }
+
+    if (!context.execution.capabilities.includes("account.manage")) {
+      return {
+        content: t("account.unlink_forbidden")
+      };
+    }
+
+    const identityId = data.slice("account.unlink:".length);
+    const identity = identityService
+      .getUserIdentities(context.execution.user.id)
+      .find((item) => item.id === identityId);
+
+    if (!identity || identity.platform === context.execution.platform) {
+      return {
+        content: t("account.unlink_unavailable")
+      };
+    }
+
+    try {
+      identityService.detachIdentity(identity.id);
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message.includes("last identity")
+      ) {
+        return {
+          content: t("account.unlink_last")
+        };
+      }
+
+      throw error;
+    }
+
+    return {
+      content: t("account.unlink_success", {
+        platform: platformLabel(identity.platform)
+      }),
+      buttons: [
+        {
+          id: "account-after-unlink",
+          label: t("account.open"),
+          action: {
+            type: "command",
+            command: "/account"
+          }
+        },
+        createBackButton(t),
+        createCloseButton(t)
+      ]
+    };
   };
 }
 
@@ -340,17 +391,12 @@ function handleSettings(
   communityService?: CommunityService,
   bridgeService?: BridgeService
 ): CommandResponse {
-  const t = createTranslator(
-    context.execution.locale
-  );
+  const t = createTranslator(context.execution.locale);
 
   if (context.execution.type === "dm") {
     return {
       content: t("settings.dm"),
-      buttons: [
-        createBackButton(t),
-        createCloseButton(t)
-      ]
+      buttons: [createBackButton(t), createCloseButton(t)]
     };
   }
 
@@ -359,74 +405,26 @@ function handleSettings(
   if (!community || !communityService) {
     return {
       content: t("settings.community_unavailable"),
-      buttons: [
-        createBackButton(t),
-        createCloseButton(t)
-      ]
+      buttons: [createBackButton(t), createCloseButton(t)]
     };
   }
 
-  let category =
-    context.args[0]?.toLowerCase();
+  let category = context.args[0]?.toLowerCase();
 
-  if (
-    category === "public" ||
-    category === "private"
-  ) {
+  if (category === "public" || category === "private") {
+    context.args = ["general", category];
     category = "general";
-    context.args = [
-      "general",
-      context.args[0]
-    ];
   }
 
-  if (
-    category === "bridges"
-  ) {
-    return createBridgeSettingsResponse(
-      context,
-      bridgeService
-    );
+  if (category === "bridges") {
+    return createBridgeSettingsResponse(context, bridgeService);
   }
 
-  if (
-    category === "general"
-  ) {
-    return createGeneralSettingsResponse(
-      context,
-      communityService
-    );
+  if (category === "general") {
+    return createGeneralSettingsResponse(context, communityService);
   }
 
-  return createCommunitySettingsCategoriesResponse(
-    context
-  );
-
-  if (mode === "public" || mode === "private") {
-    if (
-      !context.execution.capabilities.includes(
-        "community.manage"
-      )
-    ) {
-      return {
-        content: t("settings.forbidden"),
-        buttons: [
-          createBackButton(t),
-          createCloseButton(t)
-        ]
-      };
-    }
-
-    const updated =
-      communityService.setMode(
-        community.id,
-        mode
-      );
-
-    currentMode =
-      updated.mode ?? mode;
-  }
-
+  return createCommunitySettingsCategoriesResponse(context);
 }
 
 function createCommunitySettingsCategoriesResponse(

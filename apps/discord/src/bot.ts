@@ -11,6 +11,7 @@ import {
   createBuiltinCommands,
   createBridgeTestCommand,
   createMemberCommand,
+  createAccountInteractionHandler,
   createBridgeTestInteractionHandler,
   createIdentityLinkCommand,
   BridgeService,
@@ -214,6 +215,17 @@ export function createDiscordAdapter(
         )
       : () => ({
           content: "Bridge unavailable"
+        })
+  );
+
+  dispatcher.registerCallback(
+    "account.unlink:",
+    options.identityService
+      ? createAccountInteractionHandler(
+          options.identityService
+        )
+      : () => ({
+          content: "Account unavailable"
         })
   );
 

@@ -225,6 +225,12 @@ export class ModexaDatabase {
     );
   }
 
+  deleteIdentity(identityId: string): void {
+    this.database.prepare(
+      "DELETE FROM identities WHERE id = ?"
+    ).run(identityId);
+  }
+
   getIdentityByExternalId(
     platform: "telegram" | "discord",
     externalId: string

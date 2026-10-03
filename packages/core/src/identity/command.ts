@@ -187,7 +187,25 @@ function handleLink(
                 currentPlatform
               )
           }
-        )
+        ),
+        buttons: [
+          {
+            id: "link-account",
+            label: t("account.open"),
+            action: {
+              type: "command",
+              command: "/account"
+            }
+          },
+          {
+            id: "link-menu",
+            label: t("menu.back"),
+            action: {
+              type: "command",
+              command: "/menu"
+            }
+          }
+        ]
       };
     } catch (error) {
       if (
@@ -256,6 +274,24 @@ function handleLink(
       }),
       t("link.expires")
     ].join("\n"),
-    format: "markdown"
+    format: "markdown",
+    buttons: [
+      {
+        id: "link-account",
+        label: t("account.open"),
+        action: {
+          type: "command",
+          command: "/account"
+        }
+      },
+      {
+        id: "link-menu",
+        label: t("menu.back"),
+        action: {
+          type: "command",
+          command: "/menu"
+        }
+      }
+    ]
   };
 }
