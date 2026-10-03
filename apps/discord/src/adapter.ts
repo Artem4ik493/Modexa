@@ -178,9 +178,7 @@ export class DiscordAdapter
             this.getComponents(
               action.metadata
             ) as never,
-          ...(imageEmbeds.length > 0
-            ? { embeds: imageEmbeds }
-            : {})
+          ...(embeds.length > 0 ? { embeds } : {})
         });
 
         return;
