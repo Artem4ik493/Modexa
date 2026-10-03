@@ -163,6 +163,82 @@ export class ModexaDatabase {
     }));
   }
 
+  appendAudit(entry: {
+    id: string;
+    communityId: string;
+    action: string;
+    actorUserId?: string;
+    targetUserId?: string;
+    channelId?: string;
+    messageId?: string;
+    reason?: string;
+    metadata?: Record<string, unknown>;
+    createdAt: Date;
+  }): void {
+    this.database.prepare(
+      `INSERT INTO audit_entries
+       (id, community_id, action, actor_user_id, target_user_id, channel_id, message_id, reason, metadata, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      entry.id,
+      entry.communityId,
+      entry.action,
+      entry.actorUserId ?? null,
+      entry.targetUserId ?? null,
+      entry.channelId ?? null,
+      entry.messageId ?? null,
+      entry.reason ?? null,
+      entry.metadata ? JSON.stringify(entry.metadata) : null,
+      entry.createdAt.toISOString()
+    );
+  }
+
+  getAuditEntries(communityId: string, limit = 100): Array<{
+    id: string;
+    communityId: string;
+    action: string;
+    actorUserId?: string;
+    targetUserId?: string;
+    channelId?: string;
+    messageId?: string;
+    reason?: string;
+    metadata?: Record<string, unknown>;
+    createdAt: Date;
+  }> {
+    const rows = this.database.prepare(
+      `SELECT id, community_id, action, actor_user_id, target_user_id,
+              channel_id, message_id, reason, metadata, created_at
+       FROM audit_entries
+       WHERE community_id = ?
+       ORDER BY created_at DESC
+       LIMIT ?`
+    ).all(communityId, Math.max(1, Math.min(500, limit))) as Array<{
+      id: string;
+      community_id: string;
+      action: string;
+      actor_user_id: string | null;
+      target_user_id: string | null;
+      channel_id: string | null;
+      message_id: string | null;
+      reason: string | null;
+      metadata: string | null;
+      created_at: string;
+    }>;
+
+    return rows.map((row) => ({
+      id: row.id,
+      communityId: row.community_id,
+      action: row.action,
+      actorUserId: row.actor_user_id ?? undefined,
+      targetUserId: row.target_user_id ?? undefined,
+      channelId: row.channel_id ?? undefined,
+      messageId: row.message_id ?? undefined,
+      reason: row.reason ?? undefined,
+      metadata: row.metadata ? JSON.parse(row.metadata) as Record<string, unknown> : undefined,
+      createdAt: new Date(row.created_at)
+    }));
+  }
+
   getCommunitiesSnapshot(): Array<{ id: string; name: string; mode: string; createdAt: Date; updatedAt: Date }> {
     const rows = this.database.prepare(
       "SELECT id, name, mode, created_at, updated_at FROM communities ORDER BY name"
