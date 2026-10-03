@@ -424,7 +424,29 @@ export class PlatformIdentityResolver {
       return;
     }
 
+    const existingMemberships =
+      this.services.membershipService
+        .getCommunityMemberships(
+          community.id
+        );
+
+    const currentRoles =
+      accessControlService
+        .getUserCommunityRoles(
+          user.id,
+          community.id
+        );
+
+    // Bootstrap the first observed member as ADMIN.
+    // Platform owner/admin status also grants ADMIN.
+    if (
+      currentRoles.length > 0
+    ) {
+      return;
+    }
+
     const roleName =
+      existingMemberships.length === 1 ||
       input.author.platformRole ===
         "owner" ||
       input.author.platformRole ===
@@ -445,32 +467,7 @@ export class PlatformIdentityResolver {
       return;
     }
 
-    const currentRoles =
-      accessControlService
-        .getUserCommunityRoles(
-          user.id,
-          community.id
-        );
 
-    if (
-      currentRoles.some(
-        (role) =>
-          role.id ===
-          targetRole.id
-      )
-    ) {
-      return;
-    }
-
-    for (
-      const role of currentRoles
-    ) {
-      accessControlService
-        .revokeCommunityRole(
-          user.id,
-          role.id
-        );
-    }
 
     accessControlService
       .assignCommunityRole(
