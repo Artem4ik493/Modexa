@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Modexa Dashboard</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,system-ui,sans-serif;background:#080b12;color:#eef2ff}
+body{margin:0;background:radial-gradient(circle at top,#16213d 0,#080b12 45%);min-height:100vh}
+main{max-width:1100px;margin:auto;padding:48px 24px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px}
+.logo{font-size:28px;font-weight:800;letter-spacing:-1px}
+.badge{padding:8px 12px;border:1px solid #26314d;border-radius:999px;background:#10172a;color:#9fb5ff}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.card{background:#0e1422cc;border:1px solid #202a42;border-radius:18px;padding:20px;box-shadow:0 18px 60px #0005}
+h2{margin:0 0 8px} .muted{color:#91a0bc}
+#communities{margin-top:16px}
+.item{padding:14px 0;border-bottom:1px solid #202a42}
+.item:last-child{border-bottom:0}
+code{color:#b9c8ff}
+</style>
+</head>
+<body>
+<main>
+<header><div class="logo">Modexa</div><div class="badge" id="status">connecting…</div></header>
+<div class="grid">
+<section class="card"><div class="muted">API</div><h2 id="health">—</h2><div class="muted">Service status</div></section>
+<section class="card"><div class="muted">Communities</div><h2 id="count">—</h2><div class="muted">Connected communities</div></section>
+</div>
+<section class="card" style="margin-top:16px"><h2>Communities</h2><div id="communities" class="muted">Loading…</div></section>
+</main>
+<script>
+const API=location.protocol==='file:'?'http://localhost:3000':'';
+async function load(){
+ try{
+  const h=await fetch(API+'/health').then(r=>r.json());
+  document.querySelector('#health').textContent=h.status;
+  document.querySelector('#status').textContent='online';
+  const c=await fetch(API+'/api/communities').then(r=>r.json());
+  document.querySelector('#count').textContent=c.items.length;
+  document.querySelector('#communities').innerHTML=c.items.map(x=>'<div class="item"><b>'+x.name+'</b><br><span class="muted"><code>'+x.id+'</code> · '+x.mode+'</span></div>').join('')||'<div class="muted">No communities yet</div>';
+ }catch(e){document.querySelector('#status').textContent='offline';document.querySelector('#health').textContent='unavailable';}
+}
+load(); setInterval(load,30000);
+</script>
+</body>
+</html>
