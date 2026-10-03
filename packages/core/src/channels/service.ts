@@ -13,6 +13,7 @@ import type {
 
 export interface CreateChannelInput {
   communityId: CommunityId;
+  externalId?: string;
   name: string;
   type: ChannelType;
   parentId?: ChannelId;
@@ -80,6 +81,7 @@ export class ChannelService {
     const channel: Channel = {
       id: `channel-${this.nextChannelId++}`,
       communityId: input.communityId,
+      externalId: input.externalId,
       parentId: input.parentId,
       name: input.name,
       type: input.type,
