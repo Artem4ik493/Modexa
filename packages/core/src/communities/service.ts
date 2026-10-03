@@ -26,7 +26,41 @@ export class CommunityService {
   constructor(
     private readonly database?: ModexaDatabase,
     private readonly billingService?: BillingService
-  ) {}
+  ) {
+    for (const item of database?.getCommunitiesSnapshot() ?? []) {
+      const community: Community = {
+        id: item.id,
+        name: item.name,
+        mode: item.mode === "private" ? "private" : "public",
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt
+      };
+      this.communities.set(community.id, community);
+    }
+
+    for (const identity of database?.getCommunityIdentitiesSnapshot() ?? []) {
+      const item: CommunityIdentity = {
+        id: identity.id,
+        communityId: identity.communityId,
+        platform: identity.platform,
+        externalId: identity.externalId,
+        name: identity.name,
+        createdAt: identity.createdAt,
+        updatedAt: identity.updatedAt
+      };
+      this.identities.set(item.id, item);
+      this.identityIndex.set(this.getIdentityKey(item.platform, item.externalId), item.id);
+    }
+
+    this.nextCommunityId = this.getNextNumericId(
+      [...this.communities.keys()],
+      "community-"
+    );
+    this.nextIdentityId = this.getNextNumericId(
+      [...this.identities.keys()],
+      "community-identity-"
+    );
+  }
 
   private readonly communities = new Map<
     CommunityId,
@@ -99,6 +133,7 @@ export class CommunityService {
 
     community.mode = mode;
     community.updatedAt = now;
+    this.database?.upsertCommunity(community);
 
     return community;
   }
@@ -201,6 +236,15 @@ export class CommunityService {
       (identity) =>
         identity.communityId === communityId
     );
+  }
+
+  private getNextNumericId(ids: string[], prefix: string): number {
+    let next = 1;
+    for (const id of ids) {
+      const value = Number(id.slice(prefix.length));
+      if (Number.isFinite(value)) next = Math.max(next, value + 1);
+    }
+    return next;
   }
 
   private getIdentityKey(
