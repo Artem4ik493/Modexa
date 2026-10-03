@@ -415,6 +415,16 @@ export class BillingService {
     };
   }
 
+  requireFeature(
+    communityId: CommunityId,
+    feature: FeatureKey,
+    now = new Date()
+  ): void {
+    if (!this.hasFeature(communityId, feature, now)) {
+      throw new Error(`Feature "${feature}" is not enabled for community "${communityId}"`);
+    }
+  }
+
   hasFeature(
     communityId: CommunityId,
     feature: FeatureKey,
