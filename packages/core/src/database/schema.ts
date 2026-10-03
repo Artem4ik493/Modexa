@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS identities (
   external_id TEXT NOT NULL,
   username TEXT,
   display_name TEXT,
+  avatar_url TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   UNIQUE(platform, external_id)
