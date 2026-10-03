@@ -95,6 +95,23 @@ export class IdentityService {
 
       if (existingIdentity) {
         if (existingIdentity.userId === input.userId) {
+          existingIdentity.username =
+            input.username;
+          existingIdentity.displayName =
+            input.displayName;
+          existingIdentity.avatarUrl =
+            input.avatarUrl;
+          existingIdentity.updatedAt =
+            input.now ?? new Date();
+
+          this.database?.updateIdentityProfile(
+            existingIdentity.id,
+            existingIdentity.username,
+            existingIdentity.displayName,
+            existingIdentity.avatarUrl,
+            existingIdentity.updatedAt
+          );
+
           return existingIdentity;
         }
 
