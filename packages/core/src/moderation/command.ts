@@ -201,16 +201,15 @@ export function createModerationCommands(
           ? await resolveModerationTarget(context, context.args[0], identityService, membershipService, memberDirectory)
           : context.user;
         if (!target) return { content: "Участник не найден." };
-        const cases = moderationService.getCases(context.community.id)
-          .filter((item) => item.action === "warn" && item.targetUserId === target.id);
-        if (!cases.length) return { content: `У ${target.displayName} предупреждений нет.` };
+        const cases = moderationService.getCases(context.community.id).filter(
+          (item) => item.action === "warn" && item.targetUserId === target.id
+        );
         return {
-          content: [
-            `⚠️ Предупреждения: ${target.displayName}`,
-            ...cases.slice(0, 20).map((item) =>
-              `• ${item.id} · ${item.status === "active" ? "активно" : "снято"} · ${item.reason ?? "без причины"} · ${item.createdAt.toLocaleString("ru-RU")}`
-            )
-          ].join("\n")
+          content: cases.length
+            ? [`⚠️ Предупреждения: ${target.displayName}`, ...cases.slice(0, 20).map(
+                (item) => `• ${item.id} · ${item.status === "active" ? "активно" : "снято"} · ${item.reason ?? "без причины"}`
+              )].join("\n")
+            : `У ${target.displayName} предупреждений нет.`
         };
       }
     },
@@ -239,8 +238,9 @@ export function createModerationCommands(
         if (!context.community || !context.args[0]) return { content: "Использование: /resetwarns @user" };
         const target = await resolveModerationTarget(context, context.args[0], identityService, membershipService, memberDirectory);
         if (!target) return { content: "Участник не найден." };
-        const active = moderationService.getCases(context.community.id)
-          .filter((item) => item.action === "warn" && item.targetUserId === target.id && item.status === "active");
+        const active = moderationService.getCases(context.community.id).filter(
+          (item) => item.action === "warn" && item.targetUserId === target.id && item.status === "active"
+        );
         for (const item of active) moderationService.revokeCase(context.user.id, item.id);
         return { content: `✅ Снято предупреждений: ${active.length}.` };
       }
@@ -276,8 +276,7 @@ export function createModerationCommands(
         if (!context.community || !context.args[0]) return { content: "Использование: /modhistory @user" };
         const target = await resolveModerationTarget(context, context.args[0], identityService, membershipService, memberDirectory);
         if (!target) return { content: "Участник не найден." };
-        const cases = moderationService.getCases(context.community.id)
-          .filter((item) => item.targetUserId === target.id);
+        const cases = moderationService.getCases(context.community.id).filter((item) => item.targetUserId === target.id);
         if (!cases.length) return { content: "История модерации пуста." };
         return {
           content: [
@@ -311,17 +310,14 @@ async function resolveModerationTarget(
       .map((membership) => identityService.getUser(membership.userId))
       .filter((user): user is NonNullable<typeof user> => Boolean(user))
       .find((user) => identityService.getUserIdentities(user.id).some(
-        (identity) =>
-          identity.platform === context.platform &&
-          identity.username?.toLowerCase() === normalizedTarget
+        (identity) => identity.platform === context.platform && identity.username?.toLowerCase() === normalizedTarget
       ));
   }
 
-  if (!target && memberDirectory) {
+  if (!target && memberDirectory && context.community) {
     const native = targetArg.startsWith("@")
-      ? await memberDirectory.findMemberByUsername?.(context.community!.id, targetArg.replace(/^@/, "").trim())
-      : await memberDirectory.getMember(context.community!.id, targetArg);
-
+      ? await memberDirectory.findMemberByUsername?.(context.community.id, targetArg.replace(/^@/, "").trim())
+      : await memberDirectory.getMember(context.community.id, targetArg);
     if (native) {
       target = identityService.findUserByIdentity(native.user.platform, native.user.externalId);
       if (!target) {
@@ -339,241 +335,7 @@ async function resolveModerationTarget(
       }
     }
   }
-
   return target;
-}
-
-function formatDuration(
-    name: action,
-    description: `Moderation: ${action}`,
-    requiredCapabilities: MODERATION_CAPABILITIES,
-    handler: async (
-      context: CommandContext
-    ): Promise<CommandResponse> => {
-      if (!context.community) {
-        return {
-          content: `Команду /${action} можно использовать только в сообществе.`
-        };
-      }
-
-      if (!executeAction) {
-        return {
-          content: "Модерация платформы ещё не настроена."
-        };
-      }
-
-      const targetArg = context.args[0];
-
-      if (!targetArg) {
-        return {
-          content: `Использование: ${usage(action)}`
-        };
-      }
-
-      let durationSeconds: number | undefined;
-
-      if (action === "mute") {
-        durationSeconds = parseDuration(context.args[1]);
-
-        if (durationSeconds === undefined) {
-          return {
-            content:
-              "Укажите длительность: 30s, 10m, 2h, 1d или количество секунд."
-          };
-        }
-      }
-
-      const durationOffset =
-        action === "mute" ? 2 : 1;
-
-      const reason =
-        context.args
-          .slice(durationOffset)
-          .join(" ")
-          .trim() || undefined;
-
-      const normalizedTarget =
-        targetArg
-          .replace(/^@/, "")
-          .trim()
-          .toLowerCase();
-
-      let target =
-        identityService.findUserByIdentity(
-          context.platform,
-          targetArg
-        ) ??
-        identityService.findUserByUsername(
-          normalizedTarget,
-          context.platform
-        );
-
-      if (!target) {
-        target = membershipService
-          .getCommunityMemberships(
-            context.community.id
-          )
-          .map((membership) =>
-            identityService.getUser(membership.userId)
-          )
-          .filter(
-            (user): user is NonNullable<typeof user> =>
-              Boolean(user)
-          )
-          .find((user) =>
-            identityService
-              .getUserIdentities(user.id)
-              .some(
-                (identity) =>
-                  identity.platform === context.platform &&
-                  identity.username?.toLowerCase() ===
-                    normalizedTarget
-              )
-          );
-      }
-
-      if (!target && memberDirectory) {
-        const native =
-          targetArg.startsWith("@")
-            ? await memberDirectory.findMemberByUsername?.(
-                context.community.id,
-                targetArg.replace(/^@/, "").trim()
-              )
-            : await memberDirectory.getMember(
-                context.community.id,
-                targetArg
-              );
-
-        if (native) {
-          target =
-            identityService.findUserByIdentity(
-              native.user.platform,
-              native.user.externalId
-            );
-
-          if (!target) {
-            target = identityService.createUser({
-              displayName:
-                native.user.displayName ??
-                native.user.username ??
-                native.user.externalId
-            });
-
-            identityService.attachIdentity({
-              userId: target.id,
-              platform: native.user.platform,
-              externalId: native.user.externalId,
-              username: native.user.username,
-              displayName: native.user.displayName,
-              avatarUrl: native.user.avatarUrl
-            });
-          }
-        }
-      }
-
-      if (!target) {
-        return {
-          content: `Участник ${targetArg} не найден.`
-        };
-      }
-
-      const membership =
-        membershipService.findMembership(
-          target.id,
-          context.community.id
-        );
-
-      if (!membership || membership.status !== "active") {
-        return {
-          content: "Участник не состоит в этом сообществе."
-        };
-      }
-
-      const targetIdentity =
-        identityService
-          .getUserIdentities(target.id)
-          .find(
-            (identity) =>
-              identity.platform === context.platform
-          );
-
-      if (!targetIdentity) {
-        return {
-          content:
-            "Не найден аккаунт участника на текущей платформе."
-        };
-      }
-
-      const communityIdentity =
-        communityService
-          .getCommunityIdentities(context.community.id)
-          .find(
-            (identity) =>
-              identity.platform === context.platform
-          );
-
-      if (!communityIdentity) {
-        return {
-          content:
-            "Не найден внешний идентификатор сообщества."
-        };
-      }
-
-      const created =
-        moderationService.createCase({
-          action,
-          actorUserId:
-            context.user.id,
-          targetUserId:
-            target.id,
-          communityId:
-            context.community.id,
-          platform:
-            context.platform,
-          communityExternalId:
-            communityIdentity.externalId,
-          userExternalId:
-            targetIdentity.externalId,
-          ...(durationSeconds !== undefined
-            ? { durationSeconds }
-            : {}),
-          ...(reason
-            ? { reason }
-            : {})
-        });
-
-      const actionWithMetadata: AdapterAction = {
-        ...created.adapterAction,
-        metadata: {
-          targetDisplayName:
-            target.displayName,
-          moderationCaseId:
-            created.case.id
-        }
-      };
-
-      try {
-        await executeAction(actionWithMetadata);
-      } catch (error) {
-        return {
-          content:
-            `❌ Не удалось применить ${actionLabel(action)}: ${error instanceof Error ? error.message : "неизвестная ошибка"}`
-        };
-      }
-
-      const details =
-        action === "mute" && durationSeconds !== undefined
-          ? ` на ${formatDuration(durationSeconds)}`
-          : "";
-
-      return {
-        content: [
-          `✅ ${actionLabel(action)[0]!.toUpperCase() + actionLabel(action).slice(1)} применён к ${target.displayName}${details}.`,
-          ...(reason ? [`Причина: ${reason}`] : []),
-          `Case: ${created.case.id}`
-        ].join("\n")
-      };
-    }
 }
 
 function formatDuration(
