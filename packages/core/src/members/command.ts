@@ -11,6 +11,7 @@ export interface PlatformMemberDetails {
   joinedAt?: Date;
   roles?: string[];
   status?: string;
+  isMember?: boolean;
 }
 
 export interface MemberDirectory {
@@ -91,7 +92,10 @@ function ensureLocalMember(
       communityId
     );
 
-  if (!membership) {
+  if (
+    details.isMember !== false &&
+    !membership
+  ) {
     membershipService.createMembership({
       userId: user.id,
       communityId,
@@ -100,6 +104,7 @@ function ensureLocalMember(
   }
 
   if (
+    details.isMember !== false &&
     accessControlService &&
     accessControlService.getUserCommunityRoles(
       user.id,
@@ -330,20 +335,6 @@ export function createMemberCommand(
             accessControlService
           );
         }
-      }
-
-      if (
-        target &&
-        !membershipService.findMembership(
-          user.id,
-          context.community.id
-        )
-      ) {
-        return {
-          content: t("member.not_found", {
-            username: target
-          })
-        };
       }
 
       return renderMemberDetails(
