@@ -283,6 +283,55 @@ export class DiscordAdapter
     }
   }
 
+  async findMemberByUsername(
+    communityExternalId: string,
+    username: string
+  ): Promise<PlatformMemberDetails | undefined> {
+    const normalized = username.replace(/^@/, "").trim().toLowerCase();
+
+    if (!normalized) {
+      return undefined;
+    }
+
+    try {
+      const guild =
+        await this.client.guilds.fetch(
+          communityExternalId
+        );
+
+      const members =
+        await guild.members.fetch({
+          query: normalized,
+          limit: 10
+        });
+
+      const exact = [...members.values()].find(
+        (member) =>
+          !member.user.bot &&
+          [
+            member.user.username,
+            member.user.globalName,
+            member.displayName,
+            member.nickname
+          ]
+            .filter(
+              (value): value is string =>
+                Boolean(value)
+            )
+            .some(
+              (value) =>
+                value.toLowerCase() === normalized
+            )
+      );
+
+      return exact
+        ? this.toPlatformMemberDetails(exact)
+        : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   async listMembers(
     communityExternalId: string
   ): Promise<PlatformMemberDetails[]> {
@@ -881,6 +930,20 @@ export class DiscordAdapter
           : undefined
       );
 
+    const args =
+      interaction.commandName === "member"
+        ? (() => {
+            const target =
+              interaction.options.getUser(
+                "user"
+              );
+
+            return target
+              ? [target.username]
+              : [];
+          })()
+        : [];
+
     return {
       type: "command.invoked",
 
@@ -904,7 +967,7 @@ export class DiscordAdapter
 
         name: interaction.commandName,
 
-        args: [],
+        args,
 
         createdAt:
           interaction.createdAt
