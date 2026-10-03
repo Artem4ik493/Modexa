@@ -174,9 +174,6 @@ if (discordToken) {
         accessControlService:
           services.accessControlService,
 
-        moderationService:
-          services.moderationService,
-
         database:
           database
       }
