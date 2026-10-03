@@ -27,22 +27,41 @@ export function createRoleCommand(
         identityService.findUserByUsername(targetArg.replace(/^@/, ""), context.platform);
 
       if (!target && memberDirectory) {
-        const native = await memberDirectory.getMember(context.community.id, targetArg);
+        const username = targetArg.replace(/^@/, "").trim();
+        const native =
+          targetArg.startsWith("@")
+            ? await memberDirectory.findMemberByUsername?.(
+                context.community.id,
+                username
+              )
+            : await memberDirectory.getMember(
+                context.community.id,
+                targetArg
+              );
+
         if (native) {
-          target = identityService.createUser({
-            displayName:
-              native.user.displayName ??
-              native.user.username ??
-              native.user.externalId
-          });
-          identityService.attachIdentity({
-            userId: target.id,
-            platform: native.user.platform,
-            externalId: native.user.externalId,
-            username: native.user.username,
-            displayName: native.user.displayName,
-            avatarUrl: native.user.avatarUrl
-          });
+          target = identityService.findUserByIdentity(
+            native.user.platform,
+            native.user.externalId
+          );
+
+          if (!target) {
+            target = identityService.createUser({
+              displayName:
+                native.user.displayName ??
+                native.user.username ??
+                native.user.externalId
+            });
+
+            identityService.attachIdentity({
+              userId: target.id,
+              platform: native.user.platform,
+              externalId: native.user.externalId,
+              username: native.user.username,
+              displayName: native.user.displayName,
+              avatarUrl: native.user.avatarUrl
+            });
+          }
         }
       }
 
