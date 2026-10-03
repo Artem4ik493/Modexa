@@ -431,30 +431,25 @@ export class PlatformIdentityResolver {
           community.id
         );
 
-    if (currentRoles.length > 0) {
-      const isPlatformAdmin =
-        input.author.platformRole ===
-          "owner" ||
-        input.author.platformRole ===
-          "admin";
+    const platformManagedRoles = new Set([
+      COMMUNITY_ROLE_NAMES.MEMBER,
+      COMMUNITY_ROLE_NAMES.ADMIN
+    ]);
 
-      if (
-        isPlatformAdmin &&
-        currentRoles.every(
-          (role) =>
-            role.name ===
-            COMMUNITY_ROLE_NAMES.MEMBER
-        )
-      ) {
-        for (const role of currentRoles) {
-          accessControlService.revokeCommunityRole(
-            user.id,
-            role.id
-          );
-        }
-      } else {
-        return;
+    if (
+      currentRoles.length > 0 &&
+      currentRoles.every((role) =>
+        platformManagedRoles.has(role.name)
+      )
+    ) {
+      for (const role of currentRoles) {
+        accessControlService.revokeCommunityRole(
+          user.id,
+          role.id
+        );
       }
+    } else if (currentRoles.length > 0) {
+      return;
     }
 
     const roleName =
