@@ -437,22 +437,40 @@ export class PlatformIdentityResolver {
           community.id
         );
 
-    // Bootstrap the first observed member as ADMIN.
-    // Platform owner/admin status also grants ADMIN.
-    if (
-      currentRoles.length > 0
-    ) {
-      return;
+    if (currentRoles.length > 0) {
+      const isPlatformAdmin =
+        input.author.platformRole ===
+          "owner" ||
+        input.author.platformRole ===
+          "admin";
+
+      if (
+        isPlatformAdmin &&
+        currentRoles.every(
+          (role) =>
+            role.name ===
+            COMMUNITY_ROLE_NAMES.MEMBER
+        )
+      ) {
+        for (const role of currentRoles) {
+          accessControlService.revokeCommunityRole(
+            user.id,
+            role.id
+          );
+        }
+      } else {
+        return;
+      }
     }
 
     const roleName =
-      existingMemberships.length === 1 ||
       input.author.platformRole ===
-        "owner" ||
-      input.author.platformRole ===
-        "admin"
-        ? COMMUNITY_ROLE_NAMES.ADMIN
-        : COMMUNITY_ROLE_NAMES.MEMBER;
+        "owner"
+        ? COMMUNITY_ROLE_NAMES.OWNER
+        : existingMemberships.length === 1 ||
+            input.author.platformRole === "admin"
+          ? COMMUNITY_ROLE_NAMES.ADMIN
+          : COMMUNITY_ROLE_NAMES.MEMBER;
 
     const targetRole =
       createBuiltinCommunityRoles(
