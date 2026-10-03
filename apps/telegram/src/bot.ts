@@ -12,6 +12,7 @@ import {
   createBridgeTestCommand,
   createMemberCommand,
   createMembersCommand,
+  createRoleCommand,
   createAccountInteractionHandler,
   createCommunitySettingsInteractionHandler,
   createBridgeTestInteractionHandler,
@@ -181,6 +182,15 @@ export function createTelegramAdapter(
       )
     );
   }
+
+  registry.register(
+    createRoleCommand(
+      identityService,
+      membershipService,
+      accessControlService,
+      memberDirectoryProxy
+    )
+  );
 
   const commandService =
     new CommandService(
