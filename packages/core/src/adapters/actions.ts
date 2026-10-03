@@ -62,6 +62,22 @@ export interface KickMemberAction {
   metadata?: Record<string, unknown>;
 }
 
+export interface UnmuteMemberAction {
+  type: "member.unmute";
+  platform: Platform;
+  communityExternalId: string;
+  userExternalId: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface UnbanMemberAction {
+  type: "member.unban";
+  platform: Platform;
+  communityExternalId: string;
+  userExternalId: string;
+  metadata?: Record<string, unknown>;
+}
+
 export interface BanMemberAction {
   type: "member.ban";
   platform: Platform;
@@ -78,4 +94,6 @@ export type AdapterAction =
   | WarnMemberAction
   | MuteMemberAction
   | KickMemberAction
-  | BanMemberAction;
+  | BanMemberAction
+  | UnmuteMemberAction
+  | UnbanMemberAction;
