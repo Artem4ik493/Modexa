@@ -1,5 +1,6 @@
 import { CommandParser } from "./parser.js";
 import { CommandRegistry } from "./commands.js";
+import type { CommandSettingsService } from "./commands/settings.js";
 
 import type {
   CommandContext,
@@ -154,8 +155,6 @@ export class CommandService {
       };
     }
 
-    const command =
-      this.registry.get(parsed.name);
 
     if (
       command &&
