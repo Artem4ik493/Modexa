@@ -439,6 +439,21 @@ export class PlatformIdentityResolver {
       return;
     }
 
+    const ownerIds = (process.env.MODEXA_OWNER_EXTERNAL_IDS ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    if (
+      ownerIds.includes(input.author.externalId) &&
+      !accessControlService.hasSystemRole(user.id, "modexa-owner")
+    ) {
+      accessControlService.assignSystemRole(
+        user.id,
+        "modexa-owner"
+      );
+    }
+
     const currentRoles =
       accessControlService
         .getUserCommunityRoles(
