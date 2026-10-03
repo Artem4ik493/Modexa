@@ -6,7 +6,7 @@ import { ModexaDatabase, BackupService } from "@modexa/core";
 
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST ?? "0.0.0.0";
-const apiKey = process.env.MODEXA_API_KEY;
+const apiKey = process.env.MODEXA_API_KEY ?? "change-me";
 const database = new ModexaDatabase({
   path: process.env.MODEXA_DATABASE_PATH ?? "data/modexa.sqlite"
 });
@@ -24,9 +24,17 @@ function json(res: ServerResponse, status: number, value: unknown): void {
 }
 
 function authorized(req: IncomingMessage): boolean {
-  if (!apiKey) return true;
   const supplied = req.headers.authorization?.replace(/^Bearer\s+/i, "");
-  return supplied === apiKey;
+  if (supplied === apiKey) return true;
+
+  const cookie = req.headers.cookie ?? "";
+  const session = cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith("modexa_api_key="))
+    ?.slice("modexa_api_key=".length);
+
+  return session === apiKey;
 }
 
 const server = createServer((req, res) => {
@@ -55,6 +63,38 @@ const server = createServer((req, res) => {
 
     if (url.pathname === "/health") {
       json(res, 200, { status: "ok", service: "modexa-api", time: new Date().toISOString() });
+      return;
+    }
+
+    if (url.pathname === "/api/auth" && req.method === "POST") {
+      let body = "";
+      for await (const chunk of req) body += chunk;
+      let supplied = "";
+      try {
+        supplied = String((JSON.parse(body) as { key?: unknown }).key ?? "");
+      } catch {
+        supplied = "";
+      }
+
+      if (supplied !== apiKey) {
+        json(res, 401, { error: "invalid_credentials" });
+        return;
+      }
+
+      res.writeHead(200, {
+        "content-type": "application/json; charset=utf-8",
+        "set-cookie": `modexa_api_key=${encodeURIComponent(apiKey)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`,
+        "cache-control": "no-store"
+      });
+      res.end(JSON.stringify({ authenticated: true }));
+      return;
+    }
+
+    if (url.pathname === "/api/auth" && req.method === "DELETE") {
+      res.writeHead(204, {
+        "set-cookie": "modexa_api_key=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0"
+      });
+      res.end();
       return;
     }
 
