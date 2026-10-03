@@ -310,7 +310,10 @@ const server = createServer((req, res) => {
             name: guild.name,
             icon: guild.icon,
             owner: guild.owner,
-            botInstalled: botGuildIds.has(guild.id)
+            botInstalled: botGuildIds.has(guild.id),
+            communityId: communities.find(
+              (item) => item.platform === "discord" && item.externalId === guild.id
+            )?.communityId
           }))
       });
       return;
@@ -378,6 +381,16 @@ const server = createServer((req, res) => {
     }
     if (url.pathname === "/api/communities" && req.method === "GET") {
       json(res, 200, { items: database.getCommunitiesSnapshot() });
+      return;
+    }
+
+    if (url.pathname === "/api/audit" && req.method === "GET") {
+      const communityId = url.searchParams.get("communityId");
+      if (!communityId) {
+        json(res, 400, { error: "communityId is required" });
+        return;
+      }
+      json(res, 200, { items: database.getAuditEntries(communityId, 200) });
       return;
     }
 
