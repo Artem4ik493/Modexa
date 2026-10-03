@@ -187,6 +187,80 @@ export class ModexaDatabase {
     };
   }
 
+  findUsersByUsername(
+    username: string,
+    platform?: "telegram" | "discord"
+  ): Array<{
+    user: PersistedUser;
+    identity: PersistedIdentity;
+  }> {
+    const rows =
+      this.database.prepare(
+        `SELECT
+           u.id AS user_id,
+           u.display_name AS user_display_name,
+           u.created_at AS user_created_at,
+           u.updated_at AS user_updated_at,
+           i.id AS identity_id,
+           i.user_id,
+           i.platform,
+           i.external_id,
+           i.username,
+           i.display_name,
+           i.created_at,
+           i.updated_at
+         FROM identities i
+         INNER JOIN users u ON u.id = i.user_id
+         WHERE lower(i.username) = ?
+           AND (? IS NULL OR i.platform = ?)
+         ORDER BY i.id`
+      ).all(
+        username.toLowerCase(),
+        platform ?? null,
+        platform ?? null
+      ) as Array<Record<string, unknown>>;
+
+    return rows.map((row) => ({
+      user: {
+        id: row.user_id as string,
+        displayName:
+          row.user_display_name as string,
+        createdAt:
+          new Date(
+            row.user_created_at as string
+          ),
+        updatedAt:
+          new Date(
+            row.user_updated_at as string
+          )
+      },
+      identity: {
+        id: row.identity_id as string,
+        userId: row.user_id as string,
+        platform:
+          row.platform as
+            | "telegram"
+            | "discord",
+        externalId:
+          row.external_id as string,
+        username:
+          (row.username as string | null) ??
+          undefined,
+        displayName:
+          (row.display_name as string | null) ??
+          undefined,
+        createdAt:
+          new Date(
+            row.created_at as string
+          ),
+        updatedAt:
+          new Date(
+            row.updated_at as string
+          )
+      }
+    }));
+  }
+
   findUserByIdentity(
     platform: "telegram" | "discord",
     externalId: string
