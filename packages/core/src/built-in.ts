@@ -8,6 +8,11 @@ import type { CommandRegistry } from "./commands.js";
 
 import type { CommunityService } from "./communities/service.js";
 
+import type { IdentityService } from "./identity/service.js";
+import type { MembershipService } from "./memberships/service.js";
+import type { AccessControlService } from "./access/service.js";
+import type { ModexaDatabase } from "./database/service.js";
+
 import type {
   InteractionButton
 } from "./interactions/types.js";
