@@ -10,6 +10,7 @@ import {
   InteractionDispatcher,
   createBuiltinCommands,
   createBridgeTestCommand,
+  createMemberCommand,
   createBridgeTestInteractionHandler,
   createIdentityLinkCommand,
   BridgeService,
@@ -82,7 +83,10 @@ export function createTelegramAdapter(
 
   createBuiltinCommands(
     registry,
-    options.communityService
+    options.communityService,
+    options.identityService,
+    options.membershipService,
+    undefined
   );
 
   if (
@@ -108,6 +112,13 @@ export function createTelegramAdapter(
         options.membershipService
       )
     );
+  }
+
+  if (
+    options.identityService &&
+    options.membershipService
+  ) {
+    // Member command is registered by the runner with the shared access service.
   }
 
   const commandService =
