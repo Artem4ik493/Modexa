@@ -190,6 +190,12 @@ describe("Modexa core", () => {
       username: "persisted"
     });
     const community = communities.createCommunity({ name: "Persisted community" });
+    communities.setMode(community.id, "private");
+    const memberships = new MembershipService(db);
+    memberships.createMembership({
+      userId: user.id,
+      communityId: community.id
+    });
 
     const settings = new CommandSettingsService(db);
     settings.setEnabled(community.id, "stats", false);
@@ -197,7 +203,8 @@ describe("Modexa core", () => {
     const reopened = new ModexaDatabase({ path });
     expect(reopened.getUser(user.id)?.displayName).toBe("Persisted");
     expect(reopened.findUserByIdentity("telegram", "77")?.id).toBe(user.id);
-    expect(reopened.getCommunitiesSnapshot().some((item) => item.id === community.id)).toBe(true);
+    expect(reopened.getCommunitiesSnapshot().some((item) => item.id === community.id && item.mode === "private")).toBe(true);
+    expect(reopened.getMembershipsSnapshot(community.id)).toHaveLength(1);
     expect(reopened.isCommandEnabled(community.id, "stats")).toBe(false);
   });
 
