@@ -117,6 +117,9 @@ if (telegramToken) {
         accessControlService:
           services.accessControlService,
 
+        moderationService:
+          services.moderationService,
+
         database:
           database
       }
@@ -170,6 +173,9 @@ if (discordToken) {
 
         accessControlService:
           services.accessControlService,
+
+        moderationService:
+          services.moderationService,
 
         database:
           database
