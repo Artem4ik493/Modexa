@@ -43,6 +43,11 @@ import {
 } from "../moderation/service.js";
 
 import {
+  BillingService,
+  createBuiltinPlans
+} from "../billing/index.js";
+
+import {
   PlatformIdentityResolver,
   type PlatformIdentityServices
 } from "./identity.js";
@@ -69,6 +74,9 @@ export interface RuntimeServices
 
   moderationService:
     ModerationService;
+
+  billingService:
+    BillingService;
 }
 
 export function createRuntimeServices(
@@ -89,6 +97,17 @@ export function createRuntimeServices(
 
   const membershipService =
     new MembershipService();
+
+  const billingService =
+    new BillingService();
+
+  for (const plan of createBuiltinPlans()) {
+    billingService.registerPlan({
+      id: plan.id,
+      name: plan.name,
+      entitlements: plan.entitlements
+    });
+  }
 
   const accessControlService =
     new AccessControlService(database, database);
@@ -152,6 +171,7 @@ export function createRuntimeServices(
     communityAccessService,
     bridgeService,
     moderationService,
+    billingService,
     identityResolver,
     executionContextService
   };
