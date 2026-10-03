@@ -192,7 +192,9 @@ export function createTelegramAdapter(
       identityResolver:
         options.identityResolver,
       bridgeService:
-        options.bridgeService
+        options.bridgeService,
+      database:
+        options.database
     })
   );
 
