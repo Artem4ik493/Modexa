@@ -32,7 +32,7 @@ export function createPublicFeatureCommands(
     {
       name: "clear", aliases: ["purge", "очистить"], description: "Удалить указанное количество сообщений", requiredCapabilities: ["moderation"],
       handler: async (context) => {
-        if (!context.channel || !executeAction) return { content: "❌ Очистка сообщений недоступна в этом канале." };
+        if (!context.channel?.externalId || !executeAction) return { content: "❌ Очистка сообщений недоступна в этом канале." };
         const count = Number.parseInt(context.args[0] ?? "", 10);
         if (!Number.isInteger(count) || count < 1 || count > 100) return { content: "Использование: /clear <1-100>" };
         await executeAction({
