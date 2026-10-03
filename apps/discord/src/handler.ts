@@ -28,7 +28,7 @@ export function createDiscordEventHandler(
       const components =
         renderDiscordInteraction(response);
 
-      if (!components && !response.imageUrl) {
+      if (!components && !response.imageUrl && !response.embed) {
         return undefined;
       }
 
@@ -37,7 +37,8 @@ export function createDiscordEventHandler(
           ...(components ? { components } : {}),
           ...(response.imageUrl
             ? { imageUrl: response.imageUrl }
-            : {})
+            : {}),
+          ...(response.embed ? { embed: response.embed } : {})
         }
       };
     }
