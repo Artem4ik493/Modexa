@@ -118,7 +118,24 @@ export function buildDiscordSlashCommands(
                 }
               ]
             }
-          : {})
+          : name === "role"
+            ? {
+                options: [
+                  {
+                    name: "user",
+                    description: "Member",
+                    type: 6,
+                    required: true
+                  },
+                  {
+                    name: "role",
+                    description: "member or moderator",
+                    type: 3,
+                    required: false
+                  }
+                ]
+              }
+            : {})
       });
     }
   }
