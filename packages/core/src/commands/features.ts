@@ -22,8 +22,13 @@ function panel(
   }>
 ) {
   return {
-    content: description,
-    embed: { title, description, color, fields, footer: "Modexa • Community OS" },
+    embed: {
+      title,
+      description,
+      color,
+      fields,
+      footer: "Modexa • Community OS"
+    },
     buttons
   };
 }
