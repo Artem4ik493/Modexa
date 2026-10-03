@@ -35,6 +35,10 @@ import {
 } from "../memberships/service.js";
 
 import {
+  ModexaDatabase
+} from "../database/service.js";
+
+import {
   PlatformIdentityResolver,
   type PlatformIdentityServices
 } from "./identity.js";
