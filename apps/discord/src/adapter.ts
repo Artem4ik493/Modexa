@@ -958,7 +958,7 @@ export class DiscordAdapter
               );
 
             return target
-              ? [target.username]
+              ? [target.id]
               : [];
           })()
         : [];
