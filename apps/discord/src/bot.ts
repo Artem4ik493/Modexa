@@ -12,6 +12,7 @@ import {
   createBridgeTestCommand,
   createMemberCommand,
   createMembersCommand,
+  createRoleCommand,
   createAccountInteractionHandler,
   createCommunitySettingsInteractionHandler,
   createBridgeTestInteractionHandler,
@@ -259,6 +260,15 @@ export function createDiscordAdapter(
 
   registry.register(
     createMembersCommand(
+      identityService,
+      membershipService,
+      accessControlService,
+      memberDirectoryProxy
+    )
+  );
+
+  registry.register(
+    createRoleCommand(
       identityService,
       membershipService,
       accessControlService,
