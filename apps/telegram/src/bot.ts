@@ -13,6 +13,8 @@ import {
   createMemberCommand,
   createMembersCommand,
   createRoleCommand,
+  createModerationCommands,
+  ModerationService,
   createAccountInteractionHandler,
   createCommunitySettingsInteractionHandler,
   createBridgeTestInteractionHandler,
@@ -80,6 +82,9 @@ export interface CreateTelegramAdapterOptions {
 
   database?:
     ModexaDatabase;
+
+  moderationService?:
+    ModerationService;
 }
 
 export function createTelegramAdapter(
