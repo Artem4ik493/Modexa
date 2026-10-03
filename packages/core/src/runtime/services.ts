@@ -80,6 +80,9 @@ export interface RuntimeServices
   billingService:
     BillingService;
 
+  automationService:
+    AutomationService;
+
   commandSettingsService:
     CommandSettingsService;
 }
@@ -113,6 +116,12 @@ export function createRuntimeServices(
 
   const commandSettingsService =
     new CommandSettingsService(database);
+
+  const automationService =
+    new AutomationService(
+      billingService,
+      database
+    );
 
   const channelService =
     new ChannelService();
@@ -183,6 +192,7 @@ export function createRuntimeServices(
     bridgeService,
     moderationService,
     billingService,
+    automationService,
     commandSettingsService,
     identityResolver,
     executionContextService
