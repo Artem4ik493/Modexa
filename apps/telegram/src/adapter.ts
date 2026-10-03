@@ -653,9 +653,6 @@ export class TelegramAdapter
       this.recentMessageIds.set(key, ids);
     }
 
-    const chat =
-      ctx.chat;
-
     if (!chat) {
       throw new Error(
         "Telegram message event does not contain a chat"
