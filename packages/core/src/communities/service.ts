@@ -7,6 +7,7 @@ import type {
 } from "./types.js";
 
 import type { ModexaDatabase } from "../database/service.js";
+import type { BillingService } from "../billing/service.js";
 
 export interface CreateCommunityInput {
   name: string;
@@ -23,7 +24,8 @@ export interface AttachCommunityIdentityInput {
 
 export class CommunityService {
   constructor(
-    private readonly database?: ModexaDatabase
+    private readonly database?: ModexaDatabase,
+    private readonly billingService?: BillingService
   ) {}
 
   private readonly communities = new Map<
@@ -63,6 +65,13 @@ export class CommunityService {
     );
 
     this.database?.upsertCommunity(community);
+    if (this.billingService?.getPlan("free")) {
+      this.billingService.createSubscription({
+        communityId: community.id,
+        planId: "free",
+        now
+      });
+    }
 
     return community;
   }
