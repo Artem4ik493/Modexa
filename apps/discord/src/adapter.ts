@@ -1250,7 +1250,12 @@ export class DiscordAdapter
                 ...(role ? [role] : [])
               ];
             })()
-          : interaction.commandName === "command"
+          : ["unmute", "unban"].includes(interaction.commandName)
+            ? (() => {
+                const target = interaction.options.getUser("user");
+                return target ? [target.id] : [];
+              })()
+            : interaction.commandName === "command"
             ? [
                 interaction.options.getString("command") ?? "",
                 interaction.options.getString("state") ?? ""
