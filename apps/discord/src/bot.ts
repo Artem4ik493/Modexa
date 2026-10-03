@@ -294,7 +294,10 @@ export function createDiscordAdapter(
     communityService,
     moderationService,
     memberDirectoryProxy,
-    (action) => adapter.sendAction(action)
+    (action) => {
+      if (!adapter) throw new Error("Discord adapter is not ready");
+      return adapter.sendAction(action);
+    }
   )) {
     registry.register(command);
   }
@@ -352,7 +355,7 @@ export function createDiscordAdapter(
     () => ({ close: true })
   );
 
-  let adapter: DiscordAdapter;
+  let adapter: DiscordAdapter | undefined;
 
   adapter =
     new DiscordAdapter(
