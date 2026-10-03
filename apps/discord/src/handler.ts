@@ -28,9 +28,18 @@ export function createDiscordEventHandler(
       const components =
         renderDiscordInteraction(response);
 
-      return components
-        ? { discord: { components } }
-        : undefined;
+      if (!components && !response.imageUrl) {
+        return undefined;
+      }
+
+      return {
+        discord: {
+          ...(components ? { components } : {}),
+          ...(response.imageUrl
+            ? { imageUrl: response.imageUrl }
+            : {})
+        }
+      };
     }
   });
 }
