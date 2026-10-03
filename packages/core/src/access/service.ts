@@ -15,9 +15,35 @@ export interface SystemRoleAssignmentStore {
   ): boolean;
 }
 
+export interface CommunityRoleStore {
+  upsertCommunityRole(
+    role: CommunityRole
+  ): void;
+
+  getCommunityRoles(
+    communityId: CommunityId
+  ): CommunityRole[];
+
+  assignCommunityRole(
+    userId: UserId,
+    roleId: string
+  ): void;
+
+  revokeCommunityRole(
+    userId: UserId,
+    roleId: string
+  ): void;
+
+  getUserCommunityRoles(
+    userId: UserId,
+    communityId: CommunityId
+  ): CommunityRole[];
+}
+
 export class AccessControlService {
   constructor(
-    private readonly systemRoleStore?: SystemRoleAssignmentStore
+    private readonly systemRoleStore?: SystemRoleAssignmentStore,
+    private readonly communityRoleStore?: CommunityRoleStore
   ) {}
 
   private readonly systemRoles = new Map<
@@ -44,6 +70,7 @@ export class AccessControlService {
     role: CommunityRole
   ): void {
     this.communityRoles.set(role.id, role);
+    this.communityRoleStore?.upsertCommunityRole(role);
   }
 
   getSystemRole(
@@ -134,6 +161,11 @@ export class AccessControlService {
       userId,
       communityRoleId
     });
+
+    this.communityRoleStore?.assignCommunityRole(
+      userId,
+      communityRoleId
+    );
   }
 
   revokeCommunityRole(
@@ -149,10 +181,18 @@ export class AccessControlService {
       );
 
     if (index === -1) {
+      this.communityRoleStore?.revokeCommunityRole(
+        userId,
+        communityRoleId
+      );
       return;
     }
 
     this.userCommunityRoles.splice(index, 1);
+    this.communityRoleStore?.revokeCommunityRole(
+      userId,
+      communityRoleId
+    );
   }
 
   getUserSystemRoles(
@@ -177,8 +217,15 @@ export class AccessControlService {
     userId: UserId,
     communityId?: CommunityId
   ): CommunityRole[] {
-    return this.userCommunityRoles
-      .filter(
+    const persisted =
+      this.communityRoleStore?.getUserCommunityRoles(
+        userId,
+        communityId ?? ""
+      ) ?? [];
+
+    return [
+      ...this.userCommunityRoles
+        .filter(
         (assignment) =>
           assignment.userId === userId
       )
@@ -196,7 +243,14 @@ export class AccessControlService {
         (role) =>
           communityId === undefined ||
           role.communityId === communityId
-      );
+      ),
+      ...persisted
+    ].filter(
+      (role, index, roles) =>
+        roles.findIndex(
+          (item) => item.id === role.id
+        ) === index
+    );
   }
 
   moveUsers(
