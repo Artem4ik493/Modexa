@@ -20,6 +20,7 @@ export interface ExternalIdentity {
   externalId: string;
   username?: string;
   displayName?: string;
+  avatarUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
