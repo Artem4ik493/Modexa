@@ -49,6 +49,7 @@ import {
 
 import { CommandSettingsService } from "../commands/settings.js";
 import { AutomationService } from "../automations/service.js";
+import { AuditService } from "../audit/service.js";
 
 import {
   PlatformIdentityResolver,
@@ -86,6 +87,9 @@ export interface RuntimeServices
 
   commandSettingsService:
     CommandSettingsService;
+
+  auditService:
+    AuditService;
 }
 
 export function createRuntimeServices(
@@ -123,6 +127,9 @@ export function createRuntimeServices(
       billingService,
       database
     );
+
+  const auditService =
+    new AuditService(database);
 
   const channelService =
     new ChannelService();
@@ -195,6 +202,7 @@ export function createRuntimeServices(
     billingService,
     automationService,
     commandSettingsService,
+    auditService,
     identityResolver,
     executionContextService
   };
