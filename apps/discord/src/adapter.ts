@@ -270,14 +270,35 @@ export class DiscordAdapter
           communityExternalId
         );
 
-      const member =
-        await guild.members.fetch(
-          userExternalId
-        );
+      try {
+        const member =
+          await guild.members.fetch(
+            userExternalId
+          );
 
-      return this.toPlatformMemberDetails(
-        member
-      );
+        return this.toPlatformMemberDetails(
+          member
+        );
+      } catch {
+        const user =
+          await this.client.users.fetch(
+            userExternalId
+          );
+
+        if (user.bot) {
+          return undefined;
+        }
+
+        return {
+          user: this.toPlatformUser(
+            user,
+            undefined,
+            "member"
+          ),
+          roles: [],
+          status: "not_member"
+        };
+      }
     } catch {
       return undefined;
     }
