@@ -842,6 +842,31 @@ export class ModexaDatabase {
     }));
   }
 
+  getAllModerationCases(): ModerationCase[] {
+    const rows = this.database.prepare(`
+      SELECT id, action, actor_user_id, target_user_id, community_id, platform,
+             community_external_id, user_external_id, duration_seconds, reason,
+             status, created_at, revoked_at
+      FROM moderation_cases
+      ORDER BY created_at DESC
+    `).all() as Array<Record<string, unknown>>;
+    return rows.map((row) => ({
+      id: row.id as string,
+      action: row.action as ModerationActionType,
+      actorUserId: row.actor_user_id as string,
+      targetUserId: row.target_user_id as string,
+      communityId: row.community_id as string,
+      platform: row.platform as "telegram" | "discord",
+      communityExternalId: row.community_external_id as string,
+      userExternalId: row.user_external_id as string,
+      ...(row.duration_seconds != null ? { durationSeconds: Number(row.duration_seconds) } : {}),
+      ...(row.reason ? { reason: row.reason as string } : {}),
+      status: row.status as ModerationCaseStatus,
+      createdAt: new Date(row.created_at as string),
+      ...(row.revoked_at ? { revokedAt: new Date(row.revoked_at as string) } : {})
+    }));
+  }
+
   getModerationCase(caseId: string): ModerationCase | undefined {
     const row = this.database.prepare(`
       SELECT id, action, actor_user_id, target_user_id, community_id, platform,
