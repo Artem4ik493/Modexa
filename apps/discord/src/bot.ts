@@ -331,7 +331,11 @@ export function createDiscordAdapter(
     membershipService,
     communityService,
     commandSettingsService,
-    moderationService
+    moderationService,
+    (action) => {
+      if (!adapter) throw new Error("Discord adapter is not ready");
+      return adapter.sendAction(action);
+    }
   )) {
     registry.register(command);
   }
