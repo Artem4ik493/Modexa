@@ -11,6 +11,10 @@ import {
 } from "node:path";
 
 import {
+  readFileSync
+} from "node:fs";
+
+import {
   DatabaseSync
 } from "node:sqlite";
 
@@ -60,9 +64,11 @@ export interface PersistedIdentity {
 
 export class ModexaDatabase {
 
+  readonly path: string;
   private readonly database: DatabaseSync;
 
   constructor(options: DatabaseOptions) {
+    this.path = options.path;
     mkdirSync(dirname(options.path), {
       recursive: true
     });
@@ -80,6 +86,10 @@ export class ModexaDatabase {
     this.seedSystemRole(
       MODEXA_OWNER_ROLE
     );
+  }
+
+  exportSnapshot(): string {
+    return readFileSync(this.path).toString("base64");
   }
 
   getSystemRole(
