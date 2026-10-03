@@ -71,7 +71,8 @@ export function createBuiltinCommunityRoles(
       name: COMMUNITY_ROLE_NAMES.MEMBER,
       permissions: [
         "community.view",
-        "commands.use"
+      "member.view",
+      "commands.use"
       ]
     }
   ];
