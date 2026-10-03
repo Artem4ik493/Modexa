@@ -77,6 +77,30 @@ const server = createServer((req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/billing" && req.method === "GET") {
+      json(res, 200, database.getRuntimeState("billing") ?? {
+        subscriptions: [],
+        overrides: [],
+        nextSubscriptionId: 1
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/automations" && req.method === "GET") {
+      json(res, 200, {
+        items: database.getRuntimeState("automations") ?? []
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/bridge" && req.method === "GET") {
+      json(res, 200, {
+        endpoints: database.getBridgeEndpoints(),
+        links: database.getBridgeLinks()
+      });
+      return;
+    }
+
     if (url.pathname === "/api/command-settings" && req.method === "GET") {
       const communityId = url.searchParams.get("communityId");
       if (!communityId) {
