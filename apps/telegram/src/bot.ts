@@ -11,6 +11,7 @@ import {
   createBuiltinCommands,
   createBridgeTestCommand,
   createMemberCommand,
+  createMembersCommand,
   createAccountInteractionHandler,
   createCommunitySettingsInteractionHandler,
   createBridgeTestInteractionHandler,
@@ -21,7 +22,8 @@ import {
   type MembershipService,
   IdentityService,
   AccessControlService,
-  ModexaDatabase
+  ModexaDatabase,
+  type MemberDirectory
 } from "@modexa/core";
 
 import {
@@ -91,6 +93,33 @@ export function createTelegramAdapter(
   const registry =
     new CommandRegistry();
 
+  let memberDirectory:
+    MemberDirectory | undefined;
+
+  const memberDirectoryProxy: MemberDirectory = {
+    getMember(
+      communityExternalId,
+      userExternalId
+    ) {
+      return (
+        memberDirectory?.getMember(
+          communityExternalId,
+          userExternalId
+        ) ?? Promise.resolve(undefined)
+      );
+    },
+
+    listMembers(
+      communityExternalId
+    ) {
+      return (
+        memberDirectory?.listMembers(
+          communityExternalId
+        ) ?? Promise.resolve([])
+      );
+    }
+  };
+
   const accessControlService =
     options.accessControlService ??
     new AccessControlService();
@@ -138,7 +167,17 @@ export function createTelegramAdapter(
       createMemberCommand(
         options.identityService,
         options.membershipService,
-        accessControlService
+        accessControlService,
+        memberDirectoryProxy
+      )
+    );
+
+    registry.register(
+      createMembersCommand(
+        options.identityService,
+        options.membershipService,
+        accessControlService,
+        memberDirectoryProxy
       )
     );
   }
@@ -202,6 +241,8 @@ export function createTelegramAdapter(
     new TelegramAdapter(
       bot
     );
+
+  memberDirectory = adapter;
 
   adapter.onEvent(
     createTelegramEventHandler({
