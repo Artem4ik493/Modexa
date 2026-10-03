@@ -7,6 +7,27 @@ import type { ModerationService } from "../moderation/service.js";
 import type { AdapterAction } from "../adapters/actions.js";
 import { CommandSettingsService } from "./settings.js";
 
+function panel(
+  title: string,
+  description: string,
+  color = 0x8b5cf6,
+  fields?: Array<{ name: string; value: string; inline?: boolean }>,
+  buttons?: Array<{ id: string; label: string; action: { type: "command"; command: string; args?: string[] } | { type: "callback"; data: string } }>
+) {
+  return {
+    content: description,
+    embed: {
+      title,
+      description,
+      color,
+      fields,
+      footer: "Modexa • Community OS"
+    },
+    buttons
+  };
+}
+
+
 function resolveTarget(context: CommandContext, identities: IdentityService, memberships: MembershipService) {
   if (!context.args[0]) return context.user;
   const name = context.args[0].replace(/^@/, "").toLowerCase();
@@ -62,7 +83,11 @@ export function createPublicFeatureCommands(
         if (!name || !["on", "off", "enable", "disable"].includes(value ?? "")) return { content: "Использование: /command <команда> <on|off>" };
         const enabled = value === "on" || value === "enable";
         settings.setEnabled(context.community.id, name, enabled);
-        return { content: (enabled ? "✅ " : "⛔ ") + "Команда /" + name + (enabled ? " включена." : " выключена.") };
+        return panel(
+          enabled ? "Команда включена" : "Команда отключена",
+          `/${name} ${enabled ? "снова доступна участникам." : "заблокирована в этом сообществе."}`,
+          enabled ? 0x39d98a : 0xff5d73
+        );
       }
     },
     { name: "info", aliases: ["botinfo"], description: "Информация о Modexa", handler: async () => ({ content: "🤖 Modexa\nЕдиная система автоматизации Telegram + Discord.\nМодерация, роли, bridge и автоматизации." }) },
