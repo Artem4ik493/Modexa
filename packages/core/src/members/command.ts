@@ -3,6 +3,7 @@ import type { AccessControlService } from "../access/service.js";
 import type { IdentityService } from "../identity/service.js";
 import type { MembershipService } from "../memberships/service.js";
 import type { PlatformUser } from "../adapters/types.js";
+import type { User } from "../identity/types.js";
 import { createTranslator } from "../i18n/translate.js";
 
 export interface PlatformMemberDetails {
@@ -97,9 +98,7 @@ function ensureLocalMember(
 
 function renderMemberDetails(
   context: Parameters<NonNullable<CommandDefinition["handler"]>>[0],
-  user: ReturnType<IdentityService["getUser"]> extends infer T
-    ? Exclude<T, undefined>
-    : never,
+  user: User,
   identityService: IdentityService,
   membershipService: MembershipService,
   accessControlService: AccessControlService,
