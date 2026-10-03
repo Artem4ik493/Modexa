@@ -31,3 +31,5 @@ export type {
   ModerationCaseStatus,
   ModerationResult
 } from "./types.js";
+
+export { createModerationRestoreCommands } from "./restore-command.js";
