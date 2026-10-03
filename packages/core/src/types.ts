@@ -32,7 +32,7 @@ export interface CommandContext {
 
 export interface CommandResponse
   extends InteractionResponse {
-  content: string;
+  content?: string;
 }
 
 export type CommandHandler = (
