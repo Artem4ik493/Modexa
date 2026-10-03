@@ -18,7 +18,9 @@ import {
   type PlatformIdentityResolver,
   CommunityService,
   MembershipService,
-  IdentityService
+  IdentityService,
+  AccessControlService,
+  ModexaDatabase
 } from "@modexa/core";
 
 import {
@@ -81,6 +83,12 @@ export interface CreateDiscordAdapterOptions {
 
   identityLinkingService?:
     IdentityLinkingService;
+
+  accessControlService?:
+    AccessControlService;
+
+  database?:
+    ModexaDatabase;
 }
 
 export function createDiscordAdapter(
@@ -159,7 +167,7 @@ export function createDiscordAdapter(
     createMemberCommand(
       identityService,
       membershipService,
-      new (requireAccessControlStub())()
+      accessControlService
     )
   );
 
