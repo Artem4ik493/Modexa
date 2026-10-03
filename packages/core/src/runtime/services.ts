@@ -61,10 +61,11 @@ export interface RuntimeServices
 }
 
 export function createRuntimeServices(
-  logger?: Logger
+  logger?: Logger,
+  database?: ModexaDatabase
 ): RuntimeServices {
   const identityService =
-    new IdentityService();
+    new IdentityService(database);
 
   const identityLinkService =
     new IdentityLinkService();
@@ -85,7 +86,7 @@ export function createRuntimeServices(
     new MembershipService();
 
   const accessControlService =
-    new AccessControlService();
+    new AccessControlService(database);
 
   accessControlService.registerSystemRole(
     MODEXA_OWNER_ROLE
@@ -99,7 +100,8 @@ export function createRuntimeServices(
 
   const executionContextService =
     new ExecutionContextService(
-      communityAccessService
+      communityAccessService,
+      accessControlService
     );
 
   const bridgeService =
