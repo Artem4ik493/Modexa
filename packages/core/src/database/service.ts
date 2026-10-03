@@ -92,6 +92,19 @@ export class ModexaDatabase {
     return readFileSync(this.path).toString("base64");
   }
 
+  getCommunitiesSnapshot(): Array<{ id: string; name: string; mode: string; createdAt: Date; updatedAt: Date }> {
+    const rows = this.database.prepare(
+      "SELECT id, name, mode, created_at, updated_at FROM communities ORDER BY name"
+    ).all() as Array<{id:string;name:string;mode:string;created_at:string;updated_at:string}>;
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      mode: row.mode,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
+    }));
+  }
+
   getSystemRole(
     roleId: string
   ): SystemRole | undefined {
