@@ -177,29 +177,28 @@ export class TelegramAdapter
           );
 
         try {
-          await this.bot.api.editMessageText(
-            Number(
-              action.channelExternalId
-            ),
-            Number(
-              action.messageExternalId
-            ),
-            action.content,
-            {
-              ...(parseMode
-                ? {
-                    parse_mode:
-                      parseMode
-                  }
-                : {}),
-              ...(replyMarkup
-                ? {
-                    reply_markup:
-                      replyMarkup
-                  }
-                : {})
-            }
-          );
+          const imageUrl = this.getImageUrl(action.metadata);
+          if (imageUrl) {
+            await this.bot.api.editMessageCaption(
+              Number(action.channelExternalId),
+              Number(action.messageExternalId),
+              {
+                caption: content,
+                ...(parseMode ? { parse_mode: parseMode } : {}),
+                ...(replyMarkup ? { reply_markup: replyMarkup } : {})
+              }
+            );
+          } else {
+            await this.bot.api.editMessageText(
+              Number(action.channelExternalId),
+              Number(action.messageExternalId),
+              content,
+              {
+                ...(parseMode ? { parse_mode: parseMode } : {}),
+                ...(replyMarkup ? { reply_markup: replyMarkup } : {})
+              }
+            );
+          }
         } catch (error) {
           if (
             isMessageNotModified(error)
