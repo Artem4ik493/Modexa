@@ -226,20 +226,73 @@ export class TelegramAdapter
 
         return;
 
-      case "member.warn":
-        throw new Error(
-          "Telegram member.warn action is not implemented yet"
+      case "member.warn": {
+        const targetDisplayName =
+          this.getModerationTargetName(
+            action.metadata
+          );
+
+        const reason =
+          action.reason
+            ? `\\nПричина: ${action.reason}`
+            : "";
+
+        await this.bot.api.sendMessage(
+          Number(action.communityExternalId),
+          `⚠️ Пользователь ${targetDisplayName} получил предупреждение.${reason}`
         );
 
-      case "member.mute":
-        throw new Error(
-          "Telegram member.mute action is not implemented yet"
+        return;
+      }
+
+      case "member.mute": {
+        if (
+          action.durationSeconds === undefined ||
+          action.durationSeconds <= 0
+        ) {
+          throw new Error(
+            "Telegram mute requires a positive duration"
+          );
+        }
+
+        const untilDate =
+          Math.floor(Date.now() / 1000) +
+          Math.floor(action.durationSeconds);
+
+        await this.bot.api.raw.restrictChatMember({
+          chat_id:
+            Number(action.communityExternalId),
+          user_id:
+            Number(action.userExternalId),
+          permissions: {
+            can_send_messages: false
+          },
+          until_date: untilDate
+        });
+
+        return;
+      }
+
+      case "member.kick": {
+        const chatId =
+          Number(action.communityExternalId);
+
+        const userId =
+          Number(action.userExternalId);
+
+        await this.bot.api.banChatMember(
+          chatId,
+          userId
         );
 
-      case "member.kick":
-        throw new Error(
-          "Telegram member.kick action is not implemented yet"
-        );
+        await this.bot.api.raw.unbanChatMember({
+          chat_id: chatId,
+          user_id: userId,
+          only_if_banned: true
+        });
+
+        return;
+      }
 
       case "member.ban":
         await this.bot.api.banChatMember(
@@ -377,6 +430,20 @@ export class TelegramAdapter
     this.eventHandlers.push(
       handler
     );
+  }
+
+  private getModerationTargetName(
+    metadata:
+      | Record<string, unknown>
+      | undefined
+  ): string {
+    const value =
+      metadata?.targetDisplayName;
+
+    return typeof value === "string" &&
+      value.trim()
+      ? value
+      : "пользователь";
   }
 
   private getParseMode(
