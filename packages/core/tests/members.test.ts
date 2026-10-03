@@ -260,4 +260,109 @@ describe("member commands", () => {
       "Joined platform:"
     );
   });
+
+  it("resolves a native member by username when identity is not local yet", async () => {
+    const identityService =
+      new IdentityService();
+
+    const membershipService =
+      new MembershipService();
+
+    const accessControlService =
+      new AccessControlService();
+
+    const communityId = "community-1";
+
+    for (const role of createBuiltinCommunityRoles(communityId)) {
+      accessControlService.registerCommunityRole(role);
+    }
+
+    const command =
+      createMemberCommand(
+        identityService,
+        membershipService,
+        accessControlService,
+        {
+          async getMember(
+            _communityExternalId,
+            userExternalId
+          ) {
+            if (userExternalId !== "discord-42") {
+              return undefined;
+            }
+
+            return {
+              user: {
+                platform: "discord",
+                externalId: "discord-42",
+                username: "artem4ik493",
+                displayName: "Artem",
+                platformRole: "admin"
+              },
+              joinedAt:
+                new Date("2026-02-03T12:00:00Z"),
+              roles: ["Moderator"],
+              status: "admin"
+            };
+          },
+
+          async findMemberByUsername(
+            _communityExternalId,
+            username
+          ) {
+            return username === "artem4ik493"
+              ? {
+                  user: {
+                    platform: "discord",
+                    externalId: "discord-42",
+                    username: "artem4ik493",
+                    displayName: "Artem",
+                    platformRole: "admin"
+                  },
+                  joinedAt:
+                    new Date("2026-02-03T12:00:00Z"),
+                  roles: ["Moderator"],
+                  status: "admin"
+                }
+              : undefined;
+          },
+
+          async listMembers() {
+            return [];
+          }
+        }
+      );
+
+    const context =
+      createContext(
+        identityService,
+        communityId
+      );
+
+    const response =
+      await command.handler({
+        ...context,
+        args: ["@artem4ik493"],
+        rawText: "/member @artem4ik493"
+      });
+
+    expect(response.content).toContain("Artem");
+    expect(response.content).toContain("@artem4ik493");
+    expect(response.content).toContain("Moderator");
+    expect(response.content).toContain("admin");
+    expect(
+      membershipService.getCommunityMemberships(
+        communityId
+      )
+    ).toHaveLength(1);
+    expect(
+      accessControlService.getUserCommunityRoles(
+        membershipService.getCommunityMemberships(
+          communityId
+        )[0]!.userId,
+        communityId
+      ).map((role) => role.name)
+    ).toContain("ADMIN");
+  });
+
 });
