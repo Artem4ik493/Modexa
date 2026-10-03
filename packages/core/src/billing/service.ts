@@ -1,4 +1,9 @@
 import type { CommunityId } from "../communities/types.js";
+
+export interface BillingStateStore {
+  getRuntimeState<T>(key: string): T | undefined;
+  setRuntimeState(key: string, value: unknown, now?: Date): void;
+}
 import type {
   FeatureEntitlement,
   FeatureKey,
@@ -32,6 +37,19 @@ export interface SetFeatureOverrideInput {
   limit?: number;
 }
 
+type StoredSubscription = Omit<Subscription, "startsAt" | "expiresAt" | "createdAt" | "updatedAt"> & {
+  startsAt: string;
+  expiresAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type BillingState = {
+  subscriptions: StoredSubscription[];
+  overrides: SubscriptionFeatureOverride[];
+  nextSubscriptionId: number;
+};
+
 export class BillingService {
   private readonly plans = new Map<
     PlanId,
@@ -52,6 +70,30 @@ export class BillingService {
   >();
 
   private nextSubscriptionId = 1;
+  private readonly store?: BillingStateStore;
+
+  constructor(store?: BillingStateStore) {
+    this.store = store;
+    const state = store?.getRuntimeState<BillingState>("billing");
+    for (const item of state?.subscriptions ?? []) {
+      const subscription: Subscription = {
+        ...item,
+        startsAt: new Date(item.startsAt),
+        ...(item.expiresAt ? { expiresAt: new Date(item.expiresAt) } : {}),
+        createdAt: new Date(item.createdAt),
+        updatedAt: new Date(item.updatedAt)
+      };
+      this.subscriptions.set(subscription.id, subscription);
+      this.subscriptionByCommunity.set(subscription.communityId, subscription.id);
+    }
+    for (const item of state?.overrides ?? []) {
+      this.overrides.set(this.getOverrideKey(item.subscriptionId, item.feature), item);
+    }
+    this.nextSubscriptionId = Math.max(
+      state?.nextSubscriptionId ?? 1,
+      ...[...this.subscriptions.keys()].map((id) => Number(id.replace("subscription-", "")) + 1)
+    );
+  }
 
   registerPlan(input: CreatePlanInput): Plan {
     if (this.plans.has(input.id)) {
@@ -181,6 +223,7 @@ export class BillingService {
       subscription.id
     );
 
+    this.persist(now);
     return subscription;
   }
 
@@ -245,6 +288,7 @@ export class BillingService {
 
     subscription.planId = planId;
     subscription.updatedAt = now;
+    this.persist(now);
 
     return subscription;
   }
@@ -270,6 +314,7 @@ export class BillingService {
 
     subscription.status = "cancelled";
     subscription.updatedAt = now;
+    this.persist(now);
 
     return subscription;
   }
@@ -289,6 +334,7 @@ export class BillingService {
 
     subscription.status = "expired";
     subscription.updatedAt = now;
+    this.persist(now);
 
     return subscription;
   }
@@ -330,6 +376,7 @@ export class BillingService {
       ),
       override
     );
+    this.persist();
 
     return override;
   }
@@ -344,6 +391,7 @@ export class BillingService {
         feature
       )
     );
+    this.persist();
   }
 
   getFeatureEntitlement(
@@ -460,7 +508,22 @@ export class BillingService {
     ) {
       subscription.status = "expired";
       subscription.updatedAt = now;
+      this.persist(now);
     }
+  }
+
+  private persist(now = new Date()): void {
+    this.store?.setRuntimeState("billing", {
+      subscriptions: [...this.subscriptions.values()].map((item) => ({
+        ...item,
+        startsAt: item.startsAt.toISOString(),
+        ...(item.expiresAt ? { expiresAt: item.expiresAt.toISOString() } : {}),
+        createdAt: item.createdAt.toISOString(),
+        updatedAt: item.updatedAt.toISOString()
+      })),
+      overrides: [...this.overrides.values()],
+      nextSubscriptionId: this.nextSubscriptionId
+    }, now);
   }
 
   private getOverrideKey(
