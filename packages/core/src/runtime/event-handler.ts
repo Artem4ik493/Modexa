@@ -67,6 +67,10 @@ import type {
   ModexaDatabase
 } from "../database/service.js";
 
+import type {
+  AuditService
+} from "../audit/service.js";
+
 const EMPTY_CONTENT_FALLBACK =
   "…";
 
@@ -107,6 +111,9 @@ export interface PlatformEventHandlerDeps {
 
   database?:
     ModexaDatabase;
+
+  auditService?:
+    AuditService;
 
   renderMetadata(
     response: BoundInteractionResponse
@@ -515,6 +522,18 @@ async function runCommand(
     replyToExternalId:
       input.replyToExternalId,
     metadata
+  });
+
+  deps.auditService?.record({
+    communityId: executionContext.community?.id ?? "system",
+    action: "system",
+    actorUserId: executionContext.user.id,
+    channelId: executionContext.channel?.id,
+    reason: input.rawText.trim().split(/\s+/)[0],
+    metadata: {
+      command: input.rawText.trim().split(/\s+/)[0],
+      platform
+    }
   });
 
   logger.info(
