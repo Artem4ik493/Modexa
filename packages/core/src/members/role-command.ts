@@ -75,6 +75,10 @@ export function createRoleCommand(
 
       if (!targetRole) return { content: "Роль не найдена." };
 
+      // Ensure the built-in role definition exists in persistent storage
+      // before assigning it to the user.
+      accessControlService.registerCommunityRole(targetRole);
+
       for (const role of roles) {
         if (role.id !== targetRole.id) {
           accessControlService.revokeCommunityRole(target.id, role.id);
