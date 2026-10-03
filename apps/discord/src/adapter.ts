@@ -230,20 +230,39 @@ export class DiscordAdapter
         return;
       }
 
-      case "member.warn":
-        throw new Error(
-          "Discord member.warn action is not implemented yet"
-        );
+      case "member.warn": {
+        const user = await this.client.users.fetch(action.userExternalId);
+        const targetName =
+          typeof action.metadata?.targetDisplayName === "string"
+            ? action.metadata.targetDisplayName
+            : user.username;
+        await user.send({
+          content: action.reason
+            ? `⚠️ Предупреждение для ${targetName}: ${action.reason}`
+            : "⚠️ Вы получили предупреждение на сервере. Причина не указана."
+        }).catch(() => undefined);
+        return;
+      }
 
-      case "member.mute":
-        throw new Error(
-          "Discord member.mute action is not implemented yet"
+      case "member.mute": {
+        const guild = await this.client.guilds.fetch(action.communityExternalId);
+        const member = await guild.members.fetch(action.userExternalId);
+        if (!action.durationSeconds || action.durationSeconds <= 0) {
+          throw new Error("Discord mute duration must be positive");
+        }
+        await member.timeout(
+          Math.min(action.durationSeconds * 1000, 28 * 24 * 60 * 60 * 1000),
+          action.reason
         );
+        return;
+      }
 
-      case "member.kick":
-        throw new Error(
-          "Discord member.kick action is not implemented yet"
-        );
+      case "member.kick": {
+        const guild = await this.client.guilds.fetch(action.communityExternalId);
+        const member = await guild.members.fetch(action.userExternalId);
+        await member.kick(action.reason);
+        return;
+      }
 
       case "member.ban": {
         const guild =
