@@ -228,9 +228,14 @@ export class ModexaDatabase {
   }
 
   getDatabasePath(): string {
-    return this.database.prepare(
-      "PRAGMA database_list"
-    ).get() as { file: string };
+    const row =
+      this.database.prepare(
+        "PRAGMA database_list"
+      ).get() as {
+        file: string;
+      };
+
+    return row.file;
   }
 
   hasSystemRole(
