@@ -251,13 +251,13 @@ describe("member commands", () => {
       });
 
     expect(response.content).toContain(
-      "Platform roles: Moderator, VIP"
+      "**🎭 Роли платформы:** Moderator, VIP"
     );
     expect(response.content).toContain(
-      "Platform status: member"
+      "**🟢 Статус:** member"
     );
     expect(response.content).toContain(
-      "Joined platform:"
+      "**📅 В платформе:**"
     );
   });
 
