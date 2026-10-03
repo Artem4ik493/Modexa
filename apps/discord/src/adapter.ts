@@ -960,14 +960,15 @@ export class DiscordAdapter
 
     const source = embedValue as Record<string, unknown>;
     const embed: import("discord.js").APIEmbed = {};
-    for (const key of ["title", "description", "color", "fields", "footer", "thumbnailUrl", "imageUrl"]) {
-      if (key in source && source[key] !== undefined) {
-        if (key === "footer") embed.footer = { text: String(source[key]) };
-        else if (key === "thumbnailUrl") embed.thumbnail = { url: String(source[key]) };
-        else if (key === "imageUrl") embed.image = { url: String(source[key]) };
-        else embed[key] = source[key];
-      }
+    if (typeof source.title === "string") embed.title = source.title;
+    if (typeof source.description === "string") embed.description = source.description;
+    if (typeof source.color === "number") embed.color = source.color;
+    if (Array.isArray(source.fields)) {
+      embed.fields = source.fields as import("discord.js").APIEmbedField[];
     }
+    if (typeof source.footer === "string") embed.footer = { text: source.footer };
+    if (typeof source.thumbnailUrl === "string") embed.thumbnail = { url: source.thumbnailUrl };
+    if (typeof source.imageUrl === "string") embed.image = { url: source.imageUrl };
     if (imageUrl && !embed.image) embed.image = { url: imageUrl };
     return Object.keys(embed).length > 0 ? [embed] : [];
   }
