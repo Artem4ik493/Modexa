@@ -166,7 +166,13 @@ if (discordToken) {
           services.identityLinkService,
 
         identityLinkingService:
-          services.identityLinkingService
+          services.identityLinkingService,
+
+        accessControlService:
+          services.accessControlService,
+
+        database:
+          database
       }
     )
   );
