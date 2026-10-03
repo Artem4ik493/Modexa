@@ -105,6 +105,7 @@ export function createDiscordAdapter(
     new Client({
       intents: [
         GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.DirectMessages,
         GatewayIntentBits.MessageContent
@@ -140,6 +141,18 @@ export function createDiscordAdapter(
         memberDirectory?.listMembers(
           communityExternalId
         ) ?? Promise.resolve([])
+      );
+    },
+
+    findMemberByUsername(
+      communityExternalId,
+      username
+    ) {
+      return (
+        memberDirectory?.findMemberByUsername?.(
+          communityExternalId,
+          username
+        ) ?? Promise.resolve(undefined)
       );
     }
   };
