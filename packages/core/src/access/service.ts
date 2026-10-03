@@ -8,7 +8,18 @@ import type {
   UserSystemRole
 } from "./types.js";
 
+export interface SystemRoleAssignmentStore {
+  hasSystemRole(
+    userId: UserId,
+    roleId: string
+  ): boolean;
+}
+
 export class AccessControlService {
+  constructor(
+    private readonly systemRoleStore?: SystemRoleAssignmentStore
+  ) {}
+
   private readonly systemRoles = new Map<
     string,
     SystemRole
@@ -192,10 +203,16 @@ export class AccessControlService {
     userId: UserId,
     roleId: string
   ): boolean {
-    return this.userSystemRoles.some(
-      (assignment) =>
-        assignment.userId === userId &&
-        assignment.roleId === roleId
+    return (
+      this.userSystemRoles.some(
+        (assignment) =>
+          assignment.userId === userId &&
+          assignment.roleId === roleId
+      ) ||
+      this.systemRoleStore?.hasSystemRole(
+        userId,
+        roleId
+      ) === true
     );
   }
 
