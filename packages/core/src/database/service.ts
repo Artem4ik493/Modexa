@@ -816,6 +816,31 @@ export class ModexaDatabase {
     }
   }
 
+  setCommandEnabled(communityId: string, commandName: string, enabled: boolean, now = new Date()): void {
+    this.database.prepare(`
+      INSERT INTO community_command_settings
+        (community_id, command_name, enabled, updated_at)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(community_id, command_name) DO UPDATE SET
+        enabled = excluded.enabled,
+        updated_at = excluded.updated_at
+    `).run(communityId, commandName.toLowerCase(), enabled ? 1 : 0, now.toISOString());
+  }
+
+  isCommandEnabled(communityId: string, commandName: string): boolean {
+    const row = this.database.prepare(
+      "SELECT enabled FROM community_command_settings WHERE community_id = ? AND command_name = ?"
+    ).get(communityId, commandName.toLowerCase()) as { enabled?: number } | undefined;
+    return row?.enabled !== 0;
+  }
+
+  getCommandSettings(communityId: string): Array<{ commandName: string; enabled: boolean }> {
+    const rows = this.database.prepare(
+      "SELECT command_name, enabled FROM community_command_settings WHERE community_id = ? ORDER BY command_name"
+    ).all(communityId) as Array<{ command_name: string; enabled: number }>;
+    return rows.map((row) => ({ commandName: row.command_name, enabled: row.enabled !== 0 }));
+  }
+
   upsertModerationCase(item: ModerationCase): void {
     this.database.prepare(`INSERT INTO moderation_cases
       (id, action, actor_user_id, target_user_id, community_id, platform,
