@@ -1,4 +1,6 @@
 import { createServer } from "http";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import type { IncomingMessage, ServerResponse } from "http";
 import { ModexaDatabase, BackupService } from "@modexa/core";
 
@@ -9,6 +11,7 @@ const database = new ModexaDatabase({
   path: process.env.MODEXA_DATABASE_PATH ?? "data/modexa.sqlite"
 });
 const backup = new BackupService(database);
+const dashboardPath = resolve(process.cwd(), "apps/dashboard/index.html");
 
 function json(res: ServerResponse, status: number, value: unknown): void {
   const body = JSON.stringify(value);
@@ -37,6 +40,16 @@ const server = createServer((req, res) => {
         "access-control-allow-headers": "authorization,content-type"
       });
       res.end();
+      return;
+    }
+
+    if (url.pathname === "/" || url.pathname === "/dashboard") {
+      const html = readFileSync(dashboardPath, "utf8");
+      res.writeHead(200, {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store"
+      });
+      res.end(html);
       return;
     }
 
@@ -102,4 +115,14 @@ const server = createServer((req, res) => {
 
 server.listen(port, host, () => {
   console.log(`Modexa API listening on http://${host}:${port}`);
+});
+
+process.on("SIGINT", () => {
+  database.close();
+  server.close(() => process.exit(0));
+});
+
+process.on("SIGTERM", () => {
+  database.close();
+  server.close(() => process.exit(0));
 });
