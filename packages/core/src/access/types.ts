@@ -19,6 +19,7 @@ export type Permission =
   | "moderation.mute"
   | "moderation.kick"
   | "moderation.ban"
+  | "moderation.clear"
   | "commands.use"
   | "commands.manage"
   | "bridge.view"
