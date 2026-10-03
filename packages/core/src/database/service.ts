@@ -76,6 +76,9 @@ export class ModexaDatabase {
     this.database =
       new DatabaseSync(options.path);
 
+    this.database.exec("PRAGMA busy_timeout = 5000;");
+    this.database.exec("PRAGMA journal_mode = WAL;");
+
     this.database.exec(
       MODEXA_DATABASE_SCHEMA
     );
