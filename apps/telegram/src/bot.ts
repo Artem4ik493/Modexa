@@ -273,6 +273,16 @@ export function createTelegramAdapter(
     }
   }
 
+  for (const command of createModerationRestoreCommands(
+    options.identityService!,
+    options.membershipService!,
+    options.communityService!,
+    moderationService,
+    (action) => adapter.sendAction(action)
+  )) {
+    registry.register(command);
+  }
+
   for (const command of createPublicFeatureCommands(
     registry,
     options.identityService!,
