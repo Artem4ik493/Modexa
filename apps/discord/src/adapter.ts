@@ -299,6 +299,25 @@ export class DiscordAdapter
           communityExternalId
         );
 
+      try {
+        const member =
+          await guild.members.fetch(
+            normalized
+          );
+
+        if (
+          !member.user.bot &&
+          member.user.username.toLowerCase() ===
+            normalized
+        ) {
+          return this.toPlatformMemberDetails(
+            member
+          );
+        }
+      } catch {
+        // Not an external user id; fall back to username search.
+      }
+
       const members =
         await guild.members.fetch({
           query: normalized,
