@@ -176,6 +176,18 @@ export class PlatformIdentityResolver {
       );
 
     if (existing) {
+      // Keep the local identity profile synchronized with the latest
+      // platform username/display name so commands can resolve users
+      // by their current username.
+      identityService.attachIdentity({
+        userId: existing.id,
+        platform,
+        externalId: author.externalId,
+        username: author.username,
+        displayName: author.displayName,
+        avatarUrl: author.avatarUrl
+      });
+
       return existing;
     }
 
