@@ -50,7 +50,30 @@ const server = createServer((req, res) => {
       return;
     }
 
-    if (url.pathname === "/api/communities" && req.method === "GET") {
+
+    if (url.pathname === "/api/overview" && req.method === "GET") {
+      const communities = database.getCommunitiesSnapshot();
+      const cases = database.getAllModerationCases();
+      json(res, 200, {
+        communities: communities.length,
+        activeCommunities: communities.filter((item) => item.mode === "public").length,
+        moderationCases: cases.length,
+        activeModerationCases: cases.filter((item) => item.status === "active").length,
+        updatedAt: new Date().toISOString()
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/command-settings" && req.method === "GET") {
+      const communityId = url.searchParams.get("communityId");
+      if (!communityId) {
+        json(res, 400, { error: "communityId is required" });
+        return;
+      }
+      json(res, 200, { items: database.getCommandSettings(communityId) });
+      return;
+    }
+\n    if (url.pathname === "/api/communities" && req.method === "GET") {
       json(res, 200, { items: database.getCommunitiesSnapshot() });
       return;
     }
