@@ -1,4 +1,5 @@
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { createServer } from "http";
+import type { IncomingMessage, ServerResponse } from "http";
 import { ModexaDatabase, BackupService } from "@modexa/core";
 
 const port = Number(process.env.PORT ?? 3000);
