@@ -68,7 +68,10 @@ const database = new ModexaDatabase({
 // One set of services for all adapters: Telegram and Discord
 // must see the same users, communities, memberships and permissions.
 const services =
-  createRuntimeServices(logger);
+  createRuntimeServices(
+    logger,
+    database
+  );
 
 const adapters: PlatformAdapter[] =
   [];
