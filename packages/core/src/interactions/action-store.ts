@@ -193,6 +193,7 @@ export class InteractionActionStore {
 
     return {
       content: response.content,
+      ...(response.embed ? { embed: response.embed } : {}),
       ...(response.format
         ? { format: response.format }
         : {}),
