@@ -141,6 +141,18 @@ export function buildDiscordSlashCommands(
                   { name: "user", description: "Member", type: 6, required: true }
                 ]
               }
+            : ["warns", "modhistory", "resetwarns"].includes(name)
+            ? {
+                options: [
+                  { name: "user", description: "Member", type: 6, required: name !== "warns" }
+                ]
+              }
+            : ["remwarn", "case"].includes(name)
+              ? {
+                  options: [
+                    { name: "case", description: "Moderation case ID", type: 3, required: true }
+                  ]
+                }
             : name === "command"
             ? {
                 options: [
