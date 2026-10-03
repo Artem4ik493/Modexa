@@ -134,7 +134,6 @@ describe("buildDiscordSlashCommands", () => {
       "account",
       "commands",
       "help",
-      "member",
       "menu",
       "ping",
       "settings",
