@@ -238,6 +238,25 @@ export function createTelegramAdapter(
     );
   }
 
+  if (
+    options.identityService &&
+    options.membershipService &&
+    options.communityService
+  ) {
+    for (
+      const command of createModerationCommands(
+        options.identityService,
+        options.membershipService,
+        options.communityService,
+        moderationService,
+        memberDirectoryProxy,
+        (action) => adapter.sendAction(action)
+      )
+    ) {
+      registry.register(command);
+    }
+  }
+
   const commandService =
     new CommandService(
       new CommandParser(),
