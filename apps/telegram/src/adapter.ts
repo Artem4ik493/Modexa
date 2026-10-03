@@ -114,10 +114,8 @@ export class TelegramAdapter
             action.metadata
           );
 
-        const parseMode =
-          this.getParseMode(
-            action.metadata
-          );
+        const parseMode = this.getParseMode(action.metadata);
+        const content = this.getPanelContent(action.content, action.metadata);
 
         if (imageUrl) {
           await this.bot.api.sendPhoto(
@@ -126,8 +124,7 @@ export class TelegramAdapter
             ),
             imageUrl,
             {
-              caption:
-                action.content,
+              caption: content,
               ...(parseMode
                 ? {
                     parse_mode:
@@ -147,7 +144,7 @@ export class TelegramAdapter
             Number(
               action.channelExternalId
             ),
-            action.content,
+            content,
             {
               ...(parseMode
                 ? {
@@ -494,6 +491,31 @@ export class TelegramAdapter
       value.trim()
       ? value
       : "пользователь";
+  }
+
+  private getPanelContent(
+    content: string,
+    metadata: Record<string, unknown> | undefined
+  ): string {
+    const telegram = metadata?.telegram;
+    if (!telegram || typeof telegram !== "object") return content;
+    const embedValue = "embed" in telegram ? telegram.embed : undefined;
+    if (!embedValue || typeof embedValue !== "object") return content;
+
+    const embed = embedValue as Record<string, unknown>;
+    const parts: string[] = [];
+    if (typeof embed.title === "string") parts.push("*" + embed.title.replace(/([_*[\]()~\`>#+\-=|{}.!])/g, "\\$1") + "*");
+    if (typeof embed.description === "string" && embed.description !== content) parts.push(embed.description);
+    if (Array.isArray(embed.fields)) {
+      for (const field of embed.fields) {
+        if (!field || typeof field !== "object") continue;
+        const item = field as Record<string, unknown>;
+        if (typeof item.name === "string" && typeof item.value === "string") {
+          parts.push("*" + item.name + "*: " + item.value);
+        }
+      }
+    }
+    return parts.length ? parts.join("\n") : content;
   }
 
   private getParseMode(
