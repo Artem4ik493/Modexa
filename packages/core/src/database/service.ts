@@ -92,9 +92,6 @@ export class ModexaDatabase {
     return readFileSync(this.path).toString("base64");
   }
 
-  close(): void {
-    this.database.close();
-  }
 
   getCommunityIdentitiesSnapshot(communityId?: string): Array<{
     id: string;
