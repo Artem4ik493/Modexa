@@ -485,15 +485,12 @@ export class DiscordAdapter
     let after: string | undefined;
 
     do {
-      const query: Record<
-        string,
-        string
-      > = {
+      const query = new URLSearchParams({
         limit: "1000"
-      };
+      });
 
       if (after) {
-        query.after = after;
+        query.set("after", after);
       }
 
       const members =
@@ -587,15 +584,12 @@ export class DiscordAdapter
     let after: string | undefined;
 
     do {
-      const query: Record<
-        string,
-        string
-      > = {
+      const query = new URLSearchParams({
         limit: "1000"
-      };
+      });
 
       if (after) {
-        query.after = after;
+        query.set("after", after);
       }
 
       const members =
