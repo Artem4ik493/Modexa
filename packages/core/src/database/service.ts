@@ -852,6 +852,36 @@ export class ModexaDatabase {
     return row?.value;
   }
 
+  getRuntimeState<T>(key: string): T | undefined {
+    const row = this.database.prepare(
+      "SELECT value FROM runtime_state WHERE key = ?"
+    ).get(key) as { value?: string } | undefined;
+
+    if (!row?.value) return undefined;
+
+    try {
+      return JSON.parse(row.value) as T;
+    } catch {
+      return undefined;
+    }
+  }
+
+  setRuntimeState(key: string, value: unknown, now = new Date()): void {
+    this.database.prepare(
+      `INSERT INTO runtime_state (key, value, updated_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET
+         value = excluded.value,
+         updated_at = excluded.updated_at`
+    ).run(key, JSON.stringify(value), now.toISOString());
+  }
+
+  deleteRuntimeState(key: string): void {
+    this.database.prepare(
+      "DELETE FROM runtime_state WHERE key = ?"
+    ).run(key);
+  }
+
   setSystemSetting(
     key: string,
     value: string,
