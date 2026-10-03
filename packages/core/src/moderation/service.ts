@@ -12,10 +12,14 @@ import type {
   ModerationResult
 } from "./types.js";
 
-const ACTION_PERMISSIONS: Record<
-  ModerationActionType,
-  Permission
-> = {
+export interface ModerationCaseStore {
+  upsertModerationCase(item: ModerationCase): void;
+  getModerationCase(caseId: string): ModerationCase | undefined;
+  getModerationCases(communityId: string): ModerationCase[];
+  getAllModerationCases(): ModerationCase[];
+}
+
+const ACTION_PERMISSIONS: Record<ModerationActionType, Permission> = {
   warn: "moderation.warn",
   mute: "moderation.mute",
   kick: "moderation.kick",
@@ -26,14 +30,16 @@ export class ModerationService {
   private readonly cases = new Map<string, ModerationCase>();
 
   constructor(
-    private readonly accessControlService?: AccessControlService
-  ) {}
+    private readonly accessControlService?: AccessControlService,
+    private readonly store?: ModerationCaseStore
+  ) {
+    for (const item of store?.getAllModerationCases() ?? []) {
+      this.cases.set(item.id, item);
+    }
+  }
 
-  createCase(
-    input: CreateModerationCaseInput
-  ): ModerationResult {
-    const permission =
-      ACTION_PERMISSIONS[input.action];
+  createCase(input: CreateModerationCaseInput): ModerationResult {
+    const permission = ACTION_PERMISSIONS[input.action];
 
     if (
       this.accessControlService &&
@@ -43,27 +49,17 @@ export class ModerationService {
         permission
       )
     ) {
-      throw new Error(
-        `Missing permission "${permission}"`
-      );
+      throw new Error(`Missing permission "${permission}"`);
     }
 
     if (
       input.durationSeconds !== undefined &&
-      (!Number.isFinite(input.durationSeconds) ||
-        input.durationSeconds <= 0)
+      (!Number.isFinite(input.durationSeconds) || input.durationSeconds <= 0)
     ) {
-      throw new Error(
-        "Moderation duration must be greater than zero"
-      );
-    }
-
-    if (!input.reason?.trim() && input.action !== "warn") {
-      // Reason is optional for the domain, but normalize empty values.
+      throw new Error("Moderation duration must be greater than zero");
     }
 
     const now = input.now ?? new Date();
-
     const moderationCase: ModerationCase = {
       id: `mod_${randomUUID()}`,
       action: input.action,
@@ -73,68 +69,36 @@ export class ModerationService {
       platform: input.platform,
       communityExternalId: input.communityExternalId,
       userExternalId: input.userExternalId,
-      ...(input.durationSeconds !== undefined
-        ? { durationSeconds: input.durationSeconds }
-        : {}),
-      ...(input.reason?.trim()
-        ? { reason: input.reason.trim() }
-        : {}),
+      ...(input.durationSeconds !== undefined ? { durationSeconds: input.durationSeconds } : {}),
+      ...(input.reason?.trim() ? { reason: input.reason.trim() } : {}),
       status: "active",
       createdAt: now
     };
 
-    this.cases.set(
-      moderationCase.id,
-      moderationCase
-    );
-
+    this.cases.set(moderationCase.id, moderationCase);
     this.store?.upsertModerationCase(moderationCase);
 
     return {
       case: moderationCase,
-      adapterAction: this.toAdapterAction(
-        moderationCase
-      )
+      adapterAction: this.toAdapterAction(moderationCase)
     };
   }
 
-  getCase(
-    caseId: string
-  ): ModerationCase | undefined {
-    return this.cases.get(caseId);
+  getCase(caseId: string): ModerationCase | undefined {
+    return this.cases.get(caseId) ?? this.store?.getModerationCase(caseId);
   }
 
-  getCases(
-    communityId: CommunityId
-  ): ModerationCase[] {
+  getCases(communityId: CommunityId): ModerationCase[] {
     return [...this.cases.values()]
-      .filter(
-        (item) =>
-          item.communityId === communityId
-      )
-      .sort(
-        (a, b) =>
-          b.createdAt.getTime() -
-          a.createdAt.getTime()
-      );
+      .filter((item) => item.communityId === communityId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
-  revokeCase(
-    actorUserId: UserId,
-    caseId: string,
-    now = new Date()
-  ): ModerationCase {
-    const item = this.cases.get(caseId);
+  revokeCase(actorUserId: UserId, caseId: string, now = new Date()): ModerationCase {
+    const item = this.getCase(caseId);
+    if (!item) throw new Error(`Moderation case "${caseId}" does not exist`);
 
-    if (!item) {
-      throw new Error(
-        `Moderation case "${caseId}" does not exist`
-      );
-    }
-
-    const permission =
-      ACTION_PERMISSIONS[item.action];
-
+    const permission = ACTION_PERMISSIONS[item.action];
     if (
       this.accessControlService &&
       !this.accessControlService.hasCommunityPermission(
@@ -143,56 +107,34 @@ export class ModerationService {
         permission
       )
     ) {
-      throw new Error(
-        `Missing permission "${permission}"`
-      );
+      throw new Error(`Missing permission "${permission}"`);
     }
 
     item.status = "revoked";
     item.revokedAt = now;
+    this.cases.set(item.id, item);
     this.store?.upsertModerationCase(item);
-
     return item;
   }
 
-  toAdapterAction(
-    item: ModerationCase
-  ): AdapterAction {
+  toAdapterAction(item: ModerationCase): AdapterAction {
     const base = {
       platform: item.platform,
-      communityExternalId:
-        item.communityExternalId,
-      userExternalId:
-        item.userExternalId,
-      ...(item.reason
-        ? { reason: item.reason }
-        : {})
+      communityExternalId: item.communityExternalId,
+      userExternalId: item.userExternalId,
+      ...(item.reason ? { reason: item.reason } : {})
     };
 
     switch (item.action) {
-      case "warn":
-        return {
-          ...base,
-          type: "member.warn"
-        };
+      case "warn": return { ...base, type: "member.warn" };
       case "mute":
         return {
           ...base,
           type: "member.mute",
-          ...(item.durationSeconds !== undefined
-            ? { durationSeconds: item.durationSeconds }
-            : {})
+          ...(item.durationSeconds !== undefined ? { durationSeconds: item.durationSeconds } : {})
         };
-      case "kick":
-        return {
-          ...base,
-          type: "member.kick"
-        };
-      case "ban":
-        return {
-          ...base,
-          type: "member.ban"
-        };
+      case "kick": return { ...base, type: "member.kick" };
+      case "ban": return { ...base, type: "member.ban" };
     }
   }
 }
