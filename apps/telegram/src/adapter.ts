@@ -176,6 +176,12 @@ export class TelegramAdapter
             action.metadata
           );
 
+        const content =
+          this.getPanelContent(
+            action.content,
+            action.metadata
+          );
+
         try {
           const imageUrl = this.getImageUrl(action.metadata);
           if (imageUrl) {
