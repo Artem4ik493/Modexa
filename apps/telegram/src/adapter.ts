@@ -57,6 +57,8 @@ export class TelegramAdapter
 
   private started = false;
 
+  private readonly recentMessageIds = new Map<string, number[]>();
+
   constructor(
     private readonly bot: Bot
   ) {
@@ -211,6 +213,20 @@ export class TelegramAdapter
           throw error;
         }
 
+        return;
+      }
+
+      case "channel.clear": {
+        const ids = this.recentMessageIds.get(action.channelExternalId) ?? [];
+        const targets = ids.slice(-action.count);
+        for (const messageId of targets) {
+          try {
+            await this.bot.api.deleteMessage(Number(action.channelExternalId), messageId);
+          } catch {
+            // Messages may be too old or already deleted.
+          }
+        }
+        this.recentMessageIds.set(action.channelExternalId, ids.filter((id) => !targets.includes(id)));
         return;
       }
 
@@ -554,6 +570,14 @@ export class TelegramAdapter
   ): Promise<PlatformUserRole> {
     const chat =
       ctx.chat;
+
+    if (chat) {
+      const key = String(chat.id);
+      const ids = this.recentMessageIds.get(key) ?? [];
+      ids.push(message.message_id);
+      if (ids.length > 200) ids.splice(0, ids.length - 200);
+      this.recentMessageIds.set(key, ids);
+    }
 
     if (
       !chat ||
