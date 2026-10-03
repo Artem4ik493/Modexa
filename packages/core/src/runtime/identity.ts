@@ -431,7 +431,7 @@ export class PlatformIdentityResolver {
           community.id
         );
 
-    const platformManagedRoles = new Set([
+    const platformManagedRoles = new Set<string>([
       COMMUNITY_ROLE_NAMES.MEMBER,
       COMMUNITY_ROLE_NAMES.ADMIN
     ]);
