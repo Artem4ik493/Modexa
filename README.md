@@ -35,7 +35,22 @@ pnpm --filter @modexa/api dev
 
 Health: `/health`
 
-Dashboard: open `apps/dashboard/index.html` while the API is running.
+Dashboard: open http://localhost:3000/ while the API is running.
+
+`pnpm dev` builds Core and starts the API, Dashboard and Runner together. Runner starts any configured Telegram/Discord adapters from `.env`.
+
+Production-like checks:
+
+```powershell
+pnpm build
+pnpm test
+```
+
+Docker:
+
+```powershell
+docker compose up --build -d
+```
 
 ## Public bot
 
