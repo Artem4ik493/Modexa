@@ -10,7 +10,8 @@
   --accent:#8b5cf6;--accent2:#5b8cff;--ok:#39d98a;--warn:#ffb454;--danger:#ff5d73;
   font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 }
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(900px 500px at 20% -10%,#28336b55,transparent 65%),radial-gradient(700px 500px at 100% 10%,#7c3aed20,transparent 65%),var(--bg);color:var(--text)}
+*{box-sizing:border-box}.login{position:fixed;inset:0;background:#070a12ee;backdrop-filter:blur(18px);display:grid;place-items:center;z-index:100}.login.hidden{display:none}.login-card{width:min(420px,calc(100% - 36px));background:#0d1220;border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:0 30px 100px #0008}.login-card h1{margin:0 0 8px}.login-card p{color:var(--muted);line-height:1.5}.login-card input{width:100%;box-sizing:border-box;margin:12px 0;padding:13px;border-radius:12px;border:1px solid var(--line);background:#11182a;color:#fff;outline:none}.login-error{color:var(--danger);font-size:12px;min-height:18px}
+body{margin:0;background:radial-gradient(900px 500px at 20% -10%,#28336b55,transparent 65%),radial-gradient(700px 500px at 100% 10%,#7c3aed20,transparent 65%),var(--bg);color:var(--text)}
 button{font:inherit;color:inherit}.app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
 aside{border-right:1px solid var(--line);background:#090d17cc;backdrop-filter:blur(20px);padding:22px 16px;position:sticky;top:0;height:100vh}
 .brand{display:flex;gap:12px;align-items:center;padding:4px 8px 28px}.logo{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-weight:900;box-shadow:0 10px 30px #6d28d955}.brand b{font-size:20px}.brand span{display:block;color:var(--muted);font-size:11px;margin-top:2px}
@@ -28,6 +29,7 @@ main{padding:30px;max-width:1500px;width:100%;margin:auto}.top{display:flex;just
 </style>
 </head>
 <body>
+<div class="login" id="login"><div class="login-card"><h1>Modexa Control Center</h1><p>Панель администратора защищена API-ключом. Введите ключ из <code>.env</code>.</p><input id="apiKey" type="password" placeholder="MODEXA_API_KEY" autocomplete="current-password"><button class="btn primary" style="width:100%" onclick="login()">Войти</button><div class="login-error" id="loginError"></div></div></div>
 <div class="app">
 <aside>
   <div class="brand"><div class="logo">M</div><div><b>Modexa</b><span>Community OS</span></div></div>
@@ -82,7 +84,26 @@ function showPage(id){
  document.getElementById('pageTitle').textContent=titles[id];
  if(id==='moderation'&&communities[0]) loadModeration(communities[0].id);
 }
-async function get(path){const r=await fetch(API+path);if(!r.ok)throw new Error(await r.text());return r.json();}
+let authKey=localStorage.getItem('modexa_api_key')||'';
+function authHeaders(){return authKey?{Authorization:'Bearer '+authKey}:{}}
+async function get(path){
+ const r=await fetch(API+path,{headers:authHeaders()});
+ if(r.status===401){document.getElementById('login').classList.remove('hidden');throw new Error('unauthorized');}
+ if(!r.ok)throw new Error(await r.text());
+ return r.json();
+}
+async function login(){
+ const key=document.getElementById('apiKey').value.trim();
+ if(!key)return;
+ const r=await fetch(API+'/api/auth',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({key})});
+ if(!r.ok){document.getElementById('loginError').textContent='Неверный API-ключ.';return;}
+ authKey=key;localStorage.setItem('modexa_api_key',key);document.getElementById('login').classList.add('hidden');loadAll();
+}
+async function logout(){
+ await fetch(API+'/api/auth',{method:'DELETE'});
+ authKey='';localStorage.removeItem('modexa_api_key');document.getElementById('login').classList.remove('hidden');
+}
+
 function renderCommunities(target){
  const el=document.getElementById(target);
  if(!communities.length){el.innerHTML='<div class="empty">Сообществ пока нет.</div>';return;}
@@ -113,7 +134,7 @@ async function loadAll(){
  }
 }
 document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>showPage(b.dataset.page)));
-loadAll();setInterval(loadAll,30000);
+if(!authKey)document.getElementById('login').classList.remove('hidden');else loadAll();setInterval(()=>{if(authKey)loadAll()},30000);
 </script>
 </body>
 </html>
