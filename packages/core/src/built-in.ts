@@ -22,6 +22,14 @@ import {
   type Translator
 } from "./i18n/translate.js";
 
+function platformLabel(
+  platform: "telegram" | "discord"
+): string {
+  return platform === "telegram"
+    ? "Telegram"
+    : "Discord";
+}
+
 function createMenuResponse(
   t: Translator,
   canManageSystem: boolean
@@ -266,7 +274,9 @@ function handleAccount(
       }),
       t("account.platform", {
         platform:
-          execution.platform
+          platformLabel(
+            execution.platform
+          )
       }),
       t("account.platform_id", {
         id: platformId
@@ -282,7 +292,9 @@ function handleAccount(
         ? [
             t("account.linked_account", {
               platform:
-                linkedIdentity.platform,
+                platformLabel(
+                  linkedIdentity.platform
+                ),
               username:
                 linkedIdentity.username
                   ? `@${linkedIdentity.username}`

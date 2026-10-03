@@ -14,7 +14,6 @@ import type { ModexaDatabase } from "../database/service.js";
 
 export interface CreateUserInput {
   displayName: string;
-  avatarUrl?: string;
   now?: Date;
 }
 
@@ -57,7 +56,6 @@ export class IdentityService {
     const user: User = {
       id: `mx_${randomUUID()}`,
       displayName: input.displayName,
-      avatarUrl: input.avatarUrl,
       createdAt: now,
       updatedAt: now
     };
@@ -72,7 +70,6 @@ export class IdentityService {
     userIds: UserId[],
     input: {
       displayName?: string;
-      avatarUrl?: string;
       now?: Date;
     } = {}
   ): User {
@@ -110,8 +107,6 @@ export class IdentityService {
         displayName:
           input.displayName ??
           sourceUsers[0]!.displayName,
-        avatarUrl:
-          input.avatarUrl,
         now
       });
 

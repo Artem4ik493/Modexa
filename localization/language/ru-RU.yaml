@@ -32,7 +32,7 @@ link.error.dm_only: 'Связка аккаунтов доступна тольк
 link.success.created: 'Код для связки готов.'
 link.code: 'Код: {code}'
 link.target: 'Отправьте в личном чате с ботом в {platform} команду ниже:'
-link.command: '\`/link {code}\`'
+link.command: '`/link {code}`'
 link.expires: 'Код действует 10 минут и используется только один раз.'
 link.success.completed: 'Готово. Аккаунт {platform} привязан к вашему аккаунту Modexa.'
 link.error.linked: 'Аккаунт {platform} уже привязан.'
