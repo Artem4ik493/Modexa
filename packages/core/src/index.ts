@@ -16,6 +16,8 @@ export * from "./communities/index.js";
 
 export * from "./memberships/index.js";
 
+export * from "./members/index.js";
+
 export * from "./access/index.js";
 
 export * from "./billing/index.js";
