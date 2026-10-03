@@ -377,6 +377,36 @@ export class TelegramAdapter
     }
   }
 
+  private async resolveAvatarUrl(
+    userId: number
+  ): Promise<string | undefined> {
+    try {
+      const photos =
+        await this.bot.api.getUserProfilePhotos(
+          userId,
+          { limit: 1 }
+        );
+
+      const photo =
+        photos.photos[0]?.at(-1);
+
+      if (!photo) {
+        return undefined;
+      }
+
+      const file =
+        await this.bot.api.getFile(
+          photo.file_id
+        );
+
+      return file.file_path
+        ? `https://api.telegram.org/file/bot${this.bot.token}/${file.file_path}`
+        : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   private async createMessageEvent(
     ctx: Context
   ): Promise<AdapterEvent> {
@@ -407,6 +437,11 @@ export class TelegramAdapter
         author.id
       );
 
+    const avatarUrl =
+      await this.resolveAvatarUrl(
+        author.id
+      );
+
     return {
       type:
         "message.created",
@@ -432,6 +467,8 @@ export class TelegramAdapter
 
           displayName:
             author.first_name,
+
+          avatarUrl,
 
           platformRole
         },
@@ -535,6 +572,11 @@ export class TelegramAdapter
         user.id
       );
 
+    const avatarUrl =
+      await this.resolveAvatarUrl(
+        user.id
+      );
+
     return {
       type:
         "interaction.created",
@@ -560,6 +602,8 @@ export class TelegramAdapter
 
           displayName:
             user.first_name,
+
+          avatarUrl,
 
           platformRole
         },
