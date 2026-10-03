@@ -10,7 +10,7 @@
   --accent:#8b5cf6;--accent2:#5b8cff;--ok:#39d98a;--warn:#ffb454;--danger:#ff5d73;
   font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 }
-*{box-sizing:border-box}.login{position:fixed;inset:0;background:#070a12ee;backdrop-filter:blur(18px);display:grid;place-items:center;z-index:100}.login.hidden{display:none}.login-card{width:min(420px,calc(100% - 36px));background:#0d1220;border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:0 30px 100px #0008}.login-card h1{margin:0 0 8px}.login-card p{color:var(--muted);line-height:1.5}.login-card input{width:100%;box-sizing:border-box;margin:12px 0;padding:13px;border-radius:12px;border:1px solid var(--line);background:#11182a;color:#fff;outline:none}.login-error{color:var(--danger);font-size:12px;min-height:18px}
+*{box-sizing:border-box}.login{position:fixed;inset:0;background:#070a12ee;backdrop-filter:blur(18px);display:grid;place-items:center;z-index:100}.login.hidden{display:none}.login-card{width:min(420px,calc(100% - 36px));background:#0d1220;border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:0 30px 100px #0008}.login-card h1{margin:0 0 8px}.login-card p{color:var(--muted);line-height:1.5}.login-card input{width:100%;box-sizing:border-box;margin:12px 0;padding:13px;border-radius:12px;border:1px solid var(--line);background:#11182a;color:#fff;outline:none}.login-error{color:var(--danger);font-size:12px;min-height:18px}.login-divider{display:flex;align-items:center;gap:10px;color:var(--muted);margin:18px 0}.login-divider:before,.login-divider:after{content:"";height:1px;background:var(--line);flex:1}.login-divider span{font-size:11px}
 body{margin:0;background:radial-gradient(900px 500px at 20% -10%,#28336b55,transparent 65%),radial-gradient(700px 500px at 100% 10%,#7c3aed20,transparent 65%),var(--bg);color:var(--text)}
 button{font:inherit;color:inherit}.app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
 aside{border-right:1px solid var(--line);background:#090d17cc;backdrop-filter:blur(20px);padding:22px 16px;position:sticky;top:0;height:100vh}
@@ -29,10 +29,11 @@ main{padding:30px;max-width:1500px;width:100%;margin:auto}.top{display:flex;just
 </style>
 </head>
 <body>
-<div class="login" id="login"><div class="login-card"><h1>Modexa Control Center</h1><p>Панель администратора защищена API-ключом. Введите ключ из <code>.env</code>.</p><input id="apiKey" type="password" placeholder="MODEXA_API_KEY" autocomplete="current-password"><button class="btn primary" style="width:100%" onclick="login()">Войти</button><div class="login-error" id="loginError"></div></div></div>
+<div class="login" id="login"><div class="login-card"><div class="logo" style="margin-bottom:18px">M</div><h1>Добро пожаловать в Modexa</h1><p>Управляйте Discord-серверами, модерацией, AutoMod, рейтингом и автоматизациями из одной панели.</p><button class="btn primary" style="width:100%;margin-top:8px" onclick="discordLogin()">Войти через Discord</button><div class="login-divider"><span>или</span></div><details><summary class="muted">Вход по API-ключу</summary><input id="apiKey" type="password" placeholder="MODEXA_API_KEY" autocomplete="current-password"><button class="btn" style="width:100%" onclick="login()">Войти</button></details><div class="login-error" id="loginError"></div></div></div>
 <div class="app">
 <aside>
   <div class="brand"><div class="logo">M</div><div><b>Modexa</b><span>Community OS</span></div></div>
+  <div id="profile" style="display:none;margin:-8px 8px 18px;padding:10px;border:1px solid var(--line);border-radius:13px;background:#11182a"><div class="meta">Вы вошли как</div><div class="name" id="profileName">—</div><button class="btn" style="width:100%;margin-top:8px" onclick="logout()">Выйти</button></div>
   <nav>
     <button class="nav active" data-page="overview">Обзор</button>
     <button class="nav" data-page="communities">Сообщества</button>
@@ -63,7 +64,7 @@ main{padding:30px;max-width:1500px;width:100%;margin:auto}.top{display:flex;just
     </div>
   </section>
 
-  <section class="page" id="communities"><div class="card"><div class="section-title"><h2>Все сообщества</h2><span class="muted" id="communityCount">—</span></div><div id="communityList"></div></div></section>
+  <section class="page" id="communities"><div class="card"><div class="section-title"><h2>Мои Discord-серверы</h2><span class="muted" id="communityCount">—</span></div><div id="communityList"></div></div></section>
 
   <section class="page" id="moderation"><div class="card"><div class="section-title"><h2>Последние moderation cases</h2><span class="pill">SQLite</span></div><div style="overflow:auto"><table class="table"><thead><tr><th>ID</th><th>Действие</th><th>Платформа</th><th>Статус</th><th>Причина</th></tr></thead><tbody id="modTable"><tr><td colspan="5" class="empty">Выберите сообщество на странице «Сообщества».</td></tr></tbody></table></div></div></section>
 
@@ -85,12 +86,30 @@ function showPage(id){
  if(id==='moderation'&&communities[0]) loadModeration(communities[0].id);
 }
 let authKey=localStorage.getItem('modexa_api_key')||'';
+let discordUser=null;
 function authHeaders(){return authKey?{Authorization:'Bearer '+authKey}:{}}
 async function get(path){
  const r=await fetch(API+path,{headers:authHeaders()});
- if(r.status===401){document.getElementById('login').classList.remove('hidden');throw new Error('unauthorized');}
+ if(r.status===401){document.getElementById('login').classList.remove('hidden');document.getElementById('profile').style.display='none';throw new Error('unauthorized');}
  if(!r.ok)throw new Error(await r.text());
  return r.json();
+}
+function discordLogin(){location.href=API+'/auth/discord';}
+async function initAuth(){
+ if(authKey)return true;
+ try{
+  const r=await fetch(API+'/api/auth/discord');
+  if(!r.ok)throw new Error('unauthorized');
+  const data=await r.json();
+  discordUser=data.user;
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('profile').style.display='block';
+  document.getElementById('profileName').textContent=data.user.global_name||data.user.username;
+  return true;
+ }catch{
+  document.getElementById('login').classList.remove('hidden');
+  return false;
+ }
 }
 async function login(){
  const key=document.getElementById('apiKey').value.trim();
@@ -100,13 +119,14 @@ async function login(){
  authKey=key;localStorage.setItem('modexa_api_key',key);document.getElementById('login').classList.add('hidden');loadAll();
 }
 async function logout(){
+ await fetch(API+'/api/auth/discord',{method:'DELETE'});
  await fetch(API+'/api/auth',{method:'DELETE'});
- authKey='';localStorage.removeItem('modexa_api_key');document.getElementById('login').classList.remove('hidden');
+ authKey='';localStorage.removeItem('modexa_api_key');discordUser=null;document.getElementById('login').classList.remove('hidden');document.getElementById('profile').style.display='none';
 }
 
 function renderCommunities(target){
  const el=document.getElementById(target);
- if(!communities.length){el.innerHTML='<div class="empty">Сообществ пока нет.</div>';return;}
+ if(!communities.length){el.innerHTML='<div class="empty">У вас нет серверов, где есть права владельца или администратора.</div>';return;}
  el.innerHTML=communities.map(c=>`<div class="community"><div class="avatar">${esc(c.name[0]||'M')}</div><div class="grow"><div class="name">${esc(c.name)}</div><div class="meta">${esc(c.id)} · ${esc(c.mode)}</div></div><span class="pill"><span class="dot"></span>Connected</span></div>`).join('');
 }
 async function loadModeration(id){
@@ -117,7 +137,7 @@ async function loadModeration(id){
 }
 async function loadAll(){
  try{
-  const [h,o,c]=await Promise.all([get('/health'),get('/api/overview'),get('/api/communities')]);
+  const [h,o,c]=await Promise.all([get('/health'),get('/api/overview'),get('/api/auth/discord/guilds')]);
   communities=c.items||[];
   document.getElementById('apiDot').style.color='var(--ok)';
   document.getElementById('healthText').textContent=h.status;
@@ -134,7 +154,7 @@ async function loadAll(){
  }
 }
 document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>showPage(b.dataset.page)));
-if(!authKey)document.getElementById('login').classList.remove('hidden');else loadAll();setInterval(()=>{if(authKey)loadAll()},30000);
+void initAuth().then((ok)=>{if(ok)loadAll()});setInterval(()=>{if(authKey||discordUser)loadAll()},30000);
 </script>
 </body>
 </html>
