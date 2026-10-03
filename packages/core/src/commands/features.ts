@@ -4,6 +4,7 @@ import type { IdentityService } from "../identity/service.js";
 import type { MembershipService } from "../memberships/service.js";
 import type { CommunityService } from "../communities/service.js";
 import type { ModerationService } from "../moderation/service.js";
+import type { AdapterAction } from "../adapters/actions.js";
 import { CommandSettingsService } from "./settings.js";
 
 function resolveTarget(context: CommandContext, identities: IdentityService, memberships: MembershipService) {
@@ -24,9 +25,25 @@ export function createPublicFeatureCommands(
   memberships: MembershipService,
   communities: CommunityService,
   settings: CommandSettingsService,
-  moderation: ModerationService
+  moderation: ModerationService,
+  executeAction?: (action: AdapterAction) => Promise<void>
 ): CommandDefinition[] {
   return [
+    {
+      name: "clear", aliases: ["purge", "очистить"], description: "Удалить указанное количество сообщений", requiredCapabilities: ["moderation"],
+      handler: async (context) => {
+        if (!context.channel || !executeAction) return { content: "❌ Очистка сообщений недоступна в этом канале." };
+        const count = Number.parseInt(context.args[0] ?? "", 10);
+        if (!Number.isInteger(count) || count < 1 || count > 100) return { content: "Использование: /clear <1-100>" };
+        await executeAction({
+          type: "channel.clear",
+          platform: context.platform,
+          channelExternalId: context.channel.externalId,
+          count
+        });
+        return { content: "✅ Очищено " + count + " сообщений!" };
+      }
+    },
     {
       name: "help", aliases: ["commands", "хелп"], description: "Список доступных команд",
       handler: async (context) => {
