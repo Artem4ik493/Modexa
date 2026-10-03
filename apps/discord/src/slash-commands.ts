@@ -32,6 +32,13 @@ export interface DiscordSlashCommand {
     string,
     string
   >;
+
+  options?: Array<{
+    name: string;
+    description: string;
+    type: number;
+    required?: boolean;
+  }>;
 }
 
 function truncate(
@@ -99,7 +106,19 @@ export function buildDiscordSlashCommands(
           ]
         ),
         descriptionLocalizations:
-          localizations
+          localizations,
+        ...(name === "member"
+          ? {
+              options: [
+                {
+                  name: "user",
+                  description: "Member to inspect",
+                  type: 6,
+                  required: false
+                }
+              ]
+            }
+          : {})
       });
     }
   }
