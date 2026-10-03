@@ -29,7 +29,12 @@ export function createRoleCommand(
       if (!target && memberDirectory) {
         const native = await memberDirectory.getMember(context.community.id, targetArg);
         if (native) {
-          target = identityService.createUser({\n            displayName:\n              native.user.displayName ??\n              native.user.username ??\n              native.user.externalId\n          });
+          target = identityService.createUser({
+            displayName:
+              native.user.displayName ??
+              native.user.username ??
+              native.user.externalId
+          });
           identityService.attachIdentity({
             userId: target.id,
             platform: native.user.platform,
