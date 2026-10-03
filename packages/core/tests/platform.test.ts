@@ -238,11 +238,11 @@ describe("Modexa core", () => {
     };
 
     settings.setEnabled("c", "ping", false);
-    const result = await service.handle("/ping", {}, execution);
+    const result = await service.handle("/ping", { platform: execution.platform, user: execution.user, community: execution.community, channel: execution.channel, execution }, execution);
     expect(result.response?.content).toContain("отключена");
 
     settings.setEnabled("c", "ping", true);
-    const enabled = await service.handle("/ping", {}, execution);
+    const enabled = await service.handle("/ping", { platform: execution.platform, user: execution.user, community: execution.community, channel: execution.channel, execution }, execution);
     expect(enabled.response?.content).toBe("pong");
   });
 });
