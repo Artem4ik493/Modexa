@@ -118,7 +118,7 @@ export function createRuntimeServices(
     new ChannelService();
 
   const membershipService =
-    new MembershipService();
+    new MembershipService(database);
 
   const accessControlService =
     new AccessControlService(database, database);
