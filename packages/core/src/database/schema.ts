@@ -148,6 +148,22 @@ CREATE TABLE IF NOT EXISTS system_settings (
   updated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS audit_entries (
+  id TEXT PRIMARY KEY,
+  community_id TEXT NOT NULL REFERENCES communities(id) ON DELETE CASCADE,
+  action TEXT NOT NULL,
+  actor_user_id TEXT,
+  target_user_id TEXT,
+  channel_id TEXT,
+  message_id TEXT,
+  reason TEXT,
+  metadata TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_community_created
+  ON audit_entries(community_id, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS runtime_state (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
