@@ -160,6 +160,24 @@ describe("buildDiscordSlashCommands", () => {
     });
   });
 
+  it("adds a user option to /member", () => {
+    const member =
+      buildDiscordSlashCommands(
+        fullDescriptors()
+      ).find(
+        (command) => command.name === "member"
+      );
+
+    expect(member?.options).toEqual([
+      {
+        name: "user",
+        description: "Member to inspect",
+        type: 6,
+        required: false
+      }
+    ]);
+  });
+
   it("gives an alias the description of its command", () => {
     const commands =
       buildDiscordSlashCommands(
