@@ -125,7 +125,8 @@ export function createRuntimeServices(
 
   const moderationService =
     new ModerationService(
-      accessControlService
+      accessControlService,
+      database
     );
 
   const identityResolver =
