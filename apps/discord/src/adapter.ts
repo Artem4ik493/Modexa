@@ -195,10 +195,11 @@ export class DiscordAdapter
             action.messageExternalId
           );
 
+        const embeds = this.getEmbeds(action.metadata);
         await message.edit({
-          content: action.content,
+          ...(embeds.length > 0 ? {} : { content: action.content }),
           components: this.getComponents(action.metadata) as never,
-          ...(this.getEmbeds(action.metadata).length > 0 ? { embeds: this.getEmbeds(action.metadata) } : { embeds: [] })
+          ...(embeds.length > 0 ? { embeds } : { embeds: [] })
         });
 
         return;
