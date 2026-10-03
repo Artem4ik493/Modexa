@@ -193,7 +193,9 @@ export class InteractionActionStore {
 
     return {
       content: response.content,
-      imageUrl: response.imageUrl,
+      ...(response.imageUrl
+        ? { imageUrl: response.imageUrl }
+        : {}),
       buttons,
       menus,
       ...(response.close
