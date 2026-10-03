@@ -319,19 +319,13 @@ export class DiscordAdapter
     }
   }
 
-  private async getDiscordRoleNames(
+  private getDiscordRoleNames(
     guild: Guild,
     roleIds: string[]
-  ): Promise<{
+  ): {
     names: string[];
     isAdmin: boolean;
-  }> {
-    try {
-      await guild.roles.fetch();
-    } catch {
-      // Use the roles already available in cache.
-    }
-
+  } {
     const names: string[] = [];
     let isAdmin = false;
 
@@ -373,7 +367,7 @@ export class DiscordAdapter
     }
   ): Promise<PlatformMemberDetails> {
     const roleData =
-      await this.getDiscordRoleNames(
+      this.getDiscordRoleNames(
         guild,
         data.roles
       );
@@ -418,6 +412,12 @@ export class DiscordAdapter
       await this.client.guilds.fetch(
         communityExternalId
       );
+
+    try {
+      await guild.roles.fetch();
+    } catch {
+      // Continue with cached roles if role fetch fails.
+    }
 
     const data =
       await this.fetchMemberFromApi(
@@ -475,6 +475,12 @@ export class DiscordAdapter
       await this.client.guilds.fetch(
         communityExternalId
       );
+
+    try {
+      await guild.roles.fetch();
+    } catch {
+      // Continue with cached roles if role fetch fails.
+    }
 
     let after: string | undefined;
 
