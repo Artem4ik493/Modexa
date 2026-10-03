@@ -49,8 +49,25 @@ export interface InteractionMenu {
   maxSelections?: number;
 }
 
+export interface InteractionEmbedField {
+  name: string;
+  value: string;
+  inline?: boolean;
+}
+
+export interface InteractionEmbed {
+  title?: string;
+  description?: string;
+  color?: number;
+  fields?: InteractionEmbedField[];
+  footer?: string;
+  thumbnailUrl?: string;
+  imageUrl?: string;
+}
+
 export interface InteractionResponse {
   content?: string;
+  embed?: InteractionEmbed;
 
   format?: "plain" | "markdown";
 
@@ -125,9 +142,7 @@ export interface BoundInteractionMenu
   options: BoundInteractionMenuOption[];
 }
 
-export interface BoundInteractionResponse {
-  content?: string;
-
+export interface BoundInteractionResponse {\n  content?: string;\n  embed?: InteractionEmbed;\n
   format?: "plain" | "markdown";
 
   imageUrl?: string;
