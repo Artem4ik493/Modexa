@@ -1,4 +1,5 @@
 import { createServer } from "http";
+import { randomBytes, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { IncomingMessage, ServerResponse } from "http";
@@ -12,6 +13,115 @@ const database = new ModexaDatabase({
 });
 const backup = new BackupService(database);
 const dashboardPath = resolve(process.cwd(), "apps/dashboard/index.html");
+
+const discordClientId = process.env.DISCORD_CLIENT_ID ?? "";
+const discordClientSecret = process.env.DISCORD_CLIENT_SECRET ?? "";
+const discordRedirectUri =
+  process.env.DISCORD_REDIRECT_URI ??
+  `http://localhost:${port}/auth/discord/callback`;
+const dashboardUrl =
+  process.env.MODEXA_DASHBOARD_URL ??
+  `http://localhost:${port}/`;
+
+type DiscordSession = {
+  id: string;
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt: number;
+  user: {
+    id: string;
+    username: string;
+    global_name?: string;
+    avatar?: string;
+  };
+};
+
+const discordSessions = new Map<string, DiscordSession>();
+const oauthStates = new Map<string, number>();
+
+async function discordToken(code: string): Promise<{
+  access_token: string;
+  refresh_token?: string;
+  expires_in: number;
+}> {
+  const body = new URLSearchParams({
+    client_id: discordClientId,
+    client_secret: discordClientSecret,
+    grant_type: "authorization_code",
+    code,
+    redirect_uri: discordRedirectUri
+  });
+
+  const response = await fetch("https://discord.com/api/oauth2/token", {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded"
+    },
+    body
+  });
+
+  if (!response.ok) {
+    throw new Error(`Discord OAuth token exchange failed: ${response.status}`);
+  }
+
+  return response.json() as Promise<{
+    access_token: string;
+    refresh_token?: string;
+    expires_in: number;
+  }>;
+}
+
+async function discordApi<T>(
+  path: string,
+  accessToken: string
+): Promise<T> {
+  const response = await fetch(`https://discord.com/api/v10${path}`, {
+    headers: {
+      authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Discord API failed: ${response.status}`);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+function cookieValue(req: IncomingMessage, name: string): string | undefined {
+  return (req.headers.cookie ?? "")
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${name}=`))
+    ?.slice(name.length + 1);
+}
+
+function discordSession(req: IncomingMessage): DiscordSession | undefined {
+  const id = cookieValue(req, "modexa_session");
+  if (!id) return undefined;
+  const session = discordSessions.get(id);
+  if (!session || session.expiresAt <= Date.now()) {
+    discordSessions.delete(id);
+    return undefined;
+  }
+  return session;
+}
+
+function dashboardAuthorized(req: IncomingMessage): boolean {
+  return Boolean(discordSession(req)) || authorized(req);
+}
+
+function cookie(name: string, value: string, maxAge: number): string {
+  return `${name}=${encodeURIComponent(value)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}`;
+}
+
+type DiscordGuild = {
+  id: string;
+  name: string;
+  icon: string | null;
+  owner: boolean;
+  permissions: string;
+};
 
 function json(res: ServerResponse, status: number, value: unknown): void {
   const body = JSON.stringify(value);
@@ -61,6 +171,65 @@ const server = createServer((req, res) => {
       return;
     }
 
+    if (url.pathname === "/auth/discord") {
+      if (!discordClientId || !discordClientSecret) {
+        res.writeHead(503, { "content-type": "text/plain; charset=utf-8" });
+        res.end("Discord OAuth is not configured");
+        return;
+      }
+
+      const state = randomBytes(24).toString("hex");
+      oauthStates.set(state, Date.now() + 10 * 60_000);
+
+      const authorize = new URL("https://discord.com/oauth2/authorize");
+      authorize.searchParams.set("client_id", discordClientId);
+      authorize.searchParams.set("response_type", "code");
+      authorize.searchParams.set("redirect_uri", discordRedirectUri);
+      authorize.searchParams.set("scope", "identify guilds");
+      authorize.searchParams.set("state", state);
+
+      res.writeHead(302, {
+        location: authorize.toString(),
+        "cache-control": "no-store"
+      });
+      res.end();
+      return;
+    }
+
+    if (url.pathname === "/auth/discord/callback") {
+      const code = url.searchParams.get("code");
+      const state = url.searchParams.get("state");
+      const expiresAt = state ? oauthStates.get(state) : undefined;
+
+      if (!code || !state || !expiresAt || expiresAt < Date.now()) {
+        res.writeHead(400, { "content-type": "text/plain; charset=utf-8" });
+        res.end("Invalid Discord OAuth state");
+        return;
+      }
+
+      oauthStates.delete(state);
+
+      const token = await discordToken(code);
+      const user = await discordApi<DiscordSession["user"]>("/users/@me", token.access_token);
+      const sessionId = randomUUID();
+
+      discordSessions.set(sessionId, {
+        id: sessionId,
+        accessToken: token.access_token,
+        refreshToken: token.refresh_token,
+        expiresAt: Date.now() + token.expires_in * 1000,
+        user
+      });
+
+      res.writeHead(302, {
+        location: dashboardUrl,
+        "set-cookie": cookie("modexa_session", sessionId, 7 * 24 * 60 * 60),
+        "cache-control": "no-store"
+      });
+      res.end();
+      return;
+    }
+
     if (url.pathname === "/health") {
       json(res, 200, { status: "ok", service: "modexa-api", time: new Date().toISOString() });
       return;
@@ -90,6 +259,63 @@ const server = createServer((req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/auth/discord" && req.method === "GET") {
+      const session = discordSession(req);
+      if (!session) {
+        json(res, 401, { authenticated: false });
+        return;
+      }
+
+      json(res, 200, {
+        authenticated: true,
+        user: session.user
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/auth/discord" && req.method === "DELETE") {
+      const sessionId = cookieValue(req, "modexa_session");
+      if (sessionId) discordSessions.delete(sessionId);
+      res.writeHead(204, {
+        "set-cookie": cookie("modexa_session", "", 0)
+      });
+      res.end();
+      return;
+    }
+
+    if (url.pathname === "/api/auth/discord/guilds" && req.method === "GET") {
+      const session = discordSession(req);
+      if (!session) {
+        json(res, 401, { error: "unauthorized" });
+        return;
+      }
+
+      const guilds = await discordApi<DiscordGuild[]>(
+        "/users/@me/guilds",
+        session.accessToken
+      );
+
+      const communities = database.getCommunityIdentitiesSnapshot();
+      const botGuildIds = new Set(
+        communities
+          .filter((item) => item.platform === "discord")
+          .map((item) => item.externalId)
+      );
+
+      json(res, 200, {
+        items: guilds
+          .filter((guild) => guild.owner || (BigInt(guild.permissions) & 0x8n) === 0x8n)
+          .map((guild) => ({
+            id: guild.id,
+            name: guild.name,
+            icon: guild.icon,
+            owner: guild.owner,
+            botInstalled: botGuildIds.has(guild.id)
+          }))
+      });
+      return;
+    }
+
     if (url.pathname === "/api/auth" && req.method === "DELETE") {
       res.writeHead(204, {
         "set-cookie": "modexa_api_key=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0"
@@ -98,7 +324,7 @@ const server = createServer((req, res) => {
       return;
     }
 
-    if (!authorized(req)) {
+    if (!dashboardAuthorized(req)) {
       json(res, 401, { error: "unauthorized" });
       return;
     }
