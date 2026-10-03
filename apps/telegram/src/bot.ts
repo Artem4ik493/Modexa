@@ -85,6 +85,9 @@ export interface CreateTelegramAdapterOptions {
 
   moderationService?:
     ModerationService;
+
+  commandSettingsService?:
+    import("@modexa/core").CommandSettingsService;
 }
 
 export function createTelegramAdapter(
@@ -268,11 +271,23 @@ export function createTelegramAdapter(
     }
   }
 
+  for (const command of createPublicFeatureCommands(
+    registry,
+    options.identityService!,
+    options.membershipService!,
+    options.communityService!,
+    commandSettingsService,
+    moderationService
+  )) {
+    registry.register(command);
+  }
+
   const commandService =
     new CommandService(
       new CommandParser(),
       registry,
-      logger
+      logger,
+      options.commandSettingsService
     );
 
   const store =
