@@ -13,7 +13,7 @@ export function createModerationRestoreCommands(
   executeAction: (action: AdapterAction) => Promise<void>
 ): CommandDefinition[] {
   return ["unmute", "unban"].map((name) => ({
-    name, description: name === "unmute" ? "Снять мут с участника" : "Разбанить участника", requiredCapabilities: ["moderation"] as const,
+    name, description: name === "unmute" ? "Снять мут с участника" : "Разбанить участника", requiredCapabilities: ["moderation"],
     handler: async (context) => {
       if (!context.community) return { content: "Команда доступна только в сообществе." };
       const arg = context.args[0]?.replace(/^@/, "").toLowerCase();
