@@ -180,6 +180,9 @@ if (discordToken) {
         moderationService:
           services.moderationService,
 
+        commandSettingsService:
+          services.commandSettingsService,
+
         database:
           database
       }
