@@ -47,6 +47,8 @@ import {
   createBuiltinPlans
 } from "../billing/index.js";
 
+import { CommandSettingsService } from "../commands/settings.js";
+
 import {
   PlatformIdentityResolver,
   type PlatformIdentityServices
@@ -77,6 +79,9 @@ export interface RuntimeServices
 
   billingService:
     BillingService;
+
+  commandSettingsService:
+    CommandSettingsService;
 }
 
 export function createRuntimeServices(
@@ -105,6 +110,9 @@ export function createRuntimeServices(
       database,
       billingService
     );
+
+  const commandSettingsService =
+    new CommandSettingsService(database);
 
   const channelService =
     new ChannelService();
@@ -175,6 +183,7 @@ export function createRuntimeServices(
     bridgeService,
     moderationService,
     billingService,
+    commandSettingsService,
     identityResolver,
     executionContextService
   };
