@@ -41,3 +41,6 @@ export * from "./database/index.js";
 export * from "./runtime/index.js";
 
 export * from "./moderation/index.js";
+
+export * from "./automations/index.js";
+export * from "./backup/index.js";
