@@ -39,6 +39,10 @@ import {
 } from "../database/service.js";
 
 import {
+  ModerationService
+} from "../moderation/service.js";
+
+import {
   PlatformIdentityResolver,
   type PlatformIdentityServices
 } from "./identity.js";
@@ -62,6 +66,9 @@ export interface RuntimeServices
 
   bridgeService:
     BridgeService;
+
+  moderationService:
+    ModerationService;
 }
 
 export function createRuntimeServices(
@@ -116,6 +123,11 @@ export function createRuntimeServices(
       database
     );
 
+  const moderationService =
+    new ModerationService(
+      accessControlService
+    );
+
   const identityResolver =
     new PlatformIdentityResolver(
       {
@@ -138,6 +150,7 @@ export function createRuntimeServices(
     accessControlService,
     communityAccessService,
     bridgeService,
+    moderationService,
     identityResolver,
     executionContextService
   };
