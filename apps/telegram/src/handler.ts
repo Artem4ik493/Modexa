@@ -28,7 +28,7 @@ export function createTelegramEventHandler(
       const replyMarkup =
         renderTelegramInteraction(response);
 
-      if (!replyMarkup && !response.imageUrl) {
+      if (!replyMarkup && !response.imageUrl && !response.embed) {
         return undefined;
       }
 
