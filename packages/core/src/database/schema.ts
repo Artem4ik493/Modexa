@@ -86,6 +86,17 @@ CREATE TABLE IF NOT EXISTS user_community_roles (
   PRIMARY KEY(user_id, role_id)
 );
 
+CREATE TABLE IF NOT EXISTS community_command_settings (
+  community_id TEXT NOT NULL REFERENCES communities(id) ON DELETE CASCADE,
+  command_name TEXT NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (community_id, command_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_command_settings_community
+  ON community_command_settings(community_id);
+
 CREATE TABLE IF NOT EXISTS moderation_cases (
   id TEXT PRIMARY KEY,
   action TEXT NOT NULL,
