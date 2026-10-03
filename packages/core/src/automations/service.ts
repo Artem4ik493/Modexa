@@ -1,8 +1,11 @@
 import { randomUUID } from "node:crypto";
 import type { Automation, AutomationAction, AutomationTrigger } from "./types.js";
+import type { BillingService } from "../billing/service.js";
 
 export class AutomationService {
   private readonly automations = new Map<string, Automation>();
+
+  constructor(private readonly billingService?: BillingService) {}
 
   create(input: {
     communityId: string;
@@ -11,6 +14,7 @@ export class AutomationService {
     action: AutomationAction;
     now?: Date;
   }): Automation {
+    this.billingService?.requireFeature(input.communityId, "automations");
     if (!input.name.trim()) throw new Error("Automation name is required");
     if (input.trigger.type === "interval" && input.trigger.intervalSeconds < 60) {
       throw new Error("Automation interval must be at least 60 seconds");
