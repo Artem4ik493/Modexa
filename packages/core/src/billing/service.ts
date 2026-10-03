@@ -77,7 +77,10 @@ export class BillingService {
     const state = store?.getRuntimeState<BillingState>("billing");
     for (const item of state?.subscriptions ?? []) {
       const subscription: Subscription = {
-        ...item,
+        id: item.id,
+        communityId: item.communityId,
+        planId: item.planId,
+        status: item.status,
         startsAt: new Date(item.startsAt),
         ...(item.expiresAt ? { expiresAt: new Date(item.expiresAt) } : {}),
         createdAt: new Date(item.createdAt),
