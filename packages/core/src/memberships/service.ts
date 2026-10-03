@@ -1,5 +1,6 @@
 import type { CommunityId } from "../communities/types.js";
 import type { UserId } from "../identity/types.js";
+import type { ModexaDatabase } from "../database/service.js";
 import type {
   Membership,
   MembershipStatus
@@ -23,6 +24,29 @@ export class MembershipService {
   >();
 
   private nextMembershipId = 1;
+
+  constructor(private readonly database?: ModexaDatabase) {
+    for (const item of database?.getMembershipsSnapshot() ?? []) {
+      const membership: Membership = {
+        id: item.id,
+        userId: item.userId,
+        communityId: item.communityId,
+        status: item.status,
+        joinedAt: item.joinedAt,
+        updatedAt: item.updatedAt
+      };
+      this.memberships.set(membership.id, membership);
+      this.membershipIndex.set(
+        this.getMembershipKey(membership.userId, membership.communityId),
+        membership.id
+      );
+    }
+
+    this.nextMembershipId = this.getNextNumericId(
+      [...this.memberships.keys()],
+      "membership-"
+    );
+  }
 
   createMembership(
     input: CreateMembershipInput
@@ -66,6 +90,8 @@ export class MembershipService {
       key,
       membership.id
     );
+
+    this.database?.upsertMembership(membership);
 
     return membership;
   }
@@ -219,6 +245,7 @@ export class MembershipService {
 
     membership.status = status;
     membership.updatedAt = now;
+    this.database?.upsertMembership(membership);
 
     return membership;
   }
@@ -254,6 +281,15 @@ export class MembershipService {
       "active",
       now
     );
+  }
+
+  private getNextNumericId(ids: string[], prefix: string): number {
+    let next = 1;
+    for (const id of ids) {
+      const value = Number(id.slice(prefix.length));
+      if (Number.isFinite(value)) next = Math.max(next, value + 1);
+    }
+    return next;
   }
 
   private getMembershipKey(
