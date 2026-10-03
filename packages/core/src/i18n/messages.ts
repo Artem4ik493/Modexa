@@ -92,7 +92,32 @@ const MESSAGE_KEYS = [
   "help.title",
   "help.empty",
   "help.no_description",
-  "message.error"
+  "message.error",
+  "menu.system",
+  "command.system.description",
+  "system.forbidden",
+  "system.title",
+  "system.name",
+  "system.version",
+  "system.platform",
+  "system.role",
+  "system.persistence",
+  "system.settings.button",
+  "system.settings.title",
+  "system.maintenance.on",
+  "system.maintenance.off",
+  "system.maintenance.toggle",
+  "command.member.description",
+  "member.community_only",
+  "member.not_found",
+  "member.title",
+  "member.name",
+  "member.id",
+  "member.username",
+  "member.platform",
+  "member.roles",
+  "member.no_roles",
+  "member.joined"
 ] as const;
 
 export type MessageKey =
