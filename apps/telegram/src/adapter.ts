@@ -5,7 +5,9 @@ import {
   type PlatformChannel,
   type PlatformCommunity,
   type PlatformUser,
-  type PlatformUserRole
+  type PlatformUserRole,
+  type MemberDirectory,
+  type PlatformMemberDetails
 } from "@modexa/core";
 
 import {
@@ -31,7 +33,7 @@ function isMessageNotModified(
 }
 
 export class TelegramAdapter
-  implements PlatformAdapter
+  implements PlatformAdapter, MemberDirectory
 {
   readonly id =
     "telegram-main";
@@ -251,6 +253,58 @@ export class TelegramAdapter
 
         return;
     }
+  }
+
+  async getMember(
+    communityExternalId: string,
+    userExternalId: string
+  ): Promise<PlatformMemberDetails | undefined> {
+    try {
+      const member =
+        await this.bot.api.getChatMember(
+          Number(communityExternalId),
+          Number(userExternalId)
+        );
+
+      const user = member.user;
+
+      return {
+        user: {
+          platform: "telegram",
+          externalId: String(user.id),
+          username: user.username,
+          displayName: user.first_name,
+          avatarUrl:
+            await this.resolveAvatarUrl(
+              user.id
+            ),
+          platformRole:
+            member.status === "creator" ||
+            member.status === "administrator"
+              ? "admin"
+              : "member"
+        },
+        roles:
+          member.status === "creator" ||
+          member.status === "administrator"
+            ? [member.status]
+            : [],
+        status: member.status
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
+  async listMembers(
+    communityExternalId: string
+  ): Promise<PlatformMemberDetails[]> {
+    // Telegram does not expose a general "list all members"
+    // Bot API method. Keep /members backed by Modexa's
+    // persisted membership set and use getMember() for
+    // native status details.
+    void communityExternalId;
+    return [];
   }
 
   async resolveUser(
