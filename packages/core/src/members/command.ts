@@ -172,7 +172,7 @@ function renderMemberDetails(
       t("member.platform_joined", {
         date: formatDate(
           native?.joinedAt,
-          context.execution.locale
+          context.execution.locale ?? "ru"
         )
       }),
       t("member.platform_status", {
