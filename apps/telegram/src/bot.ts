@@ -17,7 +17,9 @@ import {
   type PlatformIdentityResolver,
   type CommunityService,
   type MembershipService,
-  IdentityService
+  IdentityService,
+  AccessControlService,
+  ModexaDatabase
 } from "@modexa/core";
 
 import {
@@ -67,6 +69,12 @@ export interface CreateTelegramAdapterOptions {
 
   identityLinkingService?:
     IdentityLinkingService;
+
+  accessControlService?:
+    AccessControlService;
+
+  database?:
+    ModexaDatabase;
 }
 
 export function createTelegramAdapter(
@@ -81,12 +89,17 @@ export function createTelegramAdapter(
   const registry =
     new CommandRegistry();
 
+  const accessControlService =
+    options.accessControlService ??
+    new AccessControlService();
+
   createBuiltinCommands(
     registry,
     options.communityService,
     options.identityService,
     options.membershipService,
-    undefined
+    accessControlService,
+    options.database
   );
 
   if (
@@ -118,7 +131,13 @@ export function createTelegramAdapter(
     options.identityService &&
     options.membershipService
   ) {
-    // Member command is registered by the runner with the shared access service.
+    registry.register(
+      createMemberCommand(
+        options.identityService,
+        options.membershipService,
+        accessControlService
+      )
+    );
   }
 
   const commandService =
