@@ -2,6 +2,10 @@ export {
   ModerationService
 } from "./service.js";
 
+export type {
+  ModerationCaseStore
+} from "./service.js";
+
 export {
   createModerationCommands
 } from "./command.js";
@@ -9,6 +13,16 @@ export {
 export type {
   ModerationActionExecutor
 } from "./command.js";
+
+export {
+  AutoModService
+} from "./automod.js";
+
+export type {
+  AutoModRule,
+  AutoModRuleType,
+  AutoModDecision
+} from "./automod.js";
 
 export type {
   CreateModerationCaseInput,
