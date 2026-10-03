@@ -22,9 +22,38 @@ export function createRoleCommand(
       const requestedRole = context.args[1]?.toUpperCase();
       if (!targetArg) return { content: "Использование: /role @user [member|moderator]" };
 
+      const normalizedTarget = targetArg
+        .replace(/^@/, "")
+        .trim()
+        .toLowerCase();
+
       let target =
         identityService.findUserByIdentity(context.platform, targetArg) ??
-        identityService.findUserByUsername(targetArg.replace(/^@/, ""), context.platform);
+        identityService.findUserByUsername(
+          normalizedTarget,
+          context.platform
+        );
+
+      // Telegram cannot search arbitrary group members by username via
+      // Bot API, so fall back to users already known in this community.
+      if (!target) {
+        target = membershipService
+          .getCommunityMemberships(context.community.id)
+          .map((membership) =>
+            identityService.getUser(membership.userId)
+          )
+          .filter((user): user is NonNullable<typeof user> => Boolean(user))
+          .find((user) =>
+            identityService
+              .getUserIdentities(user.id)
+              .some(
+                (identity) =>
+                  identity.platform === context.platform &&
+                  identity.username?.toLowerCase() ===
+                    normalizedTarget
+              )
+          );
+      }
 
       if (!target && memberDirectory) {
         const username = targetArg.replace(/^@/, "").trim();
