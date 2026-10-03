@@ -312,7 +312,8 @@ export function createTelegramAdapter(
     new CommandService(
       new CommandParser(),
       registry,
-      logger
+      logger,
+      commandSettingsService
     );
 
   const store =
@@ -362,25 +363,6 @@ export function createTelegramAdapter(
     "menu.close",
     () => ({ close: true })
   );
-
-  if (
-    options.identityService &&
-    options.membershipService &&
-    options.communityService
-  ) {
-    for (
-      const command of createModerationCommands(
-        options.identityService,
-        options.membershipService,
-        options.communityService,
-        moderationService,
-        memberDirectoryProxy,
-        (action: import("@modexa/core").AdapterAction) => adapter.sendAction(action)
-      )
-    ) {
-      registry.register(command);
-    }
-  }
 
   adapter.onEvent(
     createTelegramEventHandler({
