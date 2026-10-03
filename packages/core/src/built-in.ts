@@ -13,6 +13,12 @@ import type { MembershipService } from "./memberships/service.js";
 import type { AccessControlService } from "./access/service.js";
 import type { ModexaDatabase } from "./database/service.js";
 
+import type { BridgeService } from "./bridge/service.js";
+
+import type {
+  InteractionHandlerContext
+} from "./interactions/dispatcher.js";
+
 import type {
   InteractionButton
 } from "./interactions/types.js";
@@ -327,7 +333,8 @@ function handleAccount(
 
 function handleSettings(
   context: CommandContext,
-  communityService?: CommunityService
+  communityService?: CommunityService,
+  bridgeService?: BridgeService
 ): CommandResponse {
   const t = createTranslator(
     context.execution.locale
@@ -355,9 +362,30 @@ function handleSettings(
     };
   }
 
-  const mode = context.args[0]?.toLowerCase();
-  let currentMode =
-    community.mode ?? "public";
+  const category =
+    context.args[0]?.toLowerCase();
+
+  if (
+    category === "bridges"
+  ) {
+    return createBridgeSettingsResponse(
+      context,
+      bridgeService
+    );
+  }
+
+  if (
+    category === "general"
+  ) {
+    return createGeneralSettingsResponse(
+      context,
+      communityService
+    );
+  }
+
+  return createCommunitySettingsCategoriesResponse(
+    context
+  );
 
   if (mode === "public" || mode === "private") {
     if (
@@ -384,6 +412,93 @@ function handleSettings(
       updated.mode ?? mode;
   }
 
+}
+
+function createCommunitySettingsCategoriesResponse(
+  context: CommandContext
+): CommandResponse {
+  const t =
+    createTranslator(
+      context.execution.locale
+    );
+
+  return {
+    content: t(
+      "settings.categories.title"
+    ),
+    buttons: [
+      {
+        id: "settings-general",
+        label: t("settings.category.general"),
+        action: {
+          type: "command",
+          command: "/settings",
+          args: ["general"]
+        }
+      },
+      {
+        id: "settings-bridges",
+        label: t("settings.category.bridges"),
+        action: {
+          type: "command",
+          command: "/settings",
+          args: ["bridges"]
+        }
+      },
+      createBackButton(t),
+      createCloseButton(t)
+    ]
+  };
+}
+
+function createGeneralSettingsResponse(
+  context: CommandContext,
+  communityService?: CommunityService
+): CommandResponse {
+  const t =
+    createTranslator(
+      context.execution.locale
+    );
+
+  const community =
+    context.execution.community;
+
+  if (!community || !communityService) {
+    return {
+      content: t(
+        "settings.community_unavailable"
+      )
+    };
+  }
+
+  let currentMode =
+    community.mode ?? "public";
+
+  if (
+    context.args[1] === "public" ||
+    context.args[1] === "private"
+  ) {
+    if (
+      !context.execution.capabilities.includes(
+        "community.manage"
+      )
+    ) {
+      return {
+        content: t("settings.forbidden")
+      };
+    }
+
+    const updated =
+      communityService.setMode(
+        community.id,
+        context.args[1]
+      );
+
+    currentMode =
+      updated.mode ??
+      context.args[1];
+  }
+
   const canManage =
     context.execution.capabilities.includes(
       "community.manage"
@@ -391,7 +506,7 @@ function handleSettings(
 
   return {
     content: [
-      t("settings.community"),
+      t("settings.category.general"),
       t(
         currentMode === "private"
           ? "settings.mode.private"
@@ -401,30 +516,358 @@ function handleSettings(
     buttons: canManage
       ? [
           {
-            id: "settings-public",
-            label: t("settings.mode.public_button"),
+            id: "settings-general-public",
+            label: t(
+              "settings.mode.public_button"
+            ),
             action: {
-              type: "command" as const,
+              type: "command",
               command: "/settings",
-              args: ["public"]
+              args: ["general", "public"]
             }
           },
           {
-            id: "settings-private",
-            label: t("settings.mode.private_button"),
+            id: "settings-general-private",
+            label: t(
+              "settings.mode.private_button"
+            ),
             action: {
-              type: "command" as const,
+              type: "command",
               command: "/settings",
-              args: ["private"]
+              args: ["general", "private"]
             }
           },
-          createBackButton(t),
+          {
+            id: "settings-general-back",
+            label: t("menu.back"),
+            action: {
+              type: "command",
+              command: "/settings"
+            }
+          },
           createCloseButton(t)
         ]
       : [
-          createBackButton(t),
+          {
+            id: "settings-general-back",
+            label: t("menu.back"),
+            action: {
+              type: "command",
+              command: "/settings"
+            }
+          },
           createCloseButton(t)
         ]
+  };
+}
+
+function createBridgeSettingsResponse(
+  context: CommandContext,
+  bridgeService?: BridgeService
+): CommandResponse {
+  const t =
+    createTranslator(
+      context.execution.locale
+    );
+
+  if (!bridgeService || !context.execution.community) {
+    return {
+      content: t(
+        "settings.bridges.unavailable"
+      )
+    };
+  }
+
+  const bridges =
+    bridgeService.getLinksForCommunity(
+      context.execution.community.id
+    );
+
+  if (bridges.length === 0) {
+    return {
+      content: t("settings.bridges.empty"),
+      buttons: [
+        {
+          id: "settings-bridges-back",
+          label: t("menu.back"),
+          action: {
+            type: "command",
+            command: "/settings"
+          }
+        },
+        createCloseButton(t)
+      ]
+    };
+  }
+
+  return {
+    content: t("settings.bridges.title"),
+    buttons: [
+      ...bridges.map((item) => ({
+        id: `settings-bridge-${item.link.id}`,
+        label: [
+          item.first.platform === "telegram"
+            ? "Telegram"
+            : "Discord",
+          item.first.communityName,
+          item.first.channelName,
+          "↔",
+          item.second.platform === "telegram"
+            ? "Telegram"
+            : "Discord",
+          item.second.communityName,
+          item.second.channelName
+        ].join(" · "),
+        action: {
+          type: "callback" as const,
+          data:
+            `settings.bridge.select:${item.link.id}`
+        }
+      })),
+      {
+        id: "settings-bridges-back",
+        label: t("menu.back"),
+        action: {
+          type: "command",
+          command: "/settings"
+        }
+      },
+      createCloseButton(t)
+    ]
+  };
+}
+
+export function createCommunitySettingsInteractionHandler(
+  bridgeService: BridgeService
+): (
+  context: InteractionHandlerContext
+) => Promise<InteractionResponse> {
+  return async (context) => {
+    const data =
+      context.action.type === "callback"
+        ? context.action.data
+        : "";
+
+    const t =
+      createTranslator(
+        context.execution.locale
+      );
+
+    if (
+      data.startsWith(
+        "settings.bridge.select:"
+      )
+    ) {
+      const linkId =
+        data.slice(
+          "settings.bridge.select:".length
+        );
+
+      const item =
+        bridgeService
+          .getLinksForCommunity(
+            context.execution.community?.id ??
+              ""
+          )
+          .find(
+            (entry) =>
+              entry.link.id === linkId
+          );
+
+      if (!item) {
+        return {
+          content: t(
+            "settings.bridges.not_found"
+          )
+        };
+      }
+
+      return {
+        content: [
+          t("settings.bridge.title"),
+          [
+            item.first.platform === "telegram"
+              ? "Telegram"
+              : "Discord",
+            item.first.communityName,
+            item.first.channelName
+          ].join(" · "),
+          "↔",
+          [
+            item.second.platform === "telegram"
+              ? "Telegram"
+              : "Discord",
+            item.second.communityName,
+            item.second.channelName
+          ].join(" · ")
+        ].join("\n"),
+        buttons: [
+          {
+            id: "settings-bridge-remove",
+            label: t(
+              "settings.bridge.remove"
+            ),
+            action: {
+              type: "callback",
+              data:
+                `settings.bridge.remove:${linkId}`
+            }
+          },
+          {
+            id: "settings-bridge-back",
+            label: t("menu.back"),
+            action: {
+              type: "command",
+              command: "/settings",
+              args: ["bridges"]
+            }
+          },
+          createCloseButton(t)
+        ]
+      };
+    }
+
+    if (
+      data.startsWith(
+        "settings.bridge.remove:"
+      )
+    ) {
+      const linkId =
+        data.slice(
+          "settings.bridge.remove:".length
+        );
+
+      if (
+        !context.execution.capabilities.includes(
+          "community.manage"
+        )
+      ) {
+        return {
+          content: t(
+            "settings.forbidden"
+          )
+        };
+      }
+
+      const communityId =
+        context.execution.community?.id;
+
+      if (!communityId) {
+        return {
+          content: t(
+            "settings.community_unavailable"
+          )
+        };
+      }
+
+      const item =
+        bridgeService
+          .getLinksForCommunity(
+            communityId
+          )
+          .find(
+            (entry) =>
+              entry.link.id === linkId
+          );
+
+      if (!item) {
+        return {
+          content: t(
+            "settings.bridges.not_found"
+          )
+        };
+      }
+
+      return {
+        content: t(
+          "settings.bridge.remove_confirm"
+        ),
+        buttons: [
+          {
+            id: "settings-bridge-remove-confirm",
+            label: t(
+              "settings.bridge.remove_confirm_button"
+            ),
+            action: {
+              type: "callback",
+              data:
+                `settings.bridge.remove.confirm:${linkId}`
+            }
+          },
+          {
+            id: "settings-bridge-remove-cancel",
+            label: t("menu.back"),
+            action: {
+              type: "callback",
+              data:
+                `settings.bridge.select:${linkId}`
+            }
+          },
+          createCloseButton(t)
+        ]
+      };
+    }
+
+    if (
+      data.startsWith(
+        "settings.bridge.remove.confirm:"
+      )
+    ) {
+      const linkId =
+        data.slice(
+          "settings.bridge.remove.confirm:".length
+        );
+
+      try {
+        bridgeService.removeLink(
+          linkId,
+          context.execution
+        );
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message.includes(
+            "community.manage"
+          )
+        ) {
+          return {
+            content: t(
+              "settings.forbidden"
+            )
+          };
+        }
+
+        return {
+          content: t(
+            "settings.bridges.not_found"
+          )
+        };
+      }
+
+      return {
+        content: t(
+          "settings.bridge.removed"
+        ),
+        buttons: [
+          {
+            id: "settings-bridges-back",
+            label: t("menu.back"),
+            action: {
+              type: "command",
+              command: "/settings",
+              args: ["bridges"]
+            }
+          },
+          createCloseButton(t)
+        ]
+      };
+    }
+
+    return {
+      content: t(
+        "interaction.unhandled"
+      )
+    };
   };
 }
 
@@ -434,7 +877,8 @@ export function createBuiltinCommands(
   identityService?: IdentityService,
   membershipService?: MembershipService,
   accessControlService?: AccessControlService,
-  database?: ModexaDatabase
+  database?: ModexaDatabase,
+  bridgeService?: BridgeService
 ): void {
   const commands: CommandDefinition[] = [
     {
@@ -490,7 +934,8 @@ export function createBuiltinCommands(
       handler: (context) =>
         handleSettings(
           context,
-          communityService
+          communityService,
+          bridgeService
         )
     },
     {

@@ -99,7 +99,8 @@ export function createTelegramAdapter(
     options.identityService,
     options.membershipService,
     accessControlService,
-    options.database
+    options.database,
+    options.bridgeService
   );
 
   if (
@@ -167,6 +168,17 @@ export function createTelegramAdapter(
       )
     );
   }
+
+  dispatcher.registerCallback(
+    "settings.bridge.",
+    options.bridgeService
+      ? createCommunitySettingsInteractionHandler(
+          options.bridgeService
+        )
+      : () => ({
+          content: "Bridge unavailable"
+        })
+  );
 
   dispatcher.registerCallback(
     "menu.close",

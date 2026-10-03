@@ -152,7 +152,8 @@ export function createDiscordAdapter(
     identityService,
     membershipService,
     accessControlService,
-    options.database
+    options.database,
+    options.bridgeService
   );
 
   registry.register(
@@ -203,6 +204,17 @@ export function createDiscordAdapter(
       bridgeService,
       membershipService
     )
+  );
+
+  dispatcher.registerCallback(
+    "settings.bridge.",
+    options.bridgeService
+      ? createCommunitySettingsInteractionHandler(
+          options.bridgeService
+        )
+      : () => ({
+          content: "Bridge unavailable"
+        })
   );
 
   dispatcher.registerCallback(

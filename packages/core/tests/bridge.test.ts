@@ -408,4 +408,68 @@ describe("BridgeService", () => {
     );
   });
 
+
+test("removes a bridge only from the current linked community context", async () => {
+  const service = new BridgeService();
+  const now = new Date("2026-10-03T12:00:00.000Z");
+
+  const telegram = service.registerEndpoint({
+    platform: "telegram",
+    communityExternalId: "tg-community",
+    communityName: "TG",
+    channelExternalId: "tg-chat",
+    channelName: "general",
+    communityId: "community-1",
+    channelId: "channel-1"
+  });
+
+  const discord = service.registerEndpoint({
+    platform: "discord",
+    communityExternalId: "ds-community",
+    communityName: "DS",
+    channelExternalId: "ds-channel",
+    channelName: "general",
+    communityId: "community-2",
+    channelId: "channel-2"
+  });
+
+  const request = service.createLinkRequest({
+    sourceEndpointId: telegram.id,
+    targetEndpointId: discord.id,
+    requestedByUserId: "mx_test",
+    now,
+    expiresAt: new Date(now.getTime() + 60_000)
+  });
+
+  const execution = {
+    platform: "discord",
+    type: "community",
+    user: {
+      id: "mx_admin",
+      displayName: "Admin"
+    },
+    community: {
+      id: "community-2",
+      name: "DS"
+    },
+    channel: {
+      id: "channel-2",
+      name: "general"
+    },
+    capabilities: ["community.manage"],
+    locale: "ru",
+    correlationId: "test"
+  } as any;
+
+  await service.confirmRequest(request.id, execution, now);
+  expect(service.getLinksForCommunity("community-2")).toHaveLength(1);
+
+  service.removeLink(
+    service.getLinks()[0]!.id,
+    execution,
+    now
+  );
+
+  expect(service.getLinks()).toHaveLength(0);
+});
 });

@@ -223,6 +223,115 @@ export class BridgeService {
     ];
   }
 
+  getLinksForCommunity(
+    communityId: string
+  ): Array<{
+    link: BridgeLink;
+    first: BridgeEndpoint;
+    second: BridgeEndpoint;
+  }> {
+    return [...this.links.values()]
+      .map((link) => {
+        const first =
+          this.getEndpoint(
+            link.sourceEndpointId
+          );
+        const second =
+          this.getEndpoint(
+            link.targetEndpointId
+          );
+
+        if (!first || !second) {
+          return undefined;
+        }
+
+        if (
+          first.communityId !== communityId &&
+          second.communityId !== communityId
+        ) {
+          return undefined;
+        }
+
+        return {
+          link,
+          first,
+          second
+        };
+      })
+      .filter(
+        (
+          item
+        ): item is {
+          link: BridgeLink;
+          first: BridgeEndpoint;
+          second: BridgeEndpoint;
+        } => item !== undefined
+      );
+  }
+
+  removeLink(
+    linkId: BridgeLinkId,
+    execution: ExecutionContext,
+    now = new Date()
+  ): BridgeLink {
+    const link =
+      this.links.get(linkId);
+
+    if (!link) {
+      throw new Error(
+        "Bridge link not found"
+      );
+    }
+
+    if (
+      !execution.capabilities.includes(
+        "community.manage"
+      )
+    ) {
+      throw new Error(
+        "Bridge removal requires community.manage permission"
+      );
+    }
+
+    const current =
+      this.findEndpointForExecution(
+        execution
+      );
+
+    const first =
+      this.getEndpoint(
+        link.sourceEndpointId
+      );
+    const second =
+      this.getEndpoint(
+        link.targetEndpointId
+      );
+
+    if (!current || !first || !second) {
+      throw new Error(
+        "Bridge endpoint is unavailable"
+      );
+    }
+
+    if (
+      current.id !== first.id &&
+      current.id !== second.id
+    ) {
+      throw new Error(
+        "Bridge removal must be performed in one of the linked chats"
+      );
+    }
+
+    this.links.delete(linkId);
+
+    const updated =
+      new Date(now);
+
+    link.updatedAt = updated;
+
+    return link;
+  }
+
   getLinkedEndpoints(
     endpointId: BridgeEndpointId
   ): BridgeEndpoint[] {
