@@ -92,6 +92,73 @@ export class ModexaDatabase {
     return readFileSync(this.path).toString("base64");
   }
 
+  getCommunityIdentitiesSnapshot(communityId?: string): Array<{
+    id: string;
+    communityId: string;
+    platform: "telegram" | "discord";
+    externalId: string;
+    name?: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
+    const rows = this.database.prepare(
+      `SELECT id, community_id, platform, external_id, name, created_at, updated_at
+       FROM community_identities
+       WHERE (? IS NULL OR community_id = ?)
+       ORDER BY id`
+    ).all(communityId ?? null, communityId ?? null) as Array<{
+      id: string;
+      community_id: string;
+      platform: "telegram" | "discord";
+      external_id: string;
+      name: string | null;
+      created_at: string;
+      updated_at: string;
+    }>;
+
+    return rows.map((row) => ({
+      id: row.id,
+      communityId: row.community_id,
+      platform: row.platform,
+      externalId: row.external_id,
+      name: row.name ?? undefined,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
+    }));
+  }
+
+  getMembershipsSnapshot(communityId?: string): Array<{
+    id: string;
+    userId: string;
+    communityId: string;
+    status: "active" | "left" | "banned";
+    joinedAt: Date;
+    updatedAt: Date;
+  }> {
+    const rows = this.database.prepare(
+      `SELECT id, user_id, community_id, status, joined_at, updated_at
+       FROM memberships
+       WHERE (? IS NULL OR community_id = ?)
+       ORDER BY id`
+    ).all(communityId ?? null, communityId ?? null) as Array<{
+      id: string;
+      user_id: string;
+      community_id: string;
+      status: "active" | "left" | "banned";
+      joined_at: string;
+      updated_at: string;
+    }>;
+
+    return rows.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      communityId: row.community_id,
+      status: row.status,
+      joinedAt: new Date(row.joined_at),
+      updatedAt: new Date(row.updated_at)
+    }));
+  }
+
   getCommunitiesSnapshot(): Array<{ id: string; name: string; mode: string; createdAt: Date; updatedAt: Date }> {
     const rows = this.database.prepare(
       "SELECT id, name, mode, created_at, updated_at FROM communities ORDER BY name"
@@ -573,6 +640,33 @@ export class ModexaDatabase {
       identity.name ?? null,
       identity.createdAt.toISOString(),
       identity.updatedAt.toISOString()
+    );
+  }
+
+  upsertMembership(membership: {
+    id: string;
+    userId: string;
+    communityId: string;
+    status: "active" | "left" | "banned";
+    joinedAt: Date;
+    updatedAt: Date;
+  }): void {
+    this.database.prepare(
+      `INSERT INTO memberships (id, user_id, community_id, status, joined_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         user_id = excluded.user_id,
+         community_id = excluded.community_id,
+         status = excluded.status,
+         joined_at = excluded.joined_at,
+         updated_at = excluded.updated_at`
+    ).run(
+      membership.id,
+      membership.userId,
+      membership.communityId,
+      membership.status,
+      membership.joinedAt.toISOString(),
+      membership.updatedAt.toISOString()
     );
   }
 
