@@ -50,6 +50,9 @@ import {
 import { CommandSettingsService } from "../commands/settings.js";
 import { AutomationService } from "../automations/service.js";
 import { AuditService } from "../audit/service.js";
+import { RankingService } from "../ranking/service.js";
+import { WelcomeService } from "../welcome/service.js";
+import { CustomCommandService } from "../custom-commands/service.js";
 
 import {
   PlatformIdentityResolver,
@@ -90,6 +93,15 @@ export interface RuntimeServices
 
   auditService:
     AuditService;
+
+  rankingService:
+    RankingService;
+
+  welcomeService:
+    WelcomeService;
+
+  customCommandService:
+    CustomCommandService;
 }
 
 export function createRuntimeServices(
@@ -130,6 +142,15 @@ export function createRuntimeServices(
 
   const auditService =
     new AuditService(database);
+
+  const rankingService =
+    new RankingService();
+
+  const welcomeService =
+    new WelcomeService();
+
+  const customCommandService =
+    new CustomCommandService();
 
   const channelService =
     new ChannelService();
@@ -203,6 +224,9 @@ export function createRuntimeServices(
     automationService,
     commandSettingsService,
     auditService,
+    rankingService,
+    welcomeService,
+    customCommandService,
     identityResolver,
     executionContextService
   };
