@@ -15,6 +15,7 @@ export interface PlatformUser {
   externalId: string;
   username?: string;
   displayName?: string;
+  avatarUrl?: string;
 
   /**
    * Role reported by the platform.
