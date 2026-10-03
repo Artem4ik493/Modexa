@@ -1,5 +1,6 @@
 import { gzipSync } from "node:zlib";
 import type { ModexaDatabase } from "../database/service.js";
+import type { BillingService } from "../billing/service.js";
 
 export interface BackupArtifact {
   createdAt: Date;
@@ -9,9 +10,16 @@ export interface BackupArtifact {
 }
 
 export class BackupService {
-  constructor(private readonly database: ModexaDatabase) {}
+  constructor(
+    private readonly database: ModexaDatabase,
+    private readonly billingService?: BillingService,
+    private readonly communityId?: string
+  ) {}
 
   exportSnapshot(): BackupArtifact {
+    if (this.billingService && this.communityId) {
+      this.billingService.requireFeature(this.communityId, "backup");
+    }
     const snapshot = this.database.exportSnapshot();
     const compressed = gzipSync(Buffer.from(snapshot, "utf8")).toString("base64");
     return {
