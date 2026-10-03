@@ -664,6 +664,11 @@ export class DiscordAdapter
       displayName:
         user.globalName ??
         user.username,
+      avatarUrl:
+        user.displayAvatarURL({
+          extension: "png",
+          size: 512
+        }),
       locale,
       platformRole
     };
