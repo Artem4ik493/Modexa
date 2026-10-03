@@ -98,7 +98,7 @@ export function createRuntimeServices(
     new IdentityLinkService();
 
   const billingService =
-    new BillingService();
+    new BillingService(database);
 
   for (const plan of createBuiltinPlans()) {
     billingService.registerPlan({
