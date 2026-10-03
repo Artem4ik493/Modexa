@@ -6,6 +6,8 @@ import type {
   CommunityPlatform
 } from "./types.js";
 
+import type { ModexaDatabase } from "../database/service.js";
+
 export interface CreateCommunityInput {
   name: string;
   now?: Date;
@@ -20,6 +22,10 @@ export interface AttachCommunityIdentityInput {
 }
 
 export class CommunityService {
+  constructor(
+    private readonly database?: ModexaDatabase
+  ) {}
+
   private readonly communities = new Map<
     CommunityId,
     Community
@@ -55,6 +61,8 @@ export class CommunityService {
       community.id,
       community
     );
+
+    this.database?.upsertCommunity(community);
 
     return community;
   }
@@ -147,6 +155,8 @@ export class CommunityService {
     );
 
     community.updatedAt = now;
+
+    this.database?.upsertCommunityIdentity(identity);
 
     return identity;
   }
