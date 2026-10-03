@@ -18,7 +18,7 @@ export function createModerationRestoreCommands(
       if (!context.community) return { content: "Команда доступна только в сообществе." };
       const arg = context.args[0]?.replace(/^@/, "").toLowerCase();
       if (!arg) return { content: "Использование: /" + name + " @user" };
-      const target = identities.findUserByUsername(arg, context.platform) ?? memberships.getCommunityMemberships(context.community.id)
+      const target = identities.findUserByIdentity(context.platform, context.args[0]!) ?? identities.findUserByUsername(arg, context.platform) ?? memberships.getCommunityMemberships(context.community.id)
         .map((m) => identities.getUser(m.userId)).filter((u): u is NonNullable<typeof u> => Boolean(u))
         .find((u) => identities.getUserIdentities(u.id).some((i) => i.platform === context.platform && i.username?.toLowerCase() === arg));
       if (!target) return { content: "Участник не найден." };
