@@ -232,7 +232,7 @@ export class ModexaDatabase {
     return rows.map((row) => ({
       id: row.id,
       communityId: row.community_id,
-      action: row.action,
+      action: row.action as AuditAction,
       actorUserId: row.actor_user_id ?? undefined,
       targetUserId: row.target_user_id ?? undefined,
       channelId: row.channel_id ?? undefined,
