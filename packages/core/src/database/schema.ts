@@ -86,6 +86,25 @@ CREATE TABLE IF NOT EXISTS user_community_roles (
   PRIMARY KEY(user_id, role_id)
 );
 
+CREATE TABLE IF NOT EXISTS moderation_cases (
+  id TEXT PRIMARY KEY,
+  action TEXT NOT NULL,
+  actor_user_id TEXT NOT NULL REFERENCES users(id),
+  target_user_id TEXT NOT NULL REFERENCES users(id),
+  community_id TEXT NOT NULL REFERENCES communities(id) ON DELETE CASCADE,
+  platform TEXT NOT NULL,
+  community_external_id TEXT NOT NULL,
+  user_external_id TEXT NOT NULL,
+  duration_seconds INTEGER,
+  reason TEXT,
+  status TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  revoked_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_moderation_cases_community_created
+  ON moderation_cases(community_id, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS schema_meta (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
