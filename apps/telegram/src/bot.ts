@@ -227,14 +227,16 @@ export function createTelegramAdapter(
     );
   }
 
-  registry.register(
-    createRoleCommand(
-      identityService,
-      membershipService,
-      accessControlService,
-      memberDirectoryProxy
-    )
-  );
+  if (options.identityService && options.membershipService) {
+    registry.register(
+      createRoleCommand(
+        options.identityService,
+        options.membershipService,
+        accessControlService,
+        memberDirectoryProxy
+      )
+    );
+  }
 
   const commandService =
     new CommandService(
