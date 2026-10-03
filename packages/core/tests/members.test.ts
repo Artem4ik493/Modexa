@@ -146,10 +146,10 @@ describe("member commands", () => {
       "Page: 2/2"
     );
     expect(response.content).toContain(
-      "User 3"
+      "User 8"
     );
     expect(response.content).toContain(
-      "Target User"
+      "User 9"
     );
 
     const searchResponse =
