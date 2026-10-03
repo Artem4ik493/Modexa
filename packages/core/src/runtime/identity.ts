@@ -325,6 +325,7 @@ export class PlatformIdentityResolver {
       );
 
     if (existing) {
+      existing.externalId = external.externalId;
       return existing;
     }
 
