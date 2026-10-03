@@ -231,7 +231,7 @@ describe("Modexa core", () => {
       platform: "telegram" as const,
       user: { id: "u", displayName: "User", createdAt: new Date(), updatedAt: new Date() },
       community: { id: "c", name: "Community", mode: "public" as const, createdAt: new Date(), updatedAt: new Date() },
-      channel: { id: "ch", communityId: "c", name: "general", type: "text" as const, platform: "telegram" as const, externalId: "1", createdAt: new Date(), updatedAt: new Date() },
+      channel: { id: "ch", communityId: "c", name: "general", type: "discord_text" as const, platform: "telegram" as const, externalId: "1", createdAt: new Date(), updatedAt: new Date() },
       capabilities: ["commands", "community.view"] as const,
       locale: "ru" as const,
       correlationId: "test"
