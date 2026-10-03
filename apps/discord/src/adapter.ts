@@ -25,7 +25,8 @@ import {
   type Guild,
   type GuildMember,
   type Message,
-  type User
+  type User,
+  Routes
 } from "discord.js";
 
 import {
@@ -260,46 +261,197 @@ export class DiscordAdapter
     }
   }
 
+  private async fetchMemberFromApi(
+    guildId: string,
+    userId: string
+  ): Promise<{
+    id: string;
+    username: string;
+    globalName?: string;
+    avatar?: string | null;
+    roles: string[];
+    joinedAt?: Date;
+    pending?: boolean;
+  } | undefined> {
+    try {
+      const member =
+        (await this.client.rest.get(
+          Routes.guildMember(
+            guildId,
+            userId
+          )
+        )) as {
+          user?: {
+            id: string;
+            username: string;
+            global_name?: string | null;
+            avatar?: string | null;
+            bot?: boolean;
+          };
+          roles?: string[];
+          joined_at?: string | null;
+          pending?: boolean;
+        };
+
+      if (!member.user || member.user.bot) {
+        return undefined;
+      }
+
+      return {
+        id: member.user.id,
+        username: member.user.username,
+        globalName:
+          member.user.global_name ??
+          undefined,
+        avatar:
+          member.user.avatar ??
+          null,
+        roles:
+          member.roles ?? [],
+        joinedAt:
+          member.joined_at
+            ? new Date(member.joined_at)
+            : undefined,
+        pending: member.pending
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async getDiscordRoleNames(
+    guild: Guild,
+    roleIds: string[]
+  ): Promise<{
+    names: string[];
+    isAdmin: boolean;
+  }> {
+    try {
+      await guild.roles.fetch();
+    } catch {
+      // Use the roles already available in cache.
+    }
+
+    const names: string[] = [];
+    let isAdmin = false;
+
+    for (const roleId of roleIds) {
+      const role =
+        guild.roles.cache.get(roleId);
+
+      if (!role) {
+        continue;
+      }
+
+      names.push(role.name);
+
+      if (
+        role.permissions.has(
+          PermissionsBitField.Flags.Administrator
+        )
+      ) {
+        isAdmin = true;
+      }
+    }
+
+    return {
+      names,
+      isAdmin
+    };
+  }
+
+  private async toPlatformMemberDetailsFromApi(
+    guild: Guild,
+    data: {
+      id: string;
+      username: string;
+      globalName?: string;
+      avatar?: string | null;
+      roles: string[];
+      joinedAt?: Date;
+      pending?: boolean;
+    }
+  ): Promise<PlatformMemberDetails> {
+    const roleData =
+      await this.getDiscordRoleNames(
+        guild,
+        data.roles
+      );
+
+    const platformRole =
+      guild.ownerId === data.id
+        ? "owner"
+        : roleData.isAdmin
+          ? "admin"
+          : "member";
+
+    const avatarUrl =
+      data.avatar
+        ? `https://cdn.discordapp.com/avatars/${data.id}/${data.avatar}.png?size=512`
+        : undefined;
+
+    return {
+      user: {
+        platform: "discord",
+        externalId: data.id,
+        username: data.username,
+        displayName:
+          data.globalName ??
+          data.username,
+        avatarUrl,
+        platformRole
+      },
+      joinedAt: data.joinedAt,
+      roles: roleData.names,
+      status: data.pending
+        ? "pending"
+        : platformRole,
+      isMember: true
+    };
+  }
+
   async getMember(
     communityExternalId: string,
     userExternalId: string
   ): Promise<PlatformMemberDetails | undefined> {
+    const guild =
+      await this.client.guilds.fetch(
+        communityExternalId
+      );
+
+    const data =
+      await this.fetchMemberFromApi(
+        communityExternalId,
+        userExternalId
+      );
+
+    if (data) {
+      return this.toPlatformMemberDetailsFromApi(
+        guild,
+        data
+      );
+    }
+
     try {
-      const guild =
-        await this.client.guilds.fetch(
-          communityExternalId
+      const user =
+        await this.client.users.fetch(
+          userExternalId
         );
 
-      try {
-        const member =
-          await guild.members.fetch(
-            userExternalId
-          );
-
-        return this.toPlatformMemberDetails(
-          member
-        );
-      } catch {
-        const user =
-          await this.client.users.fetch(
-            userExternalId
-          );
-
-        if (user.bot) {
-          return undefined;
-        }
-
-        return {
-          user: this.toPlatformUser(
-            user,
-            undefined,
-            "member"
-          ),
-          roles: [],
-          status: "not_member",
-          isMember: false
-        };
+      if (user.bot) {
+        return undefined;
       }
+
+      return {
+        user: this.toPlatformUser(
+          user,
+          undefined,
+          "member"
+        ),
+        roles: [],
+        status: "not_member",
+        isMember: false
+      };
     } catch {
       return undefined;
     }
@@ -309,124 +461,198 @@ export class DiscordAdapter
     communityExternalId: string,
     username: string
   ): Promise<PlatformMemberDetails | undefined> {
-    const normalized = username.replace(/^@/, "").trim().toLowerCase();
+    const normalized =
+      username
+        .replace(/^@/, "")
+        .trim()
+        .toLowerCase();
 
     if (!normalized) {
       return undefined;
     }
 
-    try {
-      const guild =
-        await this.client.guilds.fetch(
-          communityExternalId
-        );
+    const guild =
+      await this.client.guilds.fetch(
+        communityExternalId
+      );
 
-      try {
-        const member =
-          await guild.members.fetch(
-            normalized
-          );
+    let after: string | undefined;
 
-        if (!member.user.bot) {
-          return this.toPlatformMemberDetails(
-            member
-          );
-        }
-      } catch {
-        // Not an external user id; fall back to username search.
+    do {
+      const query: Record<
+        string,
+        string
+      > = {
+        limit: "1000"
+      };
+
+      if (after) {
+        query.after = after;
       }
 
       const members =
-        await guild.members.fetch({
-          query: normalized,
-          limit: 10
-        });
+        (await this.client.rest.get(
+          Routes.guildMembers(
+            communityExternalId
+          ),
+          { query }
+        )) as Array<{
+          user?: {
+            id: string;
+            username: string;
+            global_name?: string | null;
+            avatar?: string | null;
+            bot?: boolean;
+          };
+          roles?: string[];
+          joined_at?: string | null;
+          pending?: boolean;
+        }>;
 
-      const exact = [...members.values()].find(
-        (member) =>
-          !member.user.bot &&
-          [
-            member.user.username,
-            member.user.globalName,
-            member.displayName,
-            member.nickname
-          ]
-            .filter(
-              (value): value is string =>
-                Boolean(value)
-            )
-            .some(
-              (value) =>
-                value.toLowerCase() === normalized
-            )
-      );
+      if (members.length === 0) {
+        break;
+      }
 
-      return exact
-        ? this.toPlatformMemberDetails(exact)
-        : undefined;
-    } catch {
-      return undefined;
-    }
+      const match =
+        members.find(
+          (member) =>
+            member.user &&
+            !member.user.bot &&
+            [
+              member.user.username,
+              member.user.global_name
+            ]
+              .filter(
+                (value): value is string =>
+                  Boolean(value)
+              )
+              .some(
+                (value) =>
+                  value.toLowerCase() ===
+                  normalized
+              )
+        );
+
+      if (match?.user) {
+        return this.toPlatformMemberDetailsFromApi(
+          guild,
+          {
+            id: match.user.id,
+            username:
+              match.user.username,
+            globalName:
+              match.user.global_name ??
+              undefined,
+            avatar:
+              match.user.avatar ??
+              null,
+            roles:
+              match.roles ?? [],
+            joinedAt:
+              match.joined_at
+                ? new Date(
+                    match.joined_at
+                  )
+                : undefined,
+            pending:
+              match.pending
+          }
+        );
+      }
+
+      after =
+        members.at(-1)?.user?.id;
+    } while (after);
+
+    return undefined;
   }
 
   async listMembers(
     communityExternalId: string
   ): Promise<PlatformMemberDetails[]> {
-    try {
-      const guild =
-        await this.client.guilds.fetch(
-          communityExternalId
-        );
+    const guild =
+      await this.client.guilds.fetch(
+        communityExternalId
+      );
+
+    const result: PlatformMemberDetails[] =
+      [];
+
+    let after: string | undefined;
+
+    do {
+      const query: Record<
+        string,
+        string
+      > = {
+        limit: "1000"
+      };
+
+      if (after) {
+        query.after = after;
+      }
 
       const members =
-        await guild.members.fetch();
+        (await this.client.rest.get(
+          Routes.guildMembers(
+            communityExternalId
+          ),
+          { query }
+        )) as Array<{
+          user?: {
+            id: string;
+            username: string;
+            global_name?: string | null;
+            avatar?: string | null;
+            bot?: boolean;
+          };
+          roles?: string[];
+          joined_at?: string | null;
+          pending?: boolean;
+        }>;
 
-      return [...members.values()]
-        .filter(
-          (member) =>
-            !member.user.bot
-        )
-        .map(
-          (member) =>
-            this.toPlatformMemberDetails(
-              member
-            )
+      if (members.length === 0) {
+        break;
+      }
+
+      for (const member of members) {
+        if (!member.user || member.user.bot) {
+          continue;
+        }
+
+        result.push(
+          await this.toPlatformMemberDetailsFromApi(
+            guild,
+            {
+              id: member.user.id,
+              username:
+                member.user.username,
+              globalName:
+                member.user.global_name ??
+                undefined,
+              avatar:
+                member.user.avatar ??
+                null,
+              roles:
+                member.roles ?? [],
+              joinedAt:
+                member.joined_at
+                  ? new Date(
+                      member.joined_at
+                    )
+                  : undefined,
+              pending:
+                member.pending
+            }
+          )
         );
-    } catch {
-      return [];
-    }
-  }
+      }
 
-  private toPlatformMemberDetails(
-    member: GuildMember
-  ): PlatformMemberDetails {
-    const platformRole =
-      member.guild.ownerId === member.id
-        ? "owner"
-        : this.hasAdministratorPermission(
-            member.permissions
-          )
-          ? "admin"
-          : "member";
+      after =
+        members.at(-1)?.user?.id;
+    } while (after);
 
-    return {
-      user: this.toPlatformUser(
-        member.user,
-        undefined,
-        platformRole
-      ),
-      joinedAt:
-        member.joinedAt ?? undefined,
-      roles:
-        member.roles.cache
-          .filter(
-            (role) =>
-              role.id !== member.guild.id
-          )
-          .map((role) => role.name),
-      status: platformRole,
-      isMember: true
-    };
+    return result;
   }
 
   async resolveUser(
