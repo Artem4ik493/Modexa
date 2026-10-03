@@ -18,6 +18,7 @@ export type ChannelType =
 export interface Channel {
   id: ChannelId;
   communityId: CommunityId;
+  externalId?: string;
   parentId?: ChannelId;
   name: string;
   type: ChannelType;
