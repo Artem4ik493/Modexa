@@ -261,7 +261,7 @@ export function createTelegramAdapter(
         options.communityService,
         moderationService,
         memberDirectoryProxy,
-        (action) => adapter.sendAction(action)
+        (action: import("@modexa/core").AdapterAction) => adapter.sendAction(action)
       )
     ) {
       registry.register(command);
@@ -342,7 +342,7 @@ export function createTelegramAdapter(
         options.communityService,
         moderationService,
         memberDirectoryProxy,
-        (action) => adapter.sendAction(action)
+        (action: import("@modexa/core").AdapterAction) => adapter.sendAction(action)
       )
     ) {
       registry.register(command);
