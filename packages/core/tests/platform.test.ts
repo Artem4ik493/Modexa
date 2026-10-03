@@ -232,7 +232,7 @@ describe("Modexa core", () => {
       user: { id: "u", displayName: "User", createdAt: new Date(), updatedAt: new Date() },
       community: { id: "c", name: "Community", mode: "public" as const, createdAt: new Date(), updatedAt: new Date() },
       channel: { id: "ch", communityId: "c", name: "general", type: "discord_text" as const, platform: "telegram" as const, externalId: "1", createdAt: new Date(), updatedAt: new Date() },
-      capabilities: ["commands", "community.view"] as const,
+      capabilities: ["commands", "community.view"],
       locale: "ru" as const,
       correlationId: "test"
     };
