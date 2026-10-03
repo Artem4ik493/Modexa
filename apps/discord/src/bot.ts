@@ -28,6 +28,7 @@ import {
   ModerationService,
   CommandSettingsService,
   createModerationCommands,
+  createModerationRestoreCommands,
   createPublicFeatureCommands,
   type MemberDirectory
 } from "@modexa/core";
@@ -303,6 +304,19 @@ export function createDiscordAdapter(
     communityService,
     moderationService,
     memberDirectoryProxy,
+    (action) => {
+      if (!adapter) throw new Error("Discord adapter is not ready");
+      return adapter.sendAction(action);
+    }
+  )) {
+    registry.register(command);
+  }
+
+  for (const command of createModerationRestoreCommands(
+    identityService,
+    membershipService,
+    communityService,
+    moderationService,
     (action) => {
       if (!adapter) throw new Error("Discord adapter is not ready");
       return adapter.sendAction(action);
