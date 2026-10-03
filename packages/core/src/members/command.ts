@@ -106,18 +106,17 @@ function ensureLocalMember(
       communityId
     ).length === 0
   ) {
-    const roles = accessControlService
-      .getCommunityRoles(communityId);
+    const roleId =
+      details.user.platformRole === "owner"
+        ? `${communityId}:owner`
+        : details.user.platformRole === "admin"
+          ? `${communityId}:admin`
+          : `${communityId}:member`;
 
-    const roleName =
-      details.user.platformRole === "owner" ||
-      details.user.platformRole === "admin"
-        ? "ADMIN"
-        : "MEMBER";
-
-    const role = roles.find(
-      (candidate) => candidate.name === roleName
-    );
+    const role =
+      accessControlService.getCommunityRole(
+        roleId
+      );
 
     if (role) {
       accessControlService.assignCommunityRole(
