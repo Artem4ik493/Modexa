@@ -214,6 +214,15 @@ export class DiscordAdapter
         return;
       }
 
+      case "channel.clear": {
+        const channel = await this.getSendableChannel(action.channelExternalId);
+        const messages = await channel.messages.fetch({ limit: Math.min(action.count, 100) });
+        if (messages.size > 0 && "bulkDelete" in channel) {
+          await channel.bulkDelete(messages, true);
+        }
+        return;
+      }
+
       case "message.delete": {
         const channel =
           await this.getSendableChannel(
