@@ -33,7 +33,8 @@ export class CommandService {
   constructor(
     private readonly parser: CommandParser,
     private readonly registry: CommandRegistry,
-    private readonly logger?: Logger
+    private readonly logger?: Logger,
+    private readonly commandSettings?: CommandSettingsService
   ) {}
 
   async handle(
@@ -119,6 +120,36 @@ export class CommandService {
               undefined,
               execution.locale
             )
+        }
+      };
+    }
+
+    const command =
+      this.registry.get(parsed.name);
+
+    if (
+      command &&
+      execution.community &&
+      this.commandSettings &&
+      command.name !== "help" &&
+      command.name !== "command" &&
+      !this.commandSettings.isEnabled(
+        execution.community.id,
+        command.name
+      )
+    ) {
+      this.logger?.debug(
+        "command.disabled",
+        {
+          ...diagnostics,
+          command: parsed.name
+        }
+      );
+
+      return {
+        handled: true,
+        response: {
+          content: "⛔ Эта команда отключена администратором сообщества."
         }
       };
     }
