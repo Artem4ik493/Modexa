@@ -49,7 +49,9 @@ export function createMemberCommand(
           t("member.platform", { platform: context.execution.platform }),
           t("member.roles", { roles: roles.length > 0 ? roles.join(", ") : t("member.no_roles") }),
           t("member.joined", { date: joinedText })
-        ].join("\n")
+        ].join("\n"),
+        imageUrl:
+          identity?.avatarUrl
       };
     }
   };
