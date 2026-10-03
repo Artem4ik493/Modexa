@@ -48,6 +48,10 @@ import type {
 } from "../types.js";
 
 import {
+  translate
+} from "../i18n/translate.js";
+
+import {
   createPlatformExecutionContext
 } from "./context.js";
 
@@ -58,6 +62,10 @@ import type {
 import type {
   BridgeService
 } from "../bridge/service.js";
+
+import type {
+  ModexaDatabase
+} from "../database/service.js";
 
 const EMPTY_CONTENT_FALLBACK =
   "…";
@@ -96,6 +104,9 @@ export interface PlatformEventHandlerDeps {
 
   bridgeService?:
     BridgeService;
+
+  database?:
+    ModexaDatabase;
 
   renderMetadata(
     response: BoundInteractionResponse
@@ -422,6 +433,35 @@ async function runCommand(
         executionContext.locale
     }
   );
+
+  if (
+    deps.database?.getSystemSetting(
+      "maintenance_mode"
+    ) === "true" &&
+    !executionContext.capabilities.includes(
+      "system.manage"
+    ) &&
+    !input.rawText.toLowerCase().startsWith(
+      "/system"
+    )
+  ) {
+    await responder.sendAction({
+      type: "message.send",
+      platform,
+      channelExternalId:
+        input.destinationExternalId,
+      content:
+        translate(
+          "system.maintenance.active",
+          undefined,
+          executionContext.locale
+        ),
+      replyToExternalId:
+        input.replyToExternalId
+    });
+
+    return;
+  }
 
   const result =
     await commandService.handle(
