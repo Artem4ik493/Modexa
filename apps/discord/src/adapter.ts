@@ -296,7 +296,8 @@ export class DiscordAdapter
             "member"
           ),
           roles: [],
-          status: "not_member"
+          status: "not_member",
+          isMember: false
         };
       }
     } catch {
@@ -423,7 +424,8 @@ export class DiscordAdapter
               role.id !== member.guild.id
           )
           .map((role) => role.name),
-      status: platformRole
+      status: platformRole,
+      isMember: true
     };
   }
 
