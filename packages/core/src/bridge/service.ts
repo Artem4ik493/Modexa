@@ -15,6 +15,10 @@ import type {
 } from "../communities/service.js";
 
 import type {
+  ModexaDatabase
+} from "../database/service.js";
+
+import type {
   BridgeEndpoint,
   BridgeLink,
   BridgeLinkRequest,
@@ -42,8 +46,22 @@ export interface CreateBridgeLinkRequestInput {
 
 export class BridgeService {
   constructor(
-    private readonly communityService?: CommunityService
-  ) {}
+    private readonly communityService?: CommunityService,
+    private readonly database?: ModexaDatabase
+  ) {
+    for (const endpoint of database?.getBridgeEndpoints() ?? []) {
+      this.endpoints.set(endpoint.id, endpoint);
+    }
+
+    for (const link of database?.getBridgeLinks() ?? []) {
+      this.links.set(link.id, link);
+    }
+
+    this.nextLinkId = this.getNextNumericId(
+      [...this.links.keys()],
+      "bridge-link-"
+    );
+  }
   private readonly endpoints = new Map<
     BridgeEndpointId,
     BridgeEndpoint
@@ -107,6 +125,8 @@ export class BridgeService {
         endpoint.updatedAt ??
         new Date();
 
+      this.database?.upsertBridgeEndpoint(existing);
+
       return existing;
     }
 
@@ -132,6 +152,8 @@ export class BridgeService {
       created.id,
       created
     );
+
+    this.database?.upsertBridgeEndpoint(created);
 
     return created;
   }
@@ -329,6 +351,8 @@ export class BridgeService {
       new Date(now);
 
     link.updatedAt = updated;
+
+    this.database?.deleteBridgeLink(linkId);
 
     return link;
   }
@@ -651,6 +675,8 @@ export class BridgeService {
       link
     );
 
+    this.database?.upsertBridgeLink(link);
+
     return {
       request,
       link,
@@ -897,6 +923,23 @@ export class BridgeService {
       communityExternalId,
       channelExternalId
     ].join(":");
+  }
+
+  private getNextNumericId(
+    ids: string[],
+    prefix: string
+  ): number {
+    let next = 1;
+
+    for (const id of ids) {
+      const value = Number(id.slice(prefix.length));
+
+      if (Number.isFinite(value)) {
+        next = Math.max(next, value + 1);
+      }
+    }
+
+    return next;
   }
 
   private expireIfNeeded(

@@ -24,6 +24,11 @@ import {
   MODEXA_DATABASE_SCHEMA
 } from "./schema.js";
 
+import type {
+  BridgeEndpoint,
+  BridgeLink
+} from "../bridge/types.js";
+
 export interface DatabaseOptions {
   path: string;
 }
@@ -229,6 +234,120 @@ export class ModexaDatabase {
     this.database.prepare(
       "DELETE FROM identities WHERE id = ?"
     ).run(identityId);
+  }
+
+  upsertBridgeEndpoint(
+    endpoint: BridgeEndpoint
+  ): void {
+    this.database.prepare(
+      `INSERT INTO bridge_endpoints
+       (id, platform, community_external_id, community_name,
+        channel_external_id, channel_name, community_id, channel_id, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         platform = excluded.platform,
+         community_external_id = excluded.community_external_id,
+         community_name = excluded.community_name,
+         channel_external_id = excluded.channel_external_id,
+         channel_name = excluded.channel_name,
+         community_id = excluded.community_id,
+         channel_id = excluded.channel_id,
+         updated_at = excluded.updated_at`
+    ).run(
+      endpoint.id,
+      endpoint.platform,
+      endpoint.communityExternalId,
+      endpoint.communityName,
+      endpoint.channelExternalId,
+      endpoint.channelName,
+      endpoint.communityId ?? null,
+      endpoint.channelId ?? null,
+      endpoint.updatedAt.toISOString()
+    );
+  }
+
+  getBridgeEndpoints(): BridgeEndpoint[] {
+    const rows =
+      this.database.prepare(
+        `SELECT id, platform, community_external_id, community_name,
+                channel_external_id, channel_name, community_id, channel_id, updated_at
+         FROM bridge_endpoints
+         ORDER BY id`
+      ).all() as Array<{
+        id: string;
+        platform: "telegram" | "discord";
+        community_external_id: string;
+        community_name: string;
+        channel_external_id: string;
+        channel_name: string;
+        community_id: string | null;
+        channel_id: string | null;
+        updated_at: string;
+      }>;
+
+    return rows.map((row) => ({
+      id: row.id,
+      platform: row.platform,
+      communityExternalId: row.community_external_id,
+      communityName: row.community_name,
+      channelExternalId: row.channel_external_id,
+      channelName: row.channel_name,
+      communityId: row.community_id ?? undefined,
+      channelId: row.channel_id ?? undefined,
+      updatedAt: new Date(row.updated_at)
+    }));
+  }
+
+  upsertBridgeLink(
+    link: BridgeLink
+  ): void {
+    this.database.prepare(
+      `INSERT INTO bridge_links
+       (id, source_endpoint_id, target_endpoint_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         source_endpoint_id = excluded.source_endpoint_id,
+         target_endpoint_id = excluded.target_endpoint_id,
+         created_at = excluded.created_at,
+         updated_at = excluded.updated_at`
+    ).run(
+      link.id,
+      link.sourceEndpointId,
+      link.targetEndpointId,
+      link.createdAt.toISOString(),
+      link.updatedAt.toISOString()
+    );
+  }
+
+  getBridgeLinks(): BridgeLink[] {
+    const rows =
+      this.database.prepare(
+        `SELECT id, source_endpoint_id, target_endpoint_id, created_at, updated_at
+         FROM bridge_links
+         ORDER BY id`
+      ).all() as Array<{
+        id: string;
+        source_endpoint_id: string;
+        target_endpoint_id: string;
+        created_at: string;
+        updated_at: string;
+      }>;
+
+    return rows.map((row) => ({
+      id: row.id,
+      sourceEndpointId: row.source_endpoint_id,
+      targetEndpointId: row.target_endpoint_id,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
+    }));
+  }
+
+  deleteBridgeLink(
+    linkId: string
+  ): void {
+    this.database.prepare(
+      "DELETE FROM bridge_links WHERE id = ?"
+    ).run(linkId);
   }
 
   getIdentityByExternalId(

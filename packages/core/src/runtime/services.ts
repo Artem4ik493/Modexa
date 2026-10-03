@@ -112,7 +112,8 @@ export function createRuntimeServices(
 
   const bridgeService =
     new BridgeService(
-      communityService
+      communityService,
+      database
     );
 
   const identityResolver =

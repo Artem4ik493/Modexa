@@ -91,6 +91,27 @@ CREATE TABLE IF NOT EXISTS schema_meta (
   value TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS bridge_endpoints (
+  id TEXT PRIMARY KEY,
+  platform TEXT NOT NULL,
+  community_external_id TEXT NOT NULL,
+  community_name TEXT NOT NULL,
+  channel_external_id TEXT NOT NULL,
+  channel_name TEXT NOT NULL,
+  community_id TEXT,
+  channel_id TEXT,
+  updated_at TEXT NOT NULL,
+  UNIQUE(platform, community_external_id, channel_external_id)
+);
+
+CREATE TABLE IF NOT EXISTS bridge_links (
+  id TEXT PRIMARY KEY,
+  source_endpoint_id TEXT NOT NULL REFERENCES bridge_endpoints(id) ON DELETE CASCADE,
+  target_endpoint_id TEXT NOT NULL REFERENCES bridge_endpoints(id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS system_settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
