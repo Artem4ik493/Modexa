@@ -38,6 +38,7 @@ export interface PersistedIdentity {
   externalId: string;
   username?: string;
   displayName?: string;
+  avatarUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
