@@ -73,7 +73,7 @@ const server = createServer((req, res) => {
       json(res, 200, { items: database.getCommandSettings(communityId) });
       return;
     }
-\n    if (url.pathname === "/api/communities" && req.method === "GET") {
+    if (url.pathname === "/api/communities" && req.method === "GET") {
       json(res, 200, { items: database.getCommunitiesSnapshot() });
       return;
     }
