@@ -14,6 +14,7 @@ import {
   createMembersCommand,
   createRoleCommand,
   createModerationCommands,
+  createModerationRestoreCommands,
   ModerationService,
   CommandSettingsService,
   createPublicFeatureCommands,
@@ -182,8 +183,20 @@ export function createTelegramAdapter(
   const moderationService =
     options.moderationService ??
     new ModerationService(
-      accessControlService
+      accessControlService,
+      options.database
     );
+
+  const commandSettingsService =
+    options.commandSettingsService ??
+    new CommandSettingsService(options.database);
+
+  const adapter =
+    new TelegramAdapter(
+      bot
+    );
+
+  memberDirectory = adapter;
 
   createBuiltinCommands(
     registry,
@@ -299,8 +312,7 @@ export function createTelegramAdapter(
     new CommandService(
       new CommandParser(),
       registry,
-      logger,
-      commandSettingsService
+      logger
     );
 
   const store =
@@ -350,13 +362,6 @@ export function createTelegramAdapter(
     "menu.close",
     () => ({ close: true })
   );
-
-  const adapter =
-    new TelegramAdapter(
-      bot
-    );
-
-  memberDirectory = adapter;
 
   if (
     options.identityService &&
