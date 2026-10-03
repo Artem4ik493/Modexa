@@ -97,27 +97,68 @@ export function createTelegramAdapter(
   let memberDirectory:
     MemberDirectory | undefined;
 
+  const resolveTelegramChatId = (
+    communityId: string
+  ): string | undefined =>
+    options.communityService
+      ?.getCommunityIdentities(
+        communityId
+      )
+      .find(
+        (identity) =>
+          identity.platform === "telegram"
+      )
+      ?.externalId;
+
   const memberDirectoryProxy: MemberDirectory = {
     getMember(
-      communityExternalId,
+      communityId,
       userExternalId
     ) {
-      return (
-        memberDirectory?.getMember(
-          communityExternalId,
-          userExternalId
-        ) ?? Promise.resolve(undefined)
-      );
+      const chatId =
+        resolveTelegramChatId(
+          communityId
+        );
+
+      return chatId && memberDirectory
+        ? memberDirectory.getMember(
+            chatId,
+            userExternalId
+          )
+        : Promise.resolve(undefined);
     },
 
     listMembers(
-      communityExternalId
+      communityId
     ) {
-      return (
-        memberDirectory?.listMembers(
-          communityExternalId
-        ) ?? Promise.resolve([])
-      );
+      const chatId =
+        resolveTelegramChatId(
+          communityId
+        );
+
+      return chatId && memberDirectory
+        ? memberDirectory.listMembers(
+            chatId
+          )
+        : Promise.resolve([]);
+    },
+
+    findMemberByUsername(
+      communityId,
+      username
+    ) {
+      const chatId =
+        resolveTelegramChatId(
+          communityId
+        );
+
+      return chatId &&
+        memberDirectory?.findMemberByUsername
+        ? memberDirectory.findMemberByUsername(
+            chatId,
+            username
+          )
+        : Promise.resolve(undefined);
     }
   };
 
