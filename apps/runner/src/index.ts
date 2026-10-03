@@ -120,6 +120,9 @@ if (telegramToken) {
         moderationService:
           services.moderationService,
 
+        commandSettingsService:
+          services.commandSettingsService,
+
         database:
           database
       }
