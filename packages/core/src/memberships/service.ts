@@ -125,6 +125,84 @@ export class MembershipService {
     );
   }
 
+  moveUsers(
+    sourceUserIds: UserId[],
+    targetUserId: UserId,
+    now = new Date()
+  ): void {
+    const sourceIds =
+      new Set(sourceUserIds);
+
+    for (const sourceUserId of sourceIds) {
+      const sourceMemberships =
+        this.getUserMemberships(
+          sourceUserId
+        );
+
+      for (const sourceMembership of sourceMemberships) {
+        const targetMembership =
+          this.findMembership(
+            targetUserId,
+            sourceMembership.communityId
+          );
+
+        if (targetMembership) {
+          if (
+            sourceMembership.status === "banned" ||
+            targetMembership.status === "left"
+          ) {
+            targetMembership.status =
+              sourceMembership.status;
+          }
+
+          if (
+            sourceMembership.joinedAt <
+            targetMembership.joinedAt
+          ) {
+            targetMembership.joinedAt =
+              sourceMembership.joinedAt;
+          }
+
+          targetMembership.updatedAt =
+            now;
+
+          this.memberships.delete(
+            sourceMembership.id
+          );
+
+          this.membershipIndex.delete(
+            this.getMembershipKey(
+              sourceUserId,
+              sourceMembership.communityId
+            )
+          );
+
+          continue;
+        }
+
+        this.membershipIndex.delete(
+          this.getMembershipKey(
+            sourceUserId,
+            sourceMembership.communityId
+          )
+        );
+
+        sourceMembership.userId =
+          targetUserId;
+        sourceMembership.updatedAt =
+          now;
+
+        this.membershipIndex.set(
+          this.getMembershipKey(
+            targetUserId,
+            sourceMembership.communityId
+          ),
+          sourceMembership.id
+        );
+      }
+    }
+  }
+
   updateStatus(
     membershipId: string,
     status: MembershipStatus,

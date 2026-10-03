@@ -246,15 +246,16 @@ function handleLink(
   return {
     content: [
       t("link.success.created"),
-      t("link.code", {
-        code:
-          session.code
-      }),
       t("link.target", {
         platform:
           platformLabel(target)
       }),
+      t("link.command", {
+        code:
+          session.code
+      }),
       t("link.expires")
-    ].join("\n")
+    ].join("\n"),
+    format: "markdown"
   };
 }

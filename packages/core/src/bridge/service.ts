@@ -29,7 +29,7 @@ export interface BridgeMessageGateway {
   }): Promise<void>;
 }
 
-const BRIDGE_RELAY_MARKER = "\u2063MODExaBridge\u2063";
+const BRIDGE_RELAY_MARKER = "\u2063\u200B\u2063";
 
 export interface CreateBridgeLinkRequestInput {
   sourceEndpointId: BridgeEndpointId;

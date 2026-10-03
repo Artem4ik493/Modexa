@@ -7,6 +7,14 @@ import {
 } from "./service.js";
 
 import type {
+  AccessControlService
+} from "../access/service.js";
+
+import type {
+  MembershipService
+} from "../memberships/service.js";
+
+import type {
   ExternalIdentity,
   IdentityLinkSession,
   IdentityPlatform
@@ -28,7 +36,9 @@ export interface CompleteIdentityLinkResult {
 export class IdentityLinkingService {
   constructor(
     private readonly identityService: IdentityService,
-    private readonly linkService: IdentityLinkService
+    private readonly linkService: IdentityLinkService,
+    private readonly accessControlService?: AccessControlService,
+    private readonly membershipService?: MembershipService
   ) {}
 
   completeLink(
@@ -59,20 +69,49 @@ export class IdentityLinkingService {
         input.targetExternalId
       );
 
-    if (
-      existingUser &&
-      existingUser.id !== session.userId
-    ) {
-      this.identityService.mergeUsers(
-        session.userId,
-        existingUser.id,
-        now
+    const sourceUser =
+      this.identityService.getUser(
+        session.userId
+      );
+
+    if (!sourceUser) {
+      throw new Error(
+        "Identity link source user does not exist"
       );
     }
 
+    const sourceUserIds = [
+      session.userId,
+      ...(existingUser &&
+      existingUser.id !== session.userId
+        ? [existingUser.id]
+        : [])
+    ];
+
+    const linkedUser =
+      this.identityService.createLinkedUser(
+        sourceUserIds,
+        {
+          displayName:
+            sourceUser.displayName,
+          now
+        }
+      );
+
+    this.accessControlService?.moveUsers(
+      sourceUserIds,
+      linkedUser.id
+    );
+
+    this.membershipService?.moveUsers(
+      sourceUserIds,
+      linkedUser.id,
+      now
+    );
+
     const identity =
       this.identityService.attachIdentity({
-        userId: session.userId,
+        userId: linkedUser.id,
         platform: session.targetPlatform,
         externalId: input.targetExternalId,
         username: input.targetUsername,

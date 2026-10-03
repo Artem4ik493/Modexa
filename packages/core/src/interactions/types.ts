@@ -52,6 +52,8 @@ export interface InteractionMenu {
 export interface InteractionResponse {
   content?: string;
 
+  format?: "plain" | "markdown";
+
   imageUrl?: string;
 
   buttons?: InteractionButton[];
@@ -125,6 +127,8 @@ export interface BoundInteractionMenu
 
 export interface BoundInteractionResponse {
   content?: string;
+
+  format?: "plain" | "markdown";
 
   imageUrl?: string;
 

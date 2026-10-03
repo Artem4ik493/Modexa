@@ -1,3 +1,7 @@
+import {
+  randomUUID
+} from "node:crypto";
+
 import type {
   ExternalIdentity,
   ExternalIdentityId,
@@ -10,6 +14,7 @@ import type { ModexaDatabase } from "../database/service.js";
 
 export interface CreateUserInput {
   displayName: string;
+  avatarUrl?: string;
   now?: Date;
 }
 
@@ -24,15 +29,12 @@ export interface AttachIdentityInput {
 }
 
 export class IdentityService {
-  private nextUserId = 1;
   private nextIdentityId = 1;
 
   constructor(
     private readonly database?: ModexaDatabase
   ) {
     if (database) {
-      this.nextUserId =
-        database.getNextUserId();
       this.nextIdentityId =
         database.getNextIdentityId();
     }
@@ -53,7 +55,7 @@ export class IdentityService {
     const now = input.now ?? new Date();
 
     const user: User = {
-      id: `user-${this.nextUserId++}`,
+      id: `mx_${randomUUID()}`,
       displayName: input.displayName,
       avatarUrl: input.avatarUrl,
       createdAt: now,
@@ -62,6 +64,81 @@ export class IdentityService {
 
     this.users.set(user.id, user);
     this.database?.createUser(user);
+
+    return user;
+  }
+
+  createLinkedUser(
+    userIds: UserId[],
+    input: {
+      displayName?: string;
+      avatarUrl?: string;
+      now?: Date;
+    } = {}
+  ): User {
+    const sourceUserIds = [
+      ...new Set(userIds)
+    ];
+
+    if (sourceUserIds.length === 0) {
+      throw new Error(
+        "At least one user is required to create a linked user"
+      );
+    }
+
+    const sourceUsers =
+      sourceUserIds.map(
+        (userId) => {
+          const user =
+            this.users.get(userId);
+
+          if (!user) {
+            throw new Error(
+              `User "${userId}" does not exist`
+            );
+          }
+
+          return user;
+        }
+      );
+
+    const now =
+      input.now ?? new Date();
+
+    const user =
+      this.createUser({
+        displayName:
+          input.displayName ??
+          sourceUsers[0]!.displayName,
+        avatarUrl:
+          input.avatarUrl,
+        now
+      });
+
+    for (const sourceUser of sourceUsers) {
+      for (
+        const identity of
+          this.getUserIdentities(
+            sourceUser.id
+          )
+      ) {
+        identity.userId =
+          user.id;
+        identity.updatedAt =
+          now;
+      }
+    }
+
+    this.database?.reassignUserReferences(
+      sourceUserIds,
+      user.id
+    );
+
+    for (const sourceUserId of sourceUserIds) {
+      this.users.delete(
+        sourceUserId
+      );
+    }
 
     return user;
   }

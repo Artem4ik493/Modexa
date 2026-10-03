@@ -199,6 +199,62 @@ export class AccessControlService {
       );
   }
 
+  moveUsers(
+    sourceUserIds: UserId[],
+    targetUserId: UserId
+  ): void {
+    const sourceIds =
+      new Set(sourceUserIds);
+
+    for (const assignment of this.userSystemRoles) {
+      if (sourceIds.has(assignment.userId)) {
+        assignment.userId =
+          targetUserId;
+      }
+    }
+
+    const systemKeys =
+      new Set<string>();
+
+    for (let index = this.userSystemRoles.length - 1; index >= 0; index--) {
+      const assignment =
+        this.userSystemRoles[index]!;
+
+      const key =
+        `${assignment.userId}:${assignment.roleId}`;
+
+      if (systemKeys.has(key)) {
+        this.userSystemRoles.splice(index, 1);
+      } else {
+        systemKeys.add(key);
+      }
+    }
+
+    for (const assignment of this.userCommunityRoles) {
+      if (sourceIds.has(assignment.userId)) {
+        assignment.userId =
+          targetUserId;
+      }
+    }
+
+    const communityKeys =
+      new Set<string>();
+
+    for (let index = this.userCommunityRoles.length - 1; index >= 0; index--) {
+      const assignment =
+        this.userCommunityRoles[index]!;
+
+      const key =
+        `${assignment.userId}:${assignment.communityRoleId}`;
+
+      if (communityKeys.has(key)) {
+        this.userCommunityRoles.splice(index, 1);
+      } else {
+        communityKeys.add(key);
+      }
+    }
+  }
+
   hasSystemRole(
     userId: UserId,
     roleId: string

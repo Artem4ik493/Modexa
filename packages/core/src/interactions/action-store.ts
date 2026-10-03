@@ -193,6 +193,9 @@ export class InteractionActionStore {
 
     return {
       content: response.content,
+      ...(response.format
+        ? { format: response.format }
+        : {}),
       ...(response.imageUrl
         ? { imageUrl: response.imageUrl }
         : {}),

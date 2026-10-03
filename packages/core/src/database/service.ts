@@ -1,4 +1,8 @@
 import {
+  randomUUID
+} from "node:crypto";
+
+import {
   mkdirSync
 } from "node:fs";
 
@@ -60,6 +64,7 @@ export class ModexaDatabase {
     );
 
     this.ensureMigrations();
+    this.migrateLegacyUserIds();
 
     this.seedSystemRole(
       MODEXA_OWNER_ROLE
@@ -376,6 +381,93 @@ export class ModexaDatabase {
       .run(userId, roleId);
   }
 
+  reassignUserReferences(
+    sourceUserIds: string[],
+    targetUserId: string
+  ): void {
+    const sourceIds = [
+      ...new Set(
+        sourceUserIds.filter(
+          (userId) =>
+            userId !== targetUserId
+        )
+      )
+    ];
+
+    if (sourceIds.length === 0) {
+      return;
+    }
+
+    this.database.exec("BEGIN");
+
+    try {
+      for (const sourceUserId of sourceIds) {
+        this.database.prepare(
+          `UPDATE identities
+           SET user_id = ?
+           WHERE user_id = ?`
+        ).run(
+          targetUserId,
+          sourceUserId
+        );
+
+        this.database.prepare(
+          `INSERT OR IGNORE INTO memberships
+           (id, user_id, community_id, status, joined_at, updated_at)
+           SELECT id, ?, community_id, status, joined_at, updated_at
+           FROM memberships
+           WHERE user_id = ?`
+        ).run(
+          targetUserId,
+          sourceUserId
+        );
+
+        this.database.prepare(
+          "DELETE FROM memberships WHERE user_id = ?"
+        ).run(sourceUserId);
+
+        this.database.prepare(
+          `INSERT OR IGNORE INTO user_system_roles
+           (user_id, role_id)
+           SELECT ?, role_id
+           FROM user_system_roles
+           WHERE user_id = ?`
+        ).run(
+          targetUserId,
+          sourceUserId
+        );
+
+        this.database.prepare(
+          "DELETE FROM user_system_roles WHERE user_id = ?"
+        ).run(sourceUserId);
+
+        this.database.prepare(
+          `INSERT OR IGNORE INTO user_community_roles
+           (user_id, role_id)
+           SELECT ?, role_id
+           FROM user_community_roles
+           WHERE user_id = ?`
+        ).run(
+          targetUserId,
+          sourceUserId
+        );
+
+        this.database.prepare(
+          "DELETE FROM user_community_roles WHERE user_id = ?"
+        ).run(sourceUserId);
+
+        this.database.prepare(
+          "DELETE FROM users WHERE id = ?"
+        ).run(sourceUserId);
+      }
+
+      this.database.exec("COMMIT");
+    } catch (error) {
+      this.database.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
   getDatabasePath(): string {
     const row =
       this.database.prepare(
@@ -440,6 +532,42 @@ export class ModexaDatabase {
 
   close(): void {
     this.database.close();
+  }
+
+  private migrateLegacyUserIds(): void {
+    const rows =
+      this.database.prepare(
+        `SELECT id, display_name, created_at, updated_at
+         FROM users
+         WHERE id LIKE 'user-%'
+         ORDER BY id`
+      ).all() as Array<{
+        id: string;
+        display_name: string;
+        created_at: string;
+        updated_at: string;
+      }>;
+
+    for (const row of rows) {
+      const newUserId =
+        `mx_${randomUUID()}`;
+
+      this.database.prepare(
+        `INSERT INTO users
+         (id, display_name, created_at, updated_at)
+         VALUES (?, ?, ?, ?)`
+      ).run(
+        newUserId,
+        row.display_name,
+        row.created_at,
+        row.updated_at
+      );
+
+      this.reassignUserReferences(
+        [row.id],
+        newUserId
+      );
+    }
   }
 
   private ensureMigrations(): void {

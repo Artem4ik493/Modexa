@@ -74,12 +74,6 @@ export function createRuntimeServices(
   const identityLinkService =
     new IdentityLinkService();
 
-  const identityLinkingService =
-    new IdentityLinkingService(
-      identityService,
-      identityLinkService
-    );
-
   const communityService =
     new CommunityService();
 
@@ -95,6 +89,14 @@ export function createRuntimeServices(
   accessControlService.registerSystemRole(
     MODEXA_OWNER_ROLE
   );
+
+  const identityLinkingService =
+    new IdentityLinkingService(
+      identityService,
+      identityLinkService,
+      accessControlService,
+      membershipService
+    );
 
   const communityAccessService =
     new CommunityAccessService(

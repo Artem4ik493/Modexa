@@ -205,7 +205,8 @@ function handleSystem(
 }
 
 function handleAccount(
-  context: CommandContext
+  context: CommandContext,
+  identityService?: IdentityService
 ): CommandResponse {
   const { execution } = context;
 
@@ -223,15 +224,72 @@ function handleAccount(
     };
   }
 
+  const identity =
+    identityService
+      ?.getUserIdentities(
+        execution.user.id
+      )
+      .find(
+        (item) =>
+          item.platform ===
+          execution.platform
+      );
+
+  const linkedIdentity =
+    identityService
+      ?.getUserIdentities(
+        execution.user.id
+      )
+      .find(
+        (item) =>
+          item.platform !==
+          execution.platform
+      );
+
+  const username =
+    identity?.username
+      ? `@${identity.username}`
+      : "—";
+
+  const platformId =
+    identity?.externalId ??
+    execution.user.id;
+
   return {
     content: [
       t("account.title"),
       t("account.name", {
         name: execution.user.displayName
       }),
-      t("account.id", {
-        id: execution.user.id
+      t("account.username", {
+        username
       }),
+      t("account.platform", {
+        platform:
+          execution.platform
+      }),
+      t("account.platform_id", {
+        id: platformId
+      }),
+      t("account.status", {
+        status: t(
+          linkedIdentity
+            ? "account.status.linked"
+            : "account.status.unlinked"
+        )
+      }),
+      ...(linkedIdentity
+        ? [
+            t("account.linked_account", {
+              platform:
+                linkedIdentity.platform,
+              username:
+                linkedIdentity.username
+                  ? `@${linkedIdentity.username}`
+                  : linkedIdentity.externalId
+            })
+          ]
+        : []),
       t("account.context", {
         context: t(
           execution.type === "dm"
@@ -396,7 +454,11 @@ export function createBuiltinCommands(
       descriptionKey:
         "command.account.description",
       requiredCapabilities: ["account.manage"],
-      handler: handleAccount
+      handler: (context) =>
+        handleAccount(
+          context,
+          identityService
+        )
     },
     {
       name: "system",
