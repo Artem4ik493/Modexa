@@ -206,6 +206,8 @@ describe("Modexa core", () => {
     expect(reopened.getCommunitiesSnapshot().some((item) => item.id === community.id && item.mode === "private")).toBe(true);
     expect(reopened.getMembershipsSnapshot(community.id)).toHaveLength(1);
     expect(reopened.isCommandEnabled(community.id, "stats")).toBe(false);
+    db.close();
+    reopened.close();
   });
 
   it("enforces command settings at the command service boundary", async () => {
@@ -213,6 +215,8 @@ describe("Modexa core", () => {
     tempDirs.push(dir);
     const db = new ModexaDatabase({ path: join(dir, "commands.sqlite") });
     const settings = new CommandSettingsService(db);
+    const communities = new CommunityService(db);
+    const community = communities.createCommunity({ name: "Command settings community" });
     const registry = new CommandRegistry();
     registry.register({
       name: "ping",
@@ -230,19 +234,20 @@ describe("Modexa core", () => {
       type: "community" as const,
       platform: "telegram" as const,
       user: { id: "u", displayName: "User", createdAt: new Date(), updatedAt: new Date() },
-      community: { id: "c", name: "Community", mode: "public" as const, createdAt: new Date(), updatedAt: new Date() },
-      channel: { id: "ch", communityId: "c", name: "general", type: "discord_text" as const, platform: "telegram" as const, externalId: "1", createdAt: new Date(), updatedAt: new Date() },
+      community: { id: community.id, name: "Community", mode: "public" as const, createdAt: new Date(), updatedAt: new Date() },
+      channel: { id: "ch", communityId: community.id, name: "general", type: "discord_text" as const, platform: "telegram" as const, externalId: "1", createdAt: new Date(), updatedAt: new Date() },
       capabilities: ["commands", "community.view"],
       locale: "ru" as const,
       correlationId: "test"
     };
 
-    settings.setEnabled("c", "ping", false);
+    settings.setEnabled(community.id, "ping", false);
     const result = await service.handle("/ping", { platform: execution.platform, user: execution.user, community: execution.community, channel: execution.channel, execution }, execution);
     expect(result.response?.content).toContain("отключена");
 
-    settings.setEnabled("c", "ping", true);
+    settings.setEnabled(community.id, "ping", true);
     const enabled = await service.handle("/ping", { platform: execution.platform, user: execution.user, community: execution.community, channel: execution.channel, execution }, execution);
     expect(enabled.response?.content).toBe("pong");
+    db.close();
   });
 });
