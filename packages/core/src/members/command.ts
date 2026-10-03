@@ -456,7 +456,9 @@ export function createMembersCommand(
               ? ` · ${nativeRoles.join(", ")}`
               : "";
 
-          return `${start + index + 1}. ${username} — ${roles.length > 0 ? roles.join(", ") : t("member.no_roles")}${nativeSuffix}`;
+          const displayName = item.user.displayName && item.user.displayName !== username ? ` (${item.user.displayName})` : "";
+
+          return `${start + index + 1}. ${username}${displayName} — ${roles.length > 0 ? roles.join(", ") : t("member.no_roles")}${nativeSuffix}`;
         });
 
       const pageText =
