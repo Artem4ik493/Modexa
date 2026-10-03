@@ -16,7 +16,9 @@ export type ModerationActionExecutor = (
   action: AdapterAction
 ) => Promise<void>;
 
-const MODERATION_CAPABILITIES: ExecutionCapability[] = ["moderation"];\n\nconst ACTIONS: ModerationActionType[] = [
+const MODERATION_CAPABILITIES: ExecutionCapability[] = ["moderation"];
+
+const ACTIONS: ModerationActionType[] = [
   "warn",
   "mute",
   "kick",
