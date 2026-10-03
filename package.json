@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "pnpm --filter @modexa/runner dev",
+    "dev": "pnpm build:core && node scripts/dev.mjs",
     "build:core": "tsc -p packages/core/tsconfig.json",
     "build:api": "tsc -p apps/api/tsconfig.json",
     "build:runner": "tsc -p apps/runner/tsconfig.json",
