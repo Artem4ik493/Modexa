@@ -264,6 +264,19 @@ export class DiscordAdapter
         return;
       }
 
+      case "member.unmute": {
+        const guild = await this.client.guilds.fetch(action.communityExternalId);
+        const member = await guild.members.fetch(action.userExternalId);
+        await member.timeout(null);
+        return;
+      }
+
+      case "member.unban":
+        await this.client.guilds
+          .fetch(action.communityExternalId)
+          .then((guild) => guild.bans.remove(action.userExternalId));
+        return;
+
       case "member.ban": {
         const guild =
           await this.client.guilds.fetch(
