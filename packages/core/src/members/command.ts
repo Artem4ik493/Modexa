@@ -166,54 +166,62 @@ function renderMemberDetails(
 
   return {
     content: [
-      t("member.title"),
-      t("member.name", {
-        name: user.displayName
-      }),
-      t("member.id", {
-        id: user.id
-      }),
-      t("member.username", {
-        username: identity?.username
-          ? `@${identity.username}`
-          : "—"
-      }),
-      t("member.platform", {
-        platform:
-          platformLabel(
-            context.execution.platform
-          )
-      }),
-      t("member.roles", {
-        roles:
-          roles.length > 0
-            ? roles.join(", ")
-            : t("member.no_roles")
-      }),
-      t("member.joined", {
-        date: formatDate(
-          membership?.joinedAt,
-          context.execution.locale ?? "ru"
-        )
-      }),
-      t("member.platform_roles", {
-        roles:
-          nativeRoles.length > 0
-            ? nativeRoles.join(", ")
-            : t("member.no_platform_roles")
-      }),
-      t("member.platform_joined", {
-        date: formatDate(
-          native?.joinedAt,
-          context.execution.locale ?? "ru"
-        )
-      }),
-      t("member.platform_status", {
-        status: native?.status ?? "—"
-      })
+      `## 👤 ${user.displayName}`,
+      identity?.username
+        ? `> @${identity.username}`
+        : `> ${t("member.username", { username: "—" })}`,
+      "",
+      `**🆔 ID Modexa:** \`${user.id}\``,
+      `**🌐 Платформа:** ${platformLabel(
+        context.execution.platform
+      )}`,
+      `**🛡 Роли Modexa:** ${roles.length > 0
+        ? roles.join(", ")
+        : t("member.no_roles")}`,
+      `**📅 В Modexa:** ${formatDate(
+        membership?.joinedAt,
+        context.execution.locale ?? "ru"
+      )}`,
+      "",
+      `**🎭 Роли платформы:** ${nativeRoles.length > 0
+        ? nativeRoles.join(", ")
+        : t("member.no_platform_roles")}`,
+      `**📅 В платформе:** ${formatDate(
+        native?.joinedAt,
+        context.execution.locale ?? "ru"
+      )}`,
+      `**🟢 Статус:** ${native?.status ?? "—"}`
     ].join("\n"),
+    format: "markdown",
     imageUrl:
-      identity?.avatarUrl
+      identity?.avatarUrl,
+    buttons: [
+      {
+        id: "member.refresh",
+        label:
+          context.execution.locale === "en"
+            ? "🔄 Refresh"
+            : "🔄 Обновить",
+        action: {
+          type: "command",
+          command: "member",
+          args: [
+            identity?.externalId ?? user.id
+          ]
+        }
+      },
+      {
+        id: "member.list",
+        label:
+          context.execution.locale === "en"
+            ? "👥 Members"
+            : "👥 Участники",
+        action: {
+          type: "command",
+          command: "members"
+        }
+      }
+    ]
   };
 }
 
