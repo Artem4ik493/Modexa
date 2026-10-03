@@ -58,6 +58,8 @@ export class ModexaDatabase {
       MODEXA_DATABASE_SCHEMA
     );
 
+    this.ensureMigrations();
+
     this.seedSystemRole(
       MODEXA_OWNER_ROLE
     );
@@ -179,8 +181,8 @@ export class ModexaDatabase {
   createIdentity(identity: PersistedIdentity): void {
     this.database.prepare(
       `INSERT INTO identities
-       (id, user_id, platform, external_id, username, display_name, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+       (id, user_id, platform, external_id, username, display_name, avatar_url, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       identity.id,
       identity.userId,
@@ -188,6 +190,7 @@ export class ModexaDatabase {
       identity.externalId,
       identity.username ?? null,
       identity.displayName ?? null,
+      identity.avatarUrl ?? null,
       identity.createdAt.toISOString(),
       identity.updatedAt.toISOString()
     );
@@ -198,7 +201,7 @@ export class ModexaDatabase {
     externalId: string
   ): PersistedIdentity | undefined {
     const row = this.database.prepare(
-      `SELECT id, user_id, platform, external_id, username, display_name, created_at, updated_at
+      `SELECT id, user_id, platform, external_id, username, display_name, avatar_url, created_at, updated_at
        FROM identities
        WHERE platform = ? AND external_id = ?
        LIMIT 1`
@@ -222,6 +225,9 @@ export class ModexaDatabase {
       externalId: row.external_id,
       username: row.username ?? undefined,
       displayName: row.display_name ?? undefined,
+      avatarUrl:
+        (row.avatar_url as string | null) ??
+        undefined,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at)
     };
@@ -247,6 +253,7 @@ export class ModexaDatabase {
            i.external_id,
            i.username,
            i.display_name,
+           i.avatar_url,
            i.created_at,
            i.updated_at
          FROM identities i
@@ -288,6 +295,9 @@ export class ModexaDatabase {
           undefined,
         displayName:
           (row.display_name as string | null) ??
+          undefined,
+        avatarUrl:
+          (row.avatar_url as string | null) ??
           undefined,
         createdAt:
           new Date(
@@ -405,6 +415,16 @@ export class ModexaDatabase {
 
   close(): void {
     this.database.close();
+  }
+
+  private ensureMigrations(): void {
+    try {
+      this.database.exec(
+        "ALTER TABLE identities ADD COLUMN avatar_url TEXT"
+      );
+    } catch {
+      // Column already exists.
+    }
   }
 
   private seedSystemRole(
