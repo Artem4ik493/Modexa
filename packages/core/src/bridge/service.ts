@@ -18,7 +18,8 @@ import type {
   BridgeEndpoint,
   BridgeLink,
   BridgeLinkRequest,
-  BridgeEndpointId
+  BridgeEndpointId,
+  BridgeLinkId
 } from "./types.js";
 
 export interface BridgeMessageGateway {

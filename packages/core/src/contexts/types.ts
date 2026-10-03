@@ -12,6 +12,7 @@ export type ExecutionCapability =
   | "commands"
   | "account.manage"
   | "identity.link"
+  | "identity.unlink"
   | "community.view"
   | "community.manage"
   | "member.view"
