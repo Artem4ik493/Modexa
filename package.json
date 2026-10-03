@@ -8,10 +8,13 @@
     "build:core": "tsc -p packages/core/tsconfig.json",
     "build:api": "tsc -p apps/api/tsconfig.json",
     "build:runner": "tsc -p apps/runner/tsconfig.json",
-    "build": "pnpm build:core && pnpm build:api && pnpm build:runner",
+    "build": "pnpm build:core && pnpm build:api && pnpm build:telegram && pnpm build:discord",
     "typecheck": "pnpm build:core && tsc -p apps/api/tsconfig.json --noEmit && tsc -p apps/telegram/tsconfig.json --noEmit && tsc -p apps/discord/tsconfig.json --noEmit && tsc -p apps/runner/tsconfig.json --noEmit",
     "test": "pnpm build:core && vitest run && pnpm --filter @modexa/telegram test && pnpm --filter @modexa/discord test",
-    "verify": "pnpm typecheck && pnpm test"
+    "verify": "pnpm typecheck && pnpm test",
+    "build:telegram": "tsc -p apps/telegram/tsconfig.json",
+    "build:discord": "tsc -p apps/discord/tsconfig.json",
+    "build:all": "pnpm build && pnpm typecheck"
   },
   "keywords": [],
   "author": "",
