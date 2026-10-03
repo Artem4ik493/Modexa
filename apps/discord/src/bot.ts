@@ -12,6 +12,7 @@ import {
   createBridgeTestCommand,
   createMemberCommand,
   createAccountInteractionHandler,
+  createCommunitySettingsInteractionHandler,
   createBridgeTestInteractionHandler,
   createIdentityLinkCommand,
   BridgeService,
