@@ -88,6 +88,8 @@ export class ModerationService {
       moderationCase
     );
 
+    this.store?.upsertModerationCase(moderationCase);
+
     return {
       case: moderationCase,
       adapterAction: this.toAdapterAction(
@@ -148,6 +150,7 @@ export class ModerationService {
 
     item.status = "revoked";
     item.revokedAt = now;
+    this.store?.upsertModerationCase(item);
 
     return item;
   }
