@@ -295,12 +295,17 @@ export class DiscordAdapter
       const members =
         await guild.members.fetch();
 
-      return [...members.values()].map(
-        (member) =>
-          this.toPlatformMemberDetails(
-            member
-          )
-      );
+      return [...members.values()]
+        .filter(
+          (member) =>
+            !member.user.bot
+        )
+        .map(
+          (member) =>
+            this.toPlatformMemberDetails(
+              member
+            )
+        );
     } catch {
       return [];
     }
