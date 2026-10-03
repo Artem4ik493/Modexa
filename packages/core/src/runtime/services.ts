@@ -48,6 +48,7 @@ import {
 } from "../billing/index.js";
 
 import { CommandSettingsService } from "../commands/settings.js";
+import { AutomationService } from "../automations/service.js";
 
 import {
   PlatformIdentityResolver,
