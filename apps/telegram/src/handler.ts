@@ -28,9 +28,18 @@ export function createTelegramEventHandler(
       const replyMarkup =
         renderTelegramInteraction(response);
 
-      return replyMarkup
-        ? { telegram: { replyMarkup } }
-        : undefined;
+      if (!replyMarkup && !response.imageUrl) {
+        return undefined;
+      }
+
+      return {
+        telegram: {
+          ...(replyMarkup ? { replyMarkup } : {}),
+          ...(response.imageUrl
+            ? { imageUrl: response.imageUrl }
+            : {})
+        }
+      };
     }
   });
 }
