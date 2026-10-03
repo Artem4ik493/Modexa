@@ -1206,7 +1206,27 @@ export class DiscordAdapter
               ? [target.id]
               : [];
           })()
-        : [];
+        : interaction.commandName === "role"
+          ? (() => {
+              const target =
+                interaction.options.getUser(
+                  "user"
+                );
+              const role =
+                interaction.options.getString(
+                  "role"
+                );
+
+              return [
+                ...(target
+                  ? [target.id]
+                  : []),
+                ...(role
+                  ? [role]
+                  : [])
+              ];
+            })()
+          : [];
 
     return {
       type: "command.invoked",
