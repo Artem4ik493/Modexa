@@ -1237,9 +1237,19 @@ export class DiscordAdapter
                 ...(role ? [role] : [])
               ];
             })()
-          : ["warn", "mute", "kick", "ban"].includes(
-              interaction.commandName
-            )
+          : interaction.commandName === "command"
+            ? [
+                interaction.options.getString("command") ?? "",
+                interaction.options.getString("state") ?? ""
+              ].filter(Boolean)
+            : interaction.commandName === "user"
+              ? (() => {
+                  const target = interaction.options.getUser("user");
+                  return target ? [target.id] : [];
+                })()
+              : ["warn", "mute", "kick", "ban"].includes(
+                  interaction.commandName
+                )
             ? (() => {
                 const target =
                   interaction.options.getUser("user");
