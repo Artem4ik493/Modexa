@@ -7,6 +7,11 @@ import type {
 } from "../access/types.js";
 
 import {
+  MODEXA_OWNER_ROLE_ID,
+  type AccessControlService
+} from "../access/index.js";
+
+import {
   DEFAULT_LOCALE
 } from "../i18n/locale.js";
 
@@ -93,7 +98,9 @@ const COMMUNITY_CAPABILITY_PERMISSIONS:
 export class ExecutionContextService {
   constructor(
     private readonly communityAccess?:
-      CommunityAccessService
+      CommunityAccessService,
+    private readonly accessControl?:
+      AccessControlService
   ) {}
 
   create(
@@ -114,7 +121,9 @@ export class ExecutionContextService {
           input.user,
         locale,
         capabilities:
-          [...DM_CAPABILITIES]
+          this.getDmCapabilities(
+            input.user.id
+          )
       };
     }
 
@@ -218,6 +227,26 @@ export class ExecutionContextService {
       context.community.id,
       permission
     );
+  }
+
+  private getDmCapabilities(
+    userId: string
+  ): ExecutionCapability[] {
+    const capabilities =
+      [...DM_CAPABILITIES];
+
+    if (
+      this.accessControl?.hasSystemRole(
+        userId,
+        MODEXA_OWNER_ROLE_ID
+      )
+    ) {
+      capabilities.push(
+        "system.manage"
+      );
+    }
+
+    return capabilities;
   }
 
   private getCommunityCapabilities(
