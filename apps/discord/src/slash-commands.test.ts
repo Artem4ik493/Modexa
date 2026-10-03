@@ -5,6 +5,7 @@ import {
 } from "vitest";
 
 import {
+  AccessControlService,
   BridgeService,
   CommandRegistry,
   CommunityService,
@@ -15,6 +16,7 @@ import {
   createBridgeTestCommand,
   createBuiltinCommands,
   createIdentityLinkCommand,
+  createMemberCommand,
   listCommandDescriptors,
   type CommandDescriptor
 } from "@modexa/core";
@@ -60,9 +62,15 @@ function fullDescriptors() {
       communityService
     );
 
+  const accessControlService =
+    new AccessControlService();
+
   createBuiltinCommands(
     registry,
-    communityService
+    communityService,
+    identityService,
+    membershipService,
+    accessControlService
   );
 
   registry.register(
@@ -78,6 +86,14 @@ function fullDescriptors() {
       bridgeService,
       identityService,
       membershipService
+    )
+  );
+
+  registry.register(
+    createMemberCommand(
+      identityService,
+      membershipService,
+      accessControlService
     )
   );
 
@@ -100,9 +116,11 @@ describe("buildDiscordSlashCommands", () => {
       "link",
       "link-account",
       "linkaccount",
+      "member",
       "menu",
       "ping",
-      "settings"
+      "settings",
+      "system"
     ]);
   });
 
@@ -116,9 +134,11 @@ describe("buildDiscordSlashCommands", () => {
       "account",
       "commands",
       "help",
+      "member",
       "menu",
       "ping",
-      "settings"
+      "settings",
+      "system"
     ]);
   });
 
