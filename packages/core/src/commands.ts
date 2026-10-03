@@ -5,6 +5,7 @@ import type {
 } from "./types.js";
 
 import type { ExecutionCapability } from "./contexts/types.js";
+import type { CommandSettingsService } from "./commands/settings.js";
 
 export class CommandRegistry {
   private readonly commands = new Map<string, CommandDefinition>();
