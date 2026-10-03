@@ -174,6 +174,12 @@ export function createTelegramAdapter(
       options.database
     );
 
+  const moderationService =
+    options.moderationService ??
+    new ModerationService(
+      accessControlService
+    );
+
   createBuiltinCommands(
     registry,
     options.communityService,
