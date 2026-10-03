@@ -305,11 +305,7 @@ export class DiscordAdapter
             normalized
           );
 
-        if (
-          !member.user.bot &&
-          member.user.username.toLowerCase() ===
-            normalized
-        ) {
+        if (!member.user.bot) {
           return this.toPlatformMemberDetails(
             member
           );
