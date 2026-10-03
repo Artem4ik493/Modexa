@@ -142,9 +142,17 @@ export function createDiscordAdapter(
       communityService
     );
 
+  const accessControlService =
+    options.accessControlService ??
+    new AccessControlService();
+
   createBuiltinCommands(
     registry,
-    communityService
+    communityService,
+    identityService,
+    membershipService,
+    accessControlService,
+    options.database
   );
 
   registry.register(
