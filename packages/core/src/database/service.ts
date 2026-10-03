@@ -34,6 +34,10 @@ import type {
 } from "../bridge/types.js";
 
 import type {
+  AuditAction
+} from "../audit/service.js";
+
+import type {
   ModerationCase,
   ModerationCaseStatus,
   ModerationActionType
@@ -166,7 +170,7 @@ export class ModexaDatabase {
   appendAudit(entry: {
     id: string;
     communityId: string;
-    action: string;
+    action: AuditAction;
     actorUserId?: string;
     targetUserId?: string;
     channelId?: string;
