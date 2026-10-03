@@ -43,6 +43,7 @@ export interface PersistedIdentity {
 }
 
 export class ModexaDatabase {
+
   private readonly database: DatabaseSync;
 
   constructor(options: DatabaseOptions) {
@@ -224,6 +225,12 @@ export class ModexaDatabase {
          VALUES (?, ?)`
       )
       .run(userId, roleId);
+  }
+
+  getDatabasePath(): string {
+    return this.database.prepare(
+      "PRAGMA database_list"
+    ).get() as { file: string };
   }
 
   hasSystemRole(
