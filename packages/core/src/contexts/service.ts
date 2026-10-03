@@ -93,6 +93,10 @@ const COMMUNITY_CAPABILITY_PERMISSIONS:
     [
       "moderation.ban",
       "moderation"
+    ],
+    [
+      "moderation.clear",
+      "moderation"
     ]
   ];
 
@@ -221,6 +225,7 @@ export class ExecutionContextService {
       | "moderation.mute"
       | "moderation.kick"
       | "moderation.ban"
+      | "moderation.clear"
       | "bridge.view"
       | "bridge.manage"
       | "commands.use"
