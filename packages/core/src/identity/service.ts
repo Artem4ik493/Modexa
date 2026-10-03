@@ -23,9 +23,19 @@ export interface AttachIdentityInput {
 }
 
 export class IdentityService {
+  private nextUserId = 1;
+  private nextIdentityId = 1;
+
   constructor(
     private readonly database?: ModexaDatabase
-  ) {}
+  ) {
+    if (database) {
+      this.nextUserId =
+        database.getNextUserId();
+      this.nextIdentityId =
+        database.getNextIdentityId();
+    }
+  }
 
   private readonly users = new Map<UserId, User>();
   private readonly identities = new Map<
@@ -37,9 +47,6 @@ export class IdentityService {
     string,
     ExternalIdentityId
   >();
-
-  private nextUserId = 1;
-  private nextIdentityId = 1;
 
   createUser(input: CreateUserInput): User {
     const now = input.now ?? new Date();
