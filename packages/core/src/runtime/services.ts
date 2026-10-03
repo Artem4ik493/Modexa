@@ -75,7 +75,7 @@ export function createRuntimeServices(
     new IdentityLinkService();
 
   const communityService =
-    new CommunityService();
+    new CommunityService(database);
 
   const channelService =
     new ChannelService();
