@@ -823,6 +823,14 @@ export class ModexaDatabase {
     return row.file;
   }
 
+  getUserSystemRoleIds(userId: string): string[] {
+    const rows = this.database.prepare(
+      `SELECT role_id FROM user_system_roles WHERE user_id = ? ORDER BY role_id`
+    ).all(userId) as Array<{ role_id: string }>;
+
+    return rows.map((row) => row.role_id);
+  }
+
   hasSystemRole(
     userId: string,
     roleId: string
