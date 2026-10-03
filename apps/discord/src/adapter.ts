@@ -145,16 +145,20 @@ export class DiscordAdapter
             pending.id
           );
 
+          const imageEmbeds =
+            this.getImageEmbeds(
+              action.metadata
+            );
+
           await pending.editReply({
             content: action.content,
             components:
               this.getComponents(
                 action.metadata
               ) as never,
-            embeds:
-              this.getImageEmbeds(
-                action.metadata
-              ) as never
+            ...(imageEmbeds.length > 0
+              ? { embeds: imageEmbeds }
+              : {})
           });
 
           return;
@@ -165,16 +169,20 @@ export class DiscordAdapter
             action.channelExternalId
           );
 
+        const imageEmbeds =
+          this.getImageEmbeds(
+            action.metadata
+          );
+
         await channel.send({
           content: action.content,
           components:
             this.getComponents(
               action.metadata
             ) as never,
-          embeds:
-            this.getImageEmbeds(
-              action.metadata
-            ) as never
+          ...(imageEmbeds.length > 0
+            ? { embeds: imageEmbeds }
+            : {})
         });
 
         return;
