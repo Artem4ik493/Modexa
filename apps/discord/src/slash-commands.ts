@@ -135,6 +135,12 @@ export function buildDiscordSlashCommands(
                   }
                 ]
               }
+            : ["unmute", "unban"].includes(name)
+            ? {
+                options: [
+                  { name: "user", description: "Member", type: 6, required: true }
+                ]
+              }
             : name === "command"
             ? {
                 options: [
