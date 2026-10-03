@@ -19,7 +19,8 @@ export type ExecutionCapability =
   | "moderation"
   | "bridge"
   | "automations"
-  | "billing";
+  | "billing"
+  | "system.manage";
 
 export interface ExecutionContext {
   type: ExecutionContextType;
