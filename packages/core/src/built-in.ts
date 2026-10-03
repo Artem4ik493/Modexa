@@ -18,11 +18,22 @@ import {
 } from "./i18n/translate.js";
 
 function createMenuResponse(
-  t: Translator
+  t: Translator,
+  canManageSystem: boolean
 ): CommandResponse {
   return {
     content: t("menu.title"),
     buttons: [
+      ...(canManageSystem
+        ? [{
+            id: "system",
+            label: t("menu.system"),
+            action: {
+              type: "command" as const,
+              command: "/system"
+            }
+          }]
+        : []),
       {
         id: "account",
         label: t("menu.account"),
@@ -67,6 +78,124 @@ function createBackButton(
       type: "command",
       command: "/menu"
     }
+  };
+}
+
+function handleSystem(
+  context: CommandContext,
+  database?: ModexaDatabase
+): CommandResponse {
+  const t =
+    createTranslator(
+      context.execution.locale
+    );
+
+  if (
+    !context.execution.capabilities.includes(
+      "system.manage"
+    )
+  ) {
+    return {
+      content:
+        t("system.forbidden")
+    };
+  }
+
+  const action =
+    context.args[0]?.toLowerCase();
+
+  if (action === "maintenance") {
+    const current =
+      database?.getSystemSetting(
+        "maintenance_mode"
+      ) === "true";
+
+    const next =
+      context.args[1]?.toLowerCase() === "on"
+        ? true
+        : context.args[1]?.toLowerCase() === "off"
+          ? false
+          : !current;
+
+    database?.setSystemSetting(
+      "maintenance_mode",
+      String(next)
+    );
+
+    return {
+      content: [
+        t("system.settings.title"),
+        t(
+          next
+            ? "system.maintenance.on"
+            : "system.maintenance.off"
+        )
+      ].join("\n"),
+      buttons: [
+        createBackButton(t),
+        createCloseButton(t)
+      ]
+    };
+  }
+
+  if (action === "settings") {
+    const maintenance =
+      database?.getSystemSetting(
+        "maintenance_mode"
+      ) === "true";
+
+    return {
+      content: [
+        t("system.settings.title"),
+        t(
+          maintenance
+            ? "system.maintenance.on"
+            : "system.maintenance.off"
+        )
+      ].join("\n"),
+      buttons: [
+        {
+          id: "system-maintenance",
+          label: t("system.maintenance.toggle"),
+          action: {
+            type: "command",
+            command: "/system",
+            args: ["maintenance"]
+          }
+        },
+        createBackButton(t),
+        createCloseButton(t)
+      ]
+    };
+  }
+
+  return {
+    content: [
+      t("system.title"),
+      t("system.name"),
+      t("system.version"),
+      t("system.platform", {
+        platform:
+          context.execution.platform
+      }),
+      t("system.role", {
+        role: "MODEXA_OWNER"
+      }),
+      t("system.persistence")
+    ].join("\n"),
+    buttons: [
+      {
+        id: "system-settings",
+        label: t("system.settings.button"),
+        action: {
+          type: "command",
+          command: "/system",
+          args: ["settings"]
+        }
+      },
+      createBackButton(t),
+      createCloseButton(t)
+    ]
   };
 }
 
@@ -226,7 +355,11 @@ function handleSettings(
 
 export function createBuiltinCommands(
   registry: CommandRegistry,
-  communityService?: CommunityService
+  communityService?: CommunityService,
+  identityService?: IdentityService,
+  membershipService?: MembershipService,
+  accessControlService?: AccessControlService,
+  database?: ModexaDatabase
 ): void {
   const commands: CommandDefinition[] = [
     {
@@ -247,6 +380,9 @@ export function createBuiltinCommands(
         createMenuResponse(
           createTranslator(
             context.execution?.locale
+          ),
+          context.execution.capabilities.includes(
+            "system.manage"
           )
         )
     },
@@ -256,6 +392,17 @@ export function createBuiltinCommands(
         "command.account.description",
       requiredCapabilities: ["account.manage"],
       handler: handleAccount
+    },
+    {
+      name: "system",
+      descriptionKey:
+        "command.system.description",
+      requiredCapabilities: ["system.manage"],
+      handler: (context) =>
+        handleSystem(
+          context,
+          database
+        )
     },
     {
       name: "settings",
