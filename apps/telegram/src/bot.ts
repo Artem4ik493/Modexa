@@ -287,7 +287,7 @@ export function createTelegramAdapter(
       new CommandParser(),
       registry,
       logger,
-      options.commandSettingsService
+      commandSettingsService
     );
 
   const store =
