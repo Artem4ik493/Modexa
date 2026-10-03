@@ -319,7 +319,17 @@ async function resolveModerationTarget(
   membershipService: MembershipService,
   memberDirectory?: MemberDirectory
 ) {
-  const normalizedTarget = targetArg.replace(/^@/, "").trim().toLowerCase();
+  const normalizedTarget = targetArg
+    .replace(/^<@!?/, "")
+    .replace(/>$/, "")
+    .replace(/^@/, "")
+    .trim()
+    .toLowerCase();
+
+  const nativeId = /^\d+$/.test(normalizedTarget)
+    ? normalizedTarget
+    : undefined;
+
   let target =
     identityService.findUserByIdentity(context.platform, targetArg) ??
     identityService.findUserByUsername(normalizedTarget, context.platform);
@@ -334,9 +344,12 @@ async function resolveModerationTarget(
   }
 
   if (!target && memberDirectory && context.community) {
-    const native = targetArg.startsWith("@")
-      ? await memberDirectory.findMemberByUsername?.(context.community.id, targetArg.replace(/^@/, "").trim())
-      : await memberDirectory.getMember(context.community.id, targetArg);
+    const native = nativeId
+      ? await memberDirectory.getMember(context.community.id, nativeId)
+      : await memberDirectory.findMemberByUsername?.(
+          context.community.id,
+          normalizedTarget
+        );
     if (native) {
       target = identityService.findUserByIdentity(native.user.platform, native.user.externalId);
       if (!target) {
