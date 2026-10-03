@@ -121,45 +121,77 @@ export function createDiscordAdapter(
   let memberDirectory:
     MemberDirectory | undefined;
 
-  const memberDirectoryProxy: MemberDirectory = {
-    getMember(
-      communityExternalId,
-      userExternalId
-    ) {
-      return (
-        memberDirectory?.getMember(
-          communityExternalId,
-          userExternalId
-        ) ?? Promise.resolve(undefined)
-      );
-    },
-
-    listMembers(
-      communityExternalId
-    ) {
-      return (
-        memberDirectory?.listMembers(
-          communityExternalId
-        ) ?? Promise.resolve([])
-      );
-    },
-
-    findMemberByUsername(
-      communityExternalId,
-      username
-    ) {
-      return (
-        memberDirectory?.findMemberByUsername?.(
-          communityExternalId,
-          username
-        ) ?? Promise.resolve(undefined)
-      );
-    }
-  };
-
   const communityService =
     options.communityService ??
     new CommunityService();
+
+  const resolveDiscordGuildId = (
+    communityId: string
+  ): string | undefined => {
+    const identity =
+      communityService
+        .getCommunityIdentities(
+          communityId
+        )
+        .find(
+          (item) =>
+            item.platform === "discord"
+        );
+
+    return identity?.externalId;
+  };
+
+  const memberDirectoryProxy: MemberDirectory = {
+    getMember(
+      communityId,
+      userExternalId
+    ) {
+      const guildId =
+        resolveDiscordGuildId(
+          communityId
+        );
+
+      return guildId && memberDirectory
+        ? memberDirectory.getMember(
+            guildId,
+            userExternalId
+          )
+        : Promise.resolve(undefined);
+    },
+
+    listMembers(
+      communityId
+    ) {
+      const guildId =
+        resolveDiscordGuildId(
+          communityId
+        );
+
+      return guildId && memberDirectory
+        ? memberDirectory.listMembers(
+            guildId
+          )
+        : Promise.resolve([]);
+    },
+
+    findMemberByUsername(
+      communityId,
+      username
+    ) {
+      const guildId =
+        resolveDiscordGuildId(
+          communityId
+        );
+
+      return guildId &&
+        memberDirectory?.findMemberByUsername
+        ? memberDirectory.findMemberByUsername(
+            guildId,
+            username
+          )
+        : Promise.resolve(undefined);
+    }
+  };
 
   const membershipService =
     options.membershipService ??
