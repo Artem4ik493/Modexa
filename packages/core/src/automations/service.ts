@@ -24,13 +24,19 @@ export class AutomationService {
     private readonly store?: AutomationStateStore
   ) {
     for (const item of store?.getRuntimeState<StoredAutomation[]>(STATE_KEY) ?? []) {
-      this.automations.set(item.id, {
-        ...item,
+      const restored: Automation = {
+        id: item.id,
+        communityId: item.communityId,
+        name: item.name,
+        enabled: item.enabled,
+        trigger: item.trigger,
+        action: item.action,
         createdAt: new Date(item.createdAt),
         updatedAt: new Date(item.updatedAt),
         ...(item.nextRunAt ? { nextRunAt: new Date(item.nextRunAt) } : {}),
         ...(item.lastRunAt ? { lastRunAt: new Date(item.lastRunAt) } : {})
-      });
+      };
+      this.automations.set(restored.id, restored);
     }
   }
 
@@ -68,9 +74,7 @@ export class AutomationService {
     return item;
   }
 
-  get(id: string): Automation | undefined {
-    return this.automations.get(id);
-  }
+  get(id: string): Automation | undefined { return this.automations.get(id); }
 
   list(communityId?: string): Automation[] {
     return [...this.automations.values()]
