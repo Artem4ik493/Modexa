@@ -18,7 +18,7 @@ export interface WelcomeMemberSnapshot {
 
 export class WelcomeService {
   private readonly settings = new Map<string, WelcomeSettings>();
-  private readonly departed = new Map<string, WelcomeMemberSnapshot>();
+  private readonly departed = new Map<string, { communityId: string; snapshot: WelcomeMemberSnapshot }>();
 
   getSettings(communityId: string): WelcomeSettings {
     return this.settings.get(communityId) ?? {
@@ -39,26 +39,30 @@ export class WelcomeService {
     });
   }
 
-  recordDeparture(snapshot: WelcomeMemberSnapshot): void {
-    this.departed.set(snapshot.userId, {
-      ...snapshot,
-      roleIds: [...snapshot.roleIds],
-      leftAt: new Date()
+  recordDeparture(communityId: string, snapshot: WelcomeMemberSnapshot): void {
+    this.departed.set(communityId + ":" + snapshot.userId, {
+      communityId,
+      snapshot: {
+        ...snapshot,
+        roleIds: [...snapshot.roleIds],
+        leftAt: new Date()
+      }
     });
   }
 
-  resolveJoin(userId: string): {
+  resolveJoin(communityId: string, userId: string): {
     restoreRoleIds: string[];
     restoreNickname?: string;
     applyStartingRoles: boolean;
   } {
-    const snapshot = this.departed.get(userId);
+    const record = this.departed.get(communityId + ":" + userId);
+    const snapshot = record?.snapshot;
     if (!snapshot) {
       return { restoreRoleIds: [], applyStartingRoles: true };
     }
 
-    this.departed.delete(userId);
-    const settings = [...this.settings.values()][0];
+    this.departed.delete(communityId + ":" + userId);
+    const settings = this.getSettings(communityId);
 
     if (!settings) {
       return { restoreRoleIds: [], applyStartingRoles: true };
