@@ -505,7 +505,7 @@ export class TelegramAdapter
     const embed = embedValue as Record<string, unknown>;
     const parts: string[] = [];
     if (typeof embed.title === "string") parts.push("*" + embed.title.replace(/([_*[\]()~\`>#+\-=|{}.!])/g, "\\$1") + "*");
-    if (typeof embed.description === "string" && embed.description !== content) parts.push(embed.description);
+    if (typeof embed.description === "string") parts.push(embed.description);
     if (Array.isArray(embed.fields)) {
       for (const field of embed.fields) {
         if (!field || typeof field !== "object") continue;
