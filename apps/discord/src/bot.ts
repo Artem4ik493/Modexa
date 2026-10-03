@@ -26,6 +26,7 @@ import {
   AccessControlService,
   ModexaDatabase,
   ModerationService,
+  CommandSettingsService,
   createModerationCommands,
   createPublicFeatureCommands,
   type MemberDirectory
@@ -241,7 +242,7 @@ export function createDiscordAdapter(
 
   const commandSettingsService =
     options.commandSettingsService ??
-    new (await import("@modexa/core")).CommandSettingsService(options.database);
+    new CommandSettingsService(options.database);
 
   createBuiltinCommands(
     registry,
@@ -326,7 +327,7 @@ export function createDiscordAdapter(
       new CommandParser(),
       registry,
       logger,
-      options.commandSettingsService
+      commandSettingsService
     );
 
   const store =
