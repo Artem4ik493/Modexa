@@ -571,14 +571,6 @@ export class TelegramAdapter
     const chat =
       ctx.chat;
 
-    if (chat) {
-      const key = String(chat.id);
-      const ids = this.recentMessageIds.get(key) ?? [];
-      ids.push(message.message_id);
-      if (ids.length > 200) ids.splice(0, ids.length - 200);
-      this.recentMessageIds.set(key, ids);
-    }
-
     if (
       !chat ||
       chat.type === "private"
@@ -648,6 +640,17 @@ export class TelegramAdapter
       throw new Error(
         "Telegram message event does not contain a message"
       );
+    }
+
+    const chat =
+      ctx.chat;
+
+    if (chat) {
+      const key = String(chat.id);
+      const ids = this.recentMessageIds.get(key) ?? [];
+      ids.push(message.message_id);
+      if (ids.length > 200) ids.splice(0, ids.length - 200);
+      this.recentMessageIds.set(key, ids);
     }
 
     const chat =
