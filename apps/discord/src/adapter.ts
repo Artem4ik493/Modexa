@@ -947,7 +947,7 @@ export class DiscordAdapter
     metadata:
       | Record<string, unknown>
       | undefined
-  ): Array<Record<string, unknown>> {
+  ): Array<import("discord.js").APIEmbed> {
     const discord = metadata?.discord;
     if (!discord || typeof discord !== "object") return [];
 
@@ -959,7 +959,7 @@ export class DiscordAdapter
     }
 
     const source = embedValue as Record<string, unknown>;
-    const embed: Record<string, unknown> = {};
+    const embed: import("discord.js").APIEmbed = {};
     for (const key of ["title", "description", "color", "fields", "footer", "thumbnailUrl", "imageUrl"]) {
       if (key in source && source[key] !== undefined) {
         if (key === "footer") embed.footer = { text: String(source[key]) };
