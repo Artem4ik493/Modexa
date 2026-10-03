@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 export type AuditAction =
   | "message.delete"
   | "message.edit"
@@ -49,7 +51,7 @@ export class AuditService {
   record(input: Omit<AuditEntry, "id" | "createdAt">): AuditEntry {
     const entry: AuditEntry = {
       ...input,
-      id: `audit_${crypto.randomUUID()}`,
+      id: `audit_${randomUUID()}`,
       createdAt: new Date()
     };
     this.store?.appendAudit(entry);
