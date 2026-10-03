@@ -493,6 +493,60 @@ export class ModexaDatabase {
     };
   }
 
+  upsertCommunity(community: {
+    id: string;
+    name: string;
+    mode?: "public" | "private";
+    createdAt: Date;
+    updatedAt: Date;
+  }): void {
+    this.database.prepare(
+      `INSERT INTO communities
+       (id, name, mode, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         name = excluded.name,
+         mode = excluded.mode,
+         updated_at = excluded.updated_at`
+    ).run(
+      community.id,
+      community.name,
+      community.mode ?? "public",
+      community.createdAt.toISOString(),
+      community.updatedAt.toISOString()
+    );
+  }
+
+  upsertCommunityIdentity(identity: {
+    id: string;
+    communityId: string;
+    platform: "telegram" | "discord";
+    externalId: string;
+    name?: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }): void {
+    this.database.prepare(
+      `INSERT INTO community_identities
+       (id, community_id, platform, external_id, name, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         community_id = excluded.community_id,
+         platform = excluded.platform,
+         external_id = excluded.external_id,
+         name = excluded.name,
+         updated_at = excluded.updated_at`
+    ).run(
+      identity.id,
+      identity.communityId,
+      identity.platform,
+      identity.externalId,
+      identity.name ?? null,
+      identity.createdAt.toISOString(),
+      identity.updatedAt.toISOString()
+    );
+  }
+
   upsertCommunityRole(role: { id: string; communityId: string; name: string; permissions: Permission[] }): void {
     this.database.prepare(`INSERT INTO community_roles (id, community_id, name) VALUES (?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET community_id = excluded.community_id, name = excluded.name`
