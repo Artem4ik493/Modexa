@@ -493,6 +493,44 @@ export class ModexaDatabase {
     };
   }
 
+  upsertCommunityRole(role: { id: string; communityId: string; name: string; permissions: Permission[] }): void {
+    this.database.prepare(`INSERT INTO community_roles (id, community_id, name) VALUES (?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET community_id = excluded.community_id, name = excluded.name`
+    ).run(role.id, role.communityId, role.name);
+    const insert = this.database.prepare(`INSERT OR IGNORE INTO community_role_permissions (role_id, permission) VALUES (?, ?)`);
+    for (const permission of role.permissions) insert.run(role.id, permission);
+  }
+
+  getCommunityRoles(communityId: string): Array<{ id: string; communityId: string; name: string; permissions: Permission[] }> {
+    const rows = this.database.prepare(`SELECT id, community_id, name FROM community_roles WHERE community_id = ? ORDER BY id`).all(communityId) as Array<{id:string;community_id:string;name:string}>;
+    return rows.map(row => ({
+      id: row.id,
+      communityId: row.community_id,
+      name: row.name,
+      permissions: (this.database.prepare(`SELECT permission FROM community_role_permissions WHERE role_id = ? ORDER BY permission`).all(row.id) as Array<{permission:string}>).map(x => x.permission as Permission)
+    }));
+  }
+
+  assignCommunityRole(userId: string, roleId: string): void {
+    this.database.prepare(`INSERT OR IGNORE INTO user_community_roles (user_id, role_id) VALUES (?, ?)`).run(userId, roleId);
+  }
+
+  revokeCommunityRole(userId: string, roleId: string): void {
+    this.database.prepare(`DELETE FROM user_community_roles WHERE user_id = ? AND role_id = ?`).run(userId, roleId);
+  }
+
+  getUserCommunityRoles(userId: string, communityId: string): Array<{ id: string; communityId: string; name: string; permissions: Permission[] }> {
+    const rows = this.database.prepare(`SELECT r.id, r.community_id, r.name FROM user_community_roles ur
+      INNER JOIN community_roles r ON r.id = ur.role_id
+      WHERE ur.user_id = ? AND r.community_id = ? ORDER BY r.id`).all(userId, communityId) as Array<{id:string;community_id:string;name:string}>;
+    return rows.map(row => ({
+      id: row.id,
+      communityId: row.community_id,
+      name: row.name,
+      permissions: (this.database.prepare(`SELECT permission FROM community_role_permissions WHERE role_id = ? ORDER BY permission`).all(row.id) as Array<{permission:string}>).map(x => x.permission as Permission)
+    }));
+  }
+
   assignSystemRole(
     userId: string,
     roleId: string
