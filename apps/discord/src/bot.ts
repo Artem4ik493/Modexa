@@ -344,8 +344,7 @@ export function createDiscordAdapter(
     new CommandService(
       new CommandParser(),
       registry,
-      logger,
-      commandSettingsService
+      logger
     );
 
   const store =
