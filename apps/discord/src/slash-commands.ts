@@ -135,7 +135,32 @@ export function buildDiscordSlashCommands(
                   }
                 ]
               }
-            : {})
+            : ["warn", "mute", "kick", "ban"].includes(name)
+              ? {
+                  options: [
+                    {
+                      name: "user",
+                      description: "Member",
+                      type: 6,
+                      required: true
+                    },
+                    ...(name === "mute"
+                      ? [{
+                          name: "duration",
+                          description: "30s, 10m, 2h or 1d",
+                          type: 3,
+                          required: true
+                        }]
+                      : []),
+                    {
+                      name: "reason",
+                      description: "Reason",
+                      type: 3,
+                      required: false
+                    }
+                  ]
+                }
+              : {})
       });
     }
   }
