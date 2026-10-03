@@ -9,7 +9,9 @@ import {
   type PlatformCommunity,
   type PlatformUser,
   type PlatformUserRole,
-  type BridgeService
+  type BridgeService,
+  type MemberDirectory,
+  type PlatformMemberDetails
 } from "@modexa/core";
 
 import {
@@ -21,6 +23,7 @@ import {
   type ButtonInteraction,
   type ChatInputCommandInteraction,
   type Guild,
+  type GuildMember,
   type Message,
   type User
 } from "discord.js";
@@ -53,7 +56,7 @@ export interface DiscordAdapterOptions {
 }
 
 export class DiscordAdapter
-  implements PlatformAdapter
+  implements PlatformAdapter, MemberDirectory
 {
   readonly id =
     "discord-main";
@@ -255,6 +258,83 @@ export class DiscordAdapter
         return;
       }
     }
+  }
+
+  async getMember(
+    communityExternalId: string,
+    userExternalId: string
+  ): Promise<PlatformMemberDetails | undefined> {
+    try {
+      const guild =
+        await this.client.guilds.fetch(
+          communityExternalId
+        );
+
+      const member =
+        await guild.members.fetch(
+          userExternalId
+        );
+
+      return this.toPlatformMemberDetails(
+        member
+      );
+    } catch {
+      return undefined;
+    }
+  }
+
+  async listMembers(
+    communityExternalId: string
+  ): Promise<PlatformMemberDetails[]> {
+    try {
+      const guild =
+        await this.client.guilds.fetch(
+          communityExternalId
+        );
+
+      const members =
+        await guild.members.fetch();
+
+      return [...members.values()].map(
+        (member) =>
+          this.toPlatformMemberDetails(
+            member
+          )
+      );
+    } catch {
+      return [];
+    }
+  }
+
+  private toPlatformMemberDetails(
+    member: GuildMember
+  ): PlatformMemberDetails {
+    const platformRole =
+      member.guild.ownerId === member.id
+        ? "owner"
+        : this.hasAdministratorPermission(
+            member.permissions
+          )
+          ? "admin"
+          : "member";
+
+    return {
+      user: this.toPlatformUser(
+        member.user,
+        undefined,
+        platformRole
+      ),
+      joinedAt:
+        member.joinedAt ?? undefined,
+      roles:
+        member.roles.cache
+          .filter(
+            (role) =>
+              role.id !== member.guild.id
+          )
+          .map((role) => role.name),
+      status: platformRole
+    };
   }
 
   async resolveUser(
