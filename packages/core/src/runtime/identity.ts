@@ -332,6 +332,8 @@ export class PlatformIdentityResolver {
       channelService.createChannel({
         communityId:
           community.id,
+        externalId:
+          external.externalId,
         name:
           external.name,
         type:
