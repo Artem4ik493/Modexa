@@ -221,7 +221,10 @@ export function createDiscordAdapter(
 
   const accessControlService =
     options.accessControlService ??
-    new AccessControlService();
+    new AccessControlService(
+      options.database,
+      options.database
+    );
 
   createBuiltinCommands(
     registry,
