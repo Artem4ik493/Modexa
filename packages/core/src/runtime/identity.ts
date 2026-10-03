@@ -196,7 +196,9 @@ export class PlatformIdentityResolver {
       username:
         author.username,
       displayName:
-        author.displayName
+        author.displayName,
+      avatarUrl:
+        author.avatarUrl
     });
 
     this.logger?.info(
