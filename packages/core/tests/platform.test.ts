@@ -76,6 +76,40 @@ describe("Modexa core", () => {
     expect(memberships.isActiveMember(user.id, community.id)).toBe(true);
   });
 
+  it("persists billing and automation state across database reopen", () => {
+    const dir = mkdtempSync(join(process.cwd(), "modexa-persist-"));
+    tempDirs.push(dir);
+    const path = join(dir, "state.sqlite");
+
+    const db = new ModexaDatabase({ path });
+    const billing = new BillingService(db);
+    billing.registerPlan({
+      id: "pro",
+      name: "Pro",
+      entitlements: [{ feature: "automations", enabled: true }]
+    });
+    const subscription = billing.createSubscription({
+      communityId: "community-persist",
+      planId: "pro"
+    });
+    const automation = new AutomationService(billing, db);
+    const created = automation.create({
+      communityId: "community-persist",
+      name: "Persisted",
+      trigger: { type: "interval", intervalSeconds: 60 },
+      action: { type: "command", command: "help" }
+    });
+    db.close();
+
+    const reopened = new ModexaDatabase({ path });
+    const billingReloaded = new BillingService(reopened);
+    const automationReloaded = new AutomationService(billingReloaded, reopened);
+
+    expect(billingReloaded.getSubscription(subscription.id)?.communityId).toBe("community-persist");
+    expect(automationReloaded.get(created.id)?.name).toBe("Persisted");
+    reopened.close();
+  });
+
   it("enforces billing entitlements and overrides", () => {
     const billing = new BillingService();
     billing.registerPlan({
