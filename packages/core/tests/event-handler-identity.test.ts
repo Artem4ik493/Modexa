@@ -187,7 +187,9 @@ describe("Platform event handler with real identities", () => {
       "message.edit"
     );
 
-    expect(content).toContain("user-1");
+    expect(content).toMatch(
+      /ID аккаунта: mx_[0-9a-f-]{36}/
+    );
     expect(content).not.toContain(
       "telegram:42"
     );

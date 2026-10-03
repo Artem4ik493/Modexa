@@ -88,7 +88,9 @@ describe("PlatformIdentityResolver", () => {
       author: telegramAuthor
     });
 
-    expect(result.user.id).toBe("user-1");
+    expect(result.user.id).toMatch(
+      /^mx_[0-9a-f-]{36}$/
+    );
 
     expect(result.user.displayName).toBe(
       "Artem"

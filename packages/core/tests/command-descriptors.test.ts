@@ -42,6 +42,7 @@ describe("listCommandDescriptors", () => {
       "ping",
       "menu",
       "account",
+      "system",
       "settings",
       "help"
     ]);

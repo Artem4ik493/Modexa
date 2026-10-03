@@ -92,12 +92,29 @@ describe("IdentityLinkingService", () => {
       "987654321"
     );
 
-    expect(
+    const linkedUser =
       identityService.findUserByIdentity(
         "discord",
         "987654321"
+      );
+
+    expect(linkedUser).toBeDefined();
+    expect(linkedUser?.id).not.toBe(
+      user.id
+    );
+    expect(linkedUser?.displayName).toBe(
+      "Artem"
+    );
+
+    expect(
+      identityService.getUserIdentities(
+        linkedUser!.id
       )
-    ).toEqual(user);
+    ).toHaveLength(2);
+
+    expect(
+      identityService.getUser(user.id)
+    ).toBeUndefined();
   });
 
   it("keeps both platform identities under the same user", () => {

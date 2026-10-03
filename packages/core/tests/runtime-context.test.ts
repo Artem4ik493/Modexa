@@ -98,7 +98,9 @@ describe("createPlatformExecutionContext", () => {
         }
       );
 
-    expect(context.user.id).toBe("user-1");
+    expect(context.user.id).toMatch(
+      /^mx_[0-9a-f-]{36}$/
+    );
 
     expect(context.community?.id).toBe(
       "community-1"
@@ -133,7 +135,9 @@ describe("createPlatformExecutionContext", () => {
 
     expect(context.type).toBe("dm");
 
-    expect(context.user.id).toBe("user-1");
+    expect(context.user.id).toMatch(
+      /^mx_[0-9a-f-]{36}$/
+    );
 
     expect(context.community).toBeUndefined();
   });
