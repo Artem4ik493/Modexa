@@ -15,6 +15,8 @@ import {
   createRoleCommand,
   createModerationCommands,
   ModerationService,
+  CommandSettingsService,
+  createPublicFeatureCommands,
   createAccountInteractionHandler,
   createCommunitySettingsInteractionHandler,
   createBridgeTestInteractionHandler,
@@ -87,7 +89,7 @@ export interface CreateTelegramAdapterOptions {
     ModerationService;
 
   commandSettingsService?:
-    import("@modexa/core").CommandSettingsService;
+    CommandSettingsService;
 }
 
 export function createTelegramAdapter(
