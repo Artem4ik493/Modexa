@@ -257,6 +257,38 @@ export class ModexaDatabase {
     return row !== undefined;
   }
 
+  getSystemSetting(
+    key: string
+  ): string | undefined {
+    const row =
+      this.database.prepare(
+        "SELECT value FROM system_settings WHERE key = ?"
+      ).get(key) as {
+        value: string;
+      } | undefined;
+
+    return row?.value;
+  }
+
+  setSystemSetting(
+    key: string,
+    value: string,
+    now = new Date()
+  ): void {
+    this.database.prepare(
+      `INSERT INTO system_settings
+       (key, value, updated_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET
+         value = excluded.value,
+         updated_at = excluded.updated_at`
+    ).run(
+      key,
+      value,
+      now.toISOString()
+    );
+  }
+
   close(): void {
     this.database.close();
   }
