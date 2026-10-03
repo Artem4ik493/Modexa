@@ -4,5 +4,5 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 COPY packages ./packages
 COPY apps ./apps
 RUN corepack enable && pnpm install --frozen-lockfile
-RUN pnpm build:core && pnpm --filter @modexa/runner exec tsc -p tsconfig.json
+RUN pnpm build:core
 CMD ["pnpm","--filter","@modexa/runner","start"]
