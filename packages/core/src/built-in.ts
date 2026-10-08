@@ -48,6 +48,14 @@ function createMenuResponse(
     content: t("menu.title"),
     buttons: [
       {
+        id: "help",
+        label: t("menu.help"),
+        action: {
+          type: "command",
+          command: "/help"
+        }
+      },
+      {
         id: "account",
         label: t("menu.account"),
         action: {
@@ -1035,7 +1043,7 @@ export function createBuiltinCommands(
 
         return {
           content: commandList
-            ? `${t("help.title")}\\n\\n${commandList}`
+            ? `${t("help.title")}\n\n${commandList}`
             : t("help.empty"),
           buttons: [
             ...categoryButtons,
