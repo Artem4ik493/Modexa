@@ -118,7 +118,7 @@ export class TelegramAdapter
         const content = this.getPanelContent(action.content, action.metadata);
 
         if (imageUrl) {
-          await this.bot.api.sendPhoto(
+          const sent = await this.bot.api.sendPhoto(
             Number(
               action.channelExternalId
             ),
@@ -139,8 +139,10 @@ export class TelegramAdapter
                 : {})
             }
           );
+
+          return String(sent.message_id);
         } else {
-          await this.bot.api.sendMessage(
+          const sent = await this.bot.api.sendMessage(
             Number(
               action.channelExternalId
             ),
@@ -160,6 +162,8 @@ export class TelegramAdapter
                 : {})
             }
           );
+
+          return String(sent.message_id);
         }
 
         return;
