@@ -23,7 +23,7 @@ export interface PlatformAdapter {
 
   sendAction(
     action: AdapterAction
-  ): Promise<void>;
+  ): Promise<string | void>;
 
   resolveUser(
     externalId: string
