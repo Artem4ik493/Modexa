@@ -260,7 +260,7 @@ describe("Telegram event handler", () => {
 
     expect(actions[3]).toMatchObject({
       type: "message.edit",
-      content: "Доступные команды:"
+      content: "Выберите действие:"
     });
   });
 
