@@ -562,10 +562,19 @@ async function handleMessage(
     return;
   }
 
+  const bridgeMedia =
+    message.metadata?.bridgeMedia &&
+    typeof message.metadata.bridgeMedia === "object"
+      ? message.metadata.bridgeMedia as {
+          type?: "image" | "animation" | "video";
+          url?: string;
+        }
+      : undefined;
+
   if (
     deps.bridgeService &&
-    message.content &&
-    !message.content.startsWith("/")
+    !message.content.startsWith("/") &&
+    (message.content.trim().length > 0 || bridgeMedia?.type)
   ) {
     const source =
       deps.bridgeService.findEndpointForExecution(
@@ -573,25 +582,16 @@ async function handleMessage(
       );
 
     if (source) {
-      const media =
-        message.metadata?.bridgeMedia &&
-        typeof message.metadata.bridgeMedia === "object"
-          ? message.metadata.bridgeMedia as {
-              type?: "image" | "animation" | "video";
-              url?: string;
-            }
-          : undefined;
-
       await deps.bridgeService.relayMessage(
         source,
         message.author,
         message.content,
         message.replyTo,
         message.externalId,
-        media?.type && media.url
+        bridgeMedia?.type && bridgeMedia.url
           ? {
-              type: media.type,
-              url: media.url
+              type: bridgeMedia.type,
+              url: bridgeMedia.url
             }
           : undefined
       );
