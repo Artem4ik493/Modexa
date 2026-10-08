@@ -514,7 +514,10 @@ const server = createServer((req, res) => {
       const permissions = process.env.DISCORD_BOT_PERMISSIONS;
       if (permissions) invite.searchParams.set("permissions", permissions);
       const communityId = url.searchParams.get("communityId");
-      if (communityId) {
+      const guildId = url.searchParams.get("guildId");
+      if (guildId) {
+        invite.searchParams.set("guild_id", guildId);
+      } else if (communityId) {
         const identity = database.getCommunityIdentitiesSnapshot().find((item) => item.communityId === communityId && item.platform === "discord");
         if (identity) invite.searchParams.set("guild_id", identity.externalId);
       }
@@ -543,7 +546,12 @@ const server = createServer((req, res) => {
 
       json(res, 200, {
         items: guilds
-          .filter((guild) => guild.owner || (BigInt(guild.permissions) & 0x8n) === 0x8n)
+          .filter((guild) => {
+            const permissions = BigInt(guild.permissions);
+            const isAdministrator = (permissions & 0x8n) === 0x8n;
+            const canManageGuild = (permissions & 0x20n) === 0x20n;
+            return guild.owner || isAdministrator || canManageGuild;
+          })
           .map((guild) => ({
             id: guild.id,
             name: guild.name,
