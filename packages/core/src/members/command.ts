@@ -189,7 +189,13 @@ function renderMemberDetails(
       )}`,
       "",
       `**🎭 Роли платформы:** ${nativeRoles.length > 0
-        ? nativeRoles.join(", ")
+        ? nativeRoles
+            .map((role) =>
+              context.execution.platform === "discord"
+                ? `@${role.replace(/^@/, "")}`
+                : role
+            )
+            .join(", ")
         : t("member.no_platform_roles")}`,
       `**📅 В платформе:** ${formatDate(
         native?.joinedAt,
@@ -252,10 +258,12 @@ export function createMemberCommand(
         };
       }
 
-      const target =
-        context.args[0]
-          ?.replace(/^@/, "")
-          .trim();
+      const rawTarget = context.args[0]?.trim();
+      const target = rawTarget
+        ?.replace(/^<@!?/, "")
+        .replace(/>$/, "")
+        .replace(/^@/, "")
+        .trim();
 
       let user = target
         ? identityService.findUserByUsername(
@@ -280,13 +288,18 @@ export function createMemberCommand(
       if (
         !user &&
         target &&
-        memberDirectory?.findMemberByUsername
+        memberDirectory
       ) {
         native =
-          await memberDirectory.findMemberByUsername(
-            context.community.id,
-            target
-          );
+          /^\d+$/.test(target)
+            ? await memberDirectory.getMember(
+                context.community.id,
+                target
+              )
+            : await memberDirectory.findMemberByUsername?.(
+                context.community.id,
+                target
+              );
 
         if (native) {
           user = ensureLocalMember(
