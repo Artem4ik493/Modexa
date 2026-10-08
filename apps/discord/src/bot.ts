@@ -440,7 +440,13 @@ export function createDiscordAdapter(
       identityResolver:
         options.identityResolver,
       bridgeService:
-        bridgeService
+        bridgeService,
+      identityService:
+        options.identityService,
+      membershipService:
+        options.membershipService,
+      communityService:
+        options.communityService
     })
   );
 
