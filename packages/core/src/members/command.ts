@@ -575,7 +575,7 @@ export function createMembersCommand(
 
           const nativeSuffix =
             nativeRoles.length > 0
-              ? ` · ${nativeRoles.join(", ")}`
+              ? ` · ${nativeRoles.map((role) => `@${role.replace(/^@/, "")}`).join(", ")}`
               : "";
 
           const displayName = item.user.displayName && item.user.displayName !== username ? ` (${item.user.displayName})` : "";
