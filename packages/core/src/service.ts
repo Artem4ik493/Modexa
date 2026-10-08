@@ -128,18 +128,6 @@ export class CommandService {
     const command =
       this.registry.get(parsed.name);
 
-    if (command?.dmOnly && execution.type !== "dm") {
-      return {
-        handled: true,
-        response: {
-          content: translate(
-            "command.dm_only",
-            undefined,
-            execution.locale
-          )
-        }
-      };
-    }
 
     if (
       command &&
