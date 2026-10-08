@@ -699,7 +699,7 @@ export class TelegramAdapter
 
   private async createMessageEvent(
     ctx: Context
-  ): Promise<AdapterEvent> {
+  ): Promise<AdapterMessageCreatedEvent> {
     const message =
       ctx.message;
 
