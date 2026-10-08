@@ -485,6 +485,73 @@ async function handleMemberBanned(
   });
 }
 
+function rememberMessageAuthor(
+  deps: PlatformEventHandlerDeps,
+  message: AdapterMessage,
+  executionContext: ExecutionContext
+): void {
+  if (
+    !deps.identityService ||
+    !deps.membershipService ||
+    !executionContext.community
+  ) {
+    return;
+  }
+
+  const user =
+    deps.identityService.findUserByIdentity(
+      deps.platform,
+      message.author.externalId
+    ) ??
+    deps.identityService.createUser({
+      displayName:
+        message.author.displayName ??
+        message.author.username ??
+        message.author.externalId,
+      now: message.createdAt
+    });
+
+  deps.identityService.attachIdentity({
+    userId: user.id,
+    platform: deps.platform,
+    externalId: message.author.externalId,
+    username: message.author.username,
+    displayName: message.author.displayName,
+    avatarUrl: message.author.avatarUrl,
+    now: message.createdAt
+  });
+
+  const membership =
+    deps.membershipService.findMembership(
+      user.id,
+      executionContext.community.id
+    );
+
+  if (!membership) {
+    deps.membershipService.createMembership({
+      userId: user.id,
+      communityId: executionContext.community.id,
+      now: message.createdAt
+    });
+  } else if (membership.status === "left") {
+    deps.membershipService.reactivate(
+      membership.id,
+      message.createdAt
+    );
+  }
+
+  deps.logger.debug(
+    "member.persistence.synced",
+    {
+      platform: deps.platform,
+      userId: user.id,
+      userExternalId: message.author.externalId,
+      communityId: executionContext.community.id,
+      username: message.author.username
+    }
+  );
+}
+
 async function handleMessageUpdate(
   deps: PlatformEventHandlerDeps,
   message: AdapterMessage
@@ -625,6 +692,16 @@ async function handleMessage(
           message.channel
       }
     );
+
+  // Every Telegram/Discord user who sends a message becomes a
+  // persistent Modexa identity. Subsequent member/moderation commands
+  // resolve the stored external ID directly instead of querying the
+  // platform again.
+  rememberMessageAuthor(
+    deps,
+    message,
+    executionContext
+  );
 
   if (
     deps.bridgeService &&
