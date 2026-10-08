@@ -111,20 +111,16 @@ export function createRoleCommand(
               nativeIdentity.externalId
             )
           : undefined;
-        const platformRoles = native?.roles ?? [];
+        const platformRoles =
+          native?.roleMentions ??
+          (native?.roles ?? []).map((role) => `@${role.replace(/^@/, "")}`);
 
         return {
           content: [
             `👤 ${target.displayName}`,
             `Роли Modexa: ${roles.map(role => role.name).join(", ") || "MEMBER"}`,
             `Роли платформы: ${platformRoles.length > 0
-              ? platformRoles
-                  .map((role) =>
-                    context.platform === "discord"
-                      ? "@" + role.replace(/^@/, "")
-                      : role
-                  )
-                  .join(", ")
+              ? platformRoles.join(", ")
               : "нет"}`
           ].join("\n")
         };
