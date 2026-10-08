@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "pnpm build:core && node scripts/dev.mjs",
-    "build:core": "tsc -p packages/core/tsconfig.json",
+    "build:core": "tsc -b packages/core/tsconfig.json --force",
     "build:api": "tsc -p apps/api/tsconfig.json",
     "build:runner": "tsc -p apps/runner/tsconfig.json",
     "build": "pnpm build:core && pnpm build:api && pnpm build:telegram && pnpm build:discord",
