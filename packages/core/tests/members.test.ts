@@ -1,4 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { ModexaDatabase } from "../src/database/service.js";
 
 import {
   createMemberCommand,
@@ -363,6 +367,81 @@ describe("member commands", () => {
         communityId
       ).map((role) => role.name)
     ).toContain("ADMIN");
+  });
+
+
+  it("resolves a Telegram member from persisted identity after a fresh service", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "modexa-members-"));
+    const database = new ModexaDatabase({
+      path: join(dir, "members.sqlite")
+    });
+
+    try {
+      const writer =
+        new IdentityService(database);
+      const membershipService =
+        new MembershipService(database);
+      const accessControlService =
+        new AccessControlService(database);
+
+      const communityId = "telegram-community";
+
+      for (const role of createBuiltinCommunityRoles(communityId)) {
+        accessControlService.registerCommunityRole(role);
+      }
+
+      const user =
+        writer.createUser({
+          displayName: "Foxicore"
+        });
+
+      writer.attachIdentity({
+        userId: user.id,
+        platform: "telegram",
+        externalId: "777",
+        username: "foxicore"
+      });
+
+      membershipService.createMembership({
+        userId: user.id,
+        communityId
+      });
+
+      const freshIdentityService =
+        new IdentityService(database);
+
+      const command =
+        createMemberCommand(
+          freshIdentityService,
+          new MembershipService(database),
+          new AccessControlService(database)
+        );
+
+      const context =
+        createContext(
+          freshIdentityService,
+          communityId
+        );
+
+      const response =
+        await command.handler({
+          ...context,
+          platform: "telegram",
+          user,
+          execution: {
+            ...context.execution,
+            platform: "telegram"
+          },
+          args: ["@foxicore"],
+          rawText: "/member @foxicore"
+        });
+
+      expect(response.content).toContain("Foxicore");
+      expect(response.content).toContain("@foxicore");
+    } finally {
+      database.close();
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
 });
