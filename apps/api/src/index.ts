@@ -27,7 +27,7 @@ const database = new ModexaDatabase({
 });
 const backup = new BackupService(database);
 const runtimeServices = createRuntimeServices(undefined, database);
-const accessControlService = runtimeServices.accessControlService;
+const accessControlService = accessControlService;
 
 if (!accessControlService) {
   throw new Error("Modexa AccessControlService is not initialized");
@@ -39,7 +39,7 @@ createBuiltinCommands(
   runtimeServices.communityService,
   runtimeServices.identityService,
   runtimeServices.membershipService,
-  runtimeServices.accessControlService,
+  accessControlService,
   database,
   runtimeServices.bridgeService
 );
@@ -61,17 +61,17 @@ for (const command of createPublicFeatureCommands(
 commandRegistry.register(createMemberCommand(
   runtimeServices.identityService,
   runtimeServices.membershipService,
-  runtimeServices.accessControlService
+  accessControlService
 ));
 commandRegistry.register(createMembersCommand(
   runtimeServices.identityService,
   runtimeServices.membershipService,
-  runtimeServices.accessControlService
+  accessControlService
 ));
 commandRegistry.register(createRoleCommand(
   runtimeServices.identityService,
   runtimeServices.membershipService,
-  runtimeServices.accessControlService
+  accessControlService
 ));
 for (const command of createModerationCommands(
   runtimeServices.identityService,
