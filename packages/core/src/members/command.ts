@@ -10,6 +10,7 @@ export interface PlatformMemberDetails {
   user: PlatformUser;
   joinedAt?: Date;
   roles?: string[];
+  roleMentions?: string[];
   status?: string;
   isMember?: boolean;
 }
@@ -189,9 +190,7 @@ function renderMemberDetails(
       )}`,
       "",
       `**🎭 Роли платформы:** ${nativeRoles.length > 0
-        ? nativeRoles
-            .map((role) => `@${role.replace(/^@/, "")}`)
-            .join(", ")
+        ? (native?.roleMentions ?? nativeRoles.map((role) => `@${role.replace(/^@/, "")}`)).join(", ")
         : t("member.no_platform_roles")}`,
       `**📅 В платформе:** ${formatDate(
         native?.joinedAt,
@@ -579,7 +578,8 @@ export function createMembersCommand(
               : item.user.displayName;
 
           const nativeRoles =
-            item.native?.roles ?? [];
+            item.native?.roleMentions ??
+            (item.native?.roles ?? []).map((role) => `@${role.replace(/^@/, "")}`);
 
           const roles =
             accessControlService
@@ -591,7 +591,7 @@ export function createMembersCommand(
 
           const nativeSuffix =
             nativeRoles.length > 0
-              ? ` · ${nativeRoles.map((role) => `@${role.replace(/^@/, "")}`).join(", ")}`
+              ? ` · ${nativeRoles.join(", ")}`
               : "";
 
           const displayName = item.user.displayName && item.user.displayName !== username ? ` (${item.user.displayName})` : "";
