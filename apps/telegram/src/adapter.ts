@@ -979,6 +979,65 @@ export class TelegramAdapter
     );
 
     this.bot.on(
+      "chat_member",
+      async (ctx) => {
+        const update = ctx.chatMember;
+        if (!update || !ctx.chat) return;
+
+        const member = update.new_chat_member;
+        const user = member.user;
+        if (!user || ctx.chat.type === "private") return;
+
+        const active =
+          member.status === "member" ||
+          member.status === "administrator" ||
+          member.status === "creator" ||
+          member.status === "restricted";
+
+        const platformRole =
+          member.status === "creator" ||
+          member.status === "administrator"
+            ? "admin" as const
+            : "member" as const;
+
+        const eventType =
+          member.status === "kicked"
+            ? "member.banned" as const
+            : active
+              ? "member.joined" as const
+              : "member.left" as const;
+
+        await this.emitEvent({
+          type: eventType,
+          member: {
+            externalId: String(user.id),
+            platform: "telegram",
+            user: {
+              platform: "telegram",
+              externalId: String(user.id),
+              username: user.username,
+              displayName: user.first_name,
+              avatarUrl: await this.resolveAvatarUrl(user.id),
+              platformRole
+            },
+            community: {
+              platform: "telegram",
+              externalId: String(ctx.chat.id),
+              name:
+                "title" in ctx.chat
+                  ? ctx.chat.title
+                  : "Telegram"
+            },
+            createdAt: new Date(update.date * 1000),
+            metadata: {
+              status: member.status
+            }
+          }
+        });
+      }
+    );
+
+    this.bot.on(
       "callback_query:data",
       async (ctx) => {
         const interactionId =
