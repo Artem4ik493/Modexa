@@ -605,6 +605,41 @@ export function createMembersCommand(
           total: totalPages
         });
 
+      const buttons = [];
+
+      if (page > 1) {
+        buttons.push({
+          id: "members.previous",
+          label: t("members.previous"),
+          action: {
+            type: "command" as const,
+            command: "/members",
+            args: [String(page - 1), ...(search ? [search] : [])]
+          }
+        });
+      }
+
+      if (page < totalPages) {
+        buttons.push({
+          id: "members.next",
+          label: t("members.next"),
+          action: {
+            type: "command" as const,
+            command: "/members",
+            args: [String(page + 1), ...(search ? [search] : [])]
+          }
+        });
+      }
+
+      buttons.push({
+        id: "members.menu",
+        label: t("menu.back"),
+        action: {
+          type: "command" as const,
+          command: "/menu"
+        }
+      });
+
       return {
         content: [
           t("members.title", {
@@ -614,7 +649,8 @@ export function createMembersCommand(
             ? lines.join("\n")
             : t("members.empty"),
           pageText
-        ].join("\n")
+        ].join("\n"),
+        buttons
       };
     }
   };
