@@ -315,7 +315,7 @@ async function handleMemberJoined(
   deps.auditService?.record({
     communityId:
       executionContext.community?.id ?? "system",
-    action: "member.joined",
+    action: "member.join",
     actorUserId:
       executionContext.user.id
   });
@@ -361,7 +361,7 @@ async function handleMemberLeft(
 
   deps.auditService?.record({
     communityId: community.id,
-    action: "member.left",
+    action: "member.leave",
     actorUserId: user.id
   });
 }
@@ -406,7 +406,7 @@ async function handleMemberBanned(
 
   deps.auditService?.record({
     communityId: community.id,
-    action: "member.banned",
+    action: "member.ban",
     actorUserId: user.id
   });
 }
