@@ -1,4 +1,5 @@
 import { createServer } from "http";
+import { spawn, type ChildProcess } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -17,6 +18,12 @@ const dashboardPath = resolve(process.cwd(), "apps/dashboard/index.html");
 
 const discordClientId = process.env.DISCORD_CLIENT_ID ?? "";
 const discordClientSecret = process.env.DISCORD_CLIENT_SECRET ?? "";
+const runnerCommand = process.execPath;
+const runnerArgs = ["--env-file=.env", "--import=tsx", "apps/runner/src/index.ts"];
+let runnerProcess: ChildProcess | undefined;
+let runnerStartedAt: string | undefined;
+let runnerLastExit: { code: number | null; signal: string | null; at: string } | undefined;
+
 const discordRedirectUri =
   process.env.DISCORD_REDIRECT_URI ??
   `http://localhost:${port}/auth/discord/callback`;
@@ -162,6 +169,47 @@ async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknow
   }
 }
 
+function startRunner(): void {
+  if (runnerProcess && runnerProcess.exitCode === null && !runnerProcess.killed) return;
+  runnerProcess = spawn(runnerCommand, runnerArgs, {
+    cwd: process.cwd(),
+    env: process.env,
+    stdio: "inherit",
+    windowsHide: false
+  });
+  runnerStartedAt = new Date().toISOString();
+  runnerLastExit = undefined;
+  runnerProcess.on("exit", (code, signal) => {
+    runnerLastExit = { code, signal, at: new Date().toISOString() };
+    runnerProcess = undefined;
+  });
+}
+
+async function stopRunner(): Promise<void> {
+  const child = runnerProcess;
+  if (!child) return;
+  runnerProcess = undefined;
+  if (child.exitCode !== null || child.killed) return;
+  child.kill();
+  await new Promise<void>((resolve) => {
+    const timer = setTimeout(resolve, 3000);
+    child.once("exit", () => { clearTimeout(timer); resolve(); });
+  });
+}
+
+function runnerStatus() {
+  return {
+    state: runnerProcess && runnerProcess.exitCode === null && !runnerProcess.killed ? "running" : "stopped",
+    pid: runnerProcess?.pid ?? null,
+    startedAt: runnerStartedAt ?? null,
+    lastExit: runnerLastExit ?? null,
+    adapters: {
+      discord: Boolean(process.env.DISCORD_BOT_TOKEN),
+      telegram: Boolean(process.env.TELEGRAM_BOT_TOKEN)
+    }
+  };
+}
+
 function apiKeyCookie(apiKeyValue: string): string {
   return `modexa_api_key=${encodeURIComponent(apiKeyValue)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`;
 }
@@ -254,6 +302,15 @@ const server = createServer((req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/config" && req.method === "GET") {
+      json(res, 200, {
+        oauth: { discord: Boolean(discordClientId && discordClientSecret) },
+        dashboard: { url: dashboardUrl },
+        runtime: runnerStatus()
+      });
+      return;
+    }
+
     if (url.pathname === "/api/auth" && req.method === "POST") {
       let body = "";
       for await (const chunk of req) body += chunk;
@@ -299,6 +356,22 @@ const server = createServer((req, res) => {
         "set-cookie": cookie("modexa_session", "", 0)
       });
       res.end();
+      return;
+    }
+
+    if (url.pathname === "/api/auth/discord/invite" && req.method === "GET") {
+      if (!discordClientId) {
+        json(res, 503, { error: "discord_oauth_not_configured" });
+        return;
+      }
+      const invite = new URL("https://discord.com/oauth2/authorize");
+      invite.searchParams.set("client_id", discordClientId);
+      invite.searchParams.set("scope", "bot applications.commands");
+      const permissions = process.env.DISCORD_BOT_PERMISSIONS;
+      if (permissions) invite.searchParams.set("permissions", permissions);
+      const guildId = url.searchParams.get("guildId");
+      if (guildId) invite.searchParams.set("guild_id", guildId);
+      json(res, 200, { url: invite.toString() });
       return;
     }
 
@@ -351,6 +424,34 @@ const server = createServer((req, res) => {
       return;
     }
 
+
+    if (url.pathname === "/api/runtime" && req.method === "GET") {
+      json(res, 200, runnerStatus());
+      return;
+    }
+
+    if (url.pathname === "/api/runtime" && req.method === "POST") {
+      const body = await readJsonBody(req);
+      const action = typeof body.action === "string" ? body.action : "";
+      if (action === "start") startRunner();
+      else if (action === "stop") await stopRunner();
+      else if (action === "restart") { await stopRunner(); startRunner(); }
+      else { json(res, 400, { error: "action must be start, stop or restart" }); return; }
+      json(res, 200, runnerStatus());
+      return;
+    }
+
+    if (url.pathname === "/api/community/mode" && req.method === "POST") {
+      const body = await readJsonBody(req);
+      const communityId = typeof body.communityId === "string" ? body.communityId : "";
+      const mode = body.mode === "private" || body.mode === "public" ? body.mode : "";
+      if (!communityId || !mode) { json(res, 400, { error: "communityId and mode are required" }); return; }
+      const community = database.getCommunitiesSnapshot().find((item) => item.id === communityId);
+      if (!community) { json(res, 404, { error: "community_not_found" }); return; }
+      database.upsertCommunity({ ...community, mode, updatedAt: new Date() });
+      json(res, 200, { updated: true, communityId, mode });
+      return;
+    }
 
     if (url.pathname === "/api/overview" && req.method === "GET") {
       const communities = database.getCommunitiesSnapshot();
