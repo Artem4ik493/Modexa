@@ -193,7 +193,8 @@ export function createTelegramAdapter(
 
   const adapter =
     new TelegramAdapter(
-      bot
+      bot,
+      logger
     );
 
   memberDirectory = adapter;
