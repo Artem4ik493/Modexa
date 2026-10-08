@@ -369,8 +369,11 @@ const server = createServer((req, res) => {
       invite.searchParams.set("scope", "bot applications.commands");
       const permissions = process.env.DISCORD_BOT_PERMISSIONS;
       if (permissions) invite.searchParams.set("permissions", permissions);
-      const guildId = url.searchParams.get("guildId");
-      if (guildId) invite.searchParams.set("guild_id", guildId);
+      const communityId = url.searchParams.get("communityId");
+      if (communityId) {
+        const identity = database.getCommunityIdentitiesSnapshot().find((item) => item.communityId === communityId && item.platform === "discord");
+        if (identity) invite.searchParams.set("guild_id", identity.externalId);
+      }
       json(res, 200, { url: invite.toString() });
       return;
     }
