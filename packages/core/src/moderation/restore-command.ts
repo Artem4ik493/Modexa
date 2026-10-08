@@ -18,9 +18,21 @@ export function createModerationRestoreCommands(
       if (!context.community) return { content: "Команда доступна только в сообществе." };
       const arg = context.args[0]?.replace(/^@/, "").toLowerCase();
       if (!arg) return { content: "Использование: /" + name + " @user" };
-      const target = identities.findUserByIdentity(context.platform, context.args[0]!) ?? identities.findUserByUsername(arg, context.platform) ?? memberships.getCommunityMemberships(context.community.id)
-        .map((m) => identities.getUser(m.userId)).filter((u): u is NonNullable<typeof u> => Boolean(u))
-        .find((u) => identities.getUserIdentities(u.id).some((i) => i.platform === context.platform && i.username?.toLowerCase() === arg));
+      let target = identities.findUserByIdentity(context.platform, context.args[0]!) ??
+        identities.findUserByUsername(arg, context.platform) ??
+        memberships.getCommunityMemberships(context.community.id)
+          .map((m) => identities.getUser(m.userId))
+          .filter((u): u is NonNullable<typeof u> => Boolean(u))
+          .find((u) => identities.getUserIdentities(u.id).some(
+            (i) => i.platform === context.platform && i.username?.toLowerCase() === arg
+          ));
+
+      if (!target && context.platform === "discord") {
+        const native = await (context.args[0] && context.args[0].match(/^\d+$/)
+          ? undefined
+          : undefined);
+        void native;
+      }
       if (!target) return { content: "Участник не найден." };
       const membership = memberships.findMembership(target.id, context.community.id);
       if (!membership || membership.status !== "active") return { content: "Участник не состоит в этом сообществе." };
