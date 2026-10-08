@@ -166,7 +166,7 @@ export function createModerationCommands(
               nativeIdentity.externalId
             )
           : undefined;
-        if (native?.isMember !== false) {
+        if (native && native.isMember !== false) {
           membershipService.createMembership({
             userId: target.id,
             communityId: context.community.id,
