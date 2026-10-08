@@ -265,7 +265,13 @@ export function createModerationCommands(
         if (!item || item.communityId !== context.community.id || item.action !== "warn" || item.status !== "active") {
           return { content: "Активное предупреждение с таким Case ID не найдено." };
         }
-        moderationService.revokeCase(context.user.id, caseId);
+        try {
+          moderationService.revokeCase(context.user.id, caseId);
+        } catch (error) {
+          return {
+            content: `❌ Не удалось снять предупреждение: ${error instanceof Error ? error.message : "ошибка"}`
+          };
+        }
         return { content: `✅ Предупреждение ${caseId} снято.` };
       }
     },
@@ -281,7 +287,15 @@ export function createModerationCommands(
         const active = moderationService.getCases(context.community.id).filter(
           (item) => item.action === "warn" && item.targetUserId === target.id && item.status === "active"
         );
-        for (const item of active) moderationService.revokeCase(context.user.id, item.id);
+        for (const item of active) {
+          try {
+            moderationService.revokeCase(context.user.id, item.id);
+          } catch (error) {
+            return {
+              content: `❌ Не удалось снять предупреждения: ${error instanceof Error ? error.message : "ошибка"}`
+            };
+          }
+        }
         return { content: `✅ Снято предупреждений: ${active.length}.` };
       }
     },
