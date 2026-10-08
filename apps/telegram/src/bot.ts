@@ -243,7 +243,8 @@ export function createTelegramAdapter(
         options.identityService,
         options.membershipService,
         accessControlService,
-        memberDirectoryProxy
+        memberDirectoryProxy,
+        logger
       )
     );
 
