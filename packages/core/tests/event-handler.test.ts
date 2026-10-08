@@ -222,7 +222,7 @@ describe("Platform event handler", () => {
       content: "Выберите действие:"
     });
 
-    expect(tokensOf(actions[0])).toHaveLength(3);
+    expect(tokensOf(actions[0])).toHaveLength(4);
   });
 
   it("edits the message when a button is pressed", async () => {
@@ -235,7 +235,7 @@ describe("Platform event handler", () => {
     await handler(
       interactionEvent(
         "telegram",
-        tokensOf(actions[0])[0]
+        tokensOf(actions[0])[1]
       )
     );
 
@@ -267,7 +267,7 @@ describe("Platform event handler", () => {
     await handler(
       interactionEvent(
         "telegram",
-        tokensOf(actions[0])[0]
+        tokensOf(actions[0])[1]
       )
     );
 
@@ -294,7 +294,7 @@ describe("Platform event handler", () => {
     await handler(
       interactionEvent(
         "telegram",
-        tokensOf(actions[0])[0],
+        tokensOf(actions[0])[1],
         { messageExternalId: undefined }
       )
     );
@@ -357,7 +357,7 @@ describe("Platform event handler", () => {
     await handler(
       interactionEvent(
         "telegram",
-        tokensOf(actions[0])[0],
+        tokensOf(actions[0])[1],
         {
           user: {
             platform: "telegram",
@@ -408,7 +408,7 @@ describe("Platform event handler", () => {
     await handler(
       interactionEvent(
         "telegram",
-        tokensOf(actions[0])[0],
+        tokensOf(actions[0])[1],
         { destinationExternalId: undefined }
       )
     );
@@ -452,7 +452,7 @@ describe("Platform event handler", () => {
     await handler(
       interactionEvent(
         "discord",
-        tokensOf(actions[0])[0],
+        tokensOf(actions[0])[1],
         {
           user: {
             platform: "discord",
