@@ -298,9 +298,17 @@ export class IdentityService {
       );
 
     if (identity) {
-      return this.users.get(
-        identity.userId
-      );
+      const user =
+        this.users.get(identity.userId);
+
+      if (user) {
+        return user;
+      }
+
+      // The identity can survive in the in-memory index while its
+      // User object was not hydrated yet (for example after a link
+      // or a runtime restart). Fall through to SQLite instead of
+      // incorrectly treating the member as missing.
     }
 
     if (this.database) {
