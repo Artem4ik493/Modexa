@@ -344,6 +344,19 @@ export class IdentityService {
   getUserIdentities(
     userId: UserId
   ): ExternalIdentity[] {
+    if (this.database) {
+      const persisted = this.database.getUserIdentities(userId);
+      for (const identity of persisted) {
+        if (!this.identities.has(identity.id)) {
+          this.identities.set(identity.id, identity);
+          this.identityIndex.set(
+            this.getIdentityKey(identity.platform, identity.externalId),
+            identity.id
+          );
+        }
+      }
+    }
+
     return [...this.identities.values()].filter(
       (identity) => identity.userId === userId
     );
