@@ -190,11 +190,7 @@ function renderMemberDetails(
       "",
       `**🎭 Роли платформы:** ${nativeRoles.length > 0
         ? nativeRoles
-            .map((role) =>
-              context.execution.platform === "discord"
-                ? `@${role.replace(/^@/, "")}`
-                : role
-            )
+            .map((role) => role.replace(/^@/, ""))
             .join(", ")
         : t("member.no_platform_roles")}`,
       `**📅 В платформе:** ${formatDate(
