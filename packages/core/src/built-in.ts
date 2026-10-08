@@ -48,14 +48,6 @@ function createMenuResponse(
     content: t("menu.title"),
     buttons: [
       {
-        id: "help",
-        label: "❓ Помощь",
-        action: {
-          type: "command",
-          command: "/help"
-        }
-      },
-      {
         id: "account",
         label: t("menu.account"),
         action: {
@@ -970,7 +962,7 @@ export function createBuiltinCommands(
         );
         const available = registry
           .listAvailable(context.execution.capabilities)
-          .filter((command) => command.name !== "help");
+          .filter((command) => command.name !== "menu");
 
         const groupFor = (name: string): string => {
           if ([
