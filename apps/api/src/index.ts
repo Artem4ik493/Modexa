@@ -3,7 +3,6 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { parse as parseUrlEncoded } from "node:querystring";
 import type { IncomingMessage, ServerResponse } from "http";
 import { ModexaDatabase, BackupService } from "@modexa/core";
 
@@ -328,7 +327,7 @@ const server = createServer((req, res) => {
 
       res.writeHead(200, {
         "content-type": "application/json; charset=utf-8",
-        "set-cookie": `modexa_api_key=${encodeURIComponent(apiKey)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`,
+        "set-cookie": apiKeyCookie(apiKey),
         "cache-control": "no-store"
       });
       res.end(JSON.stringify({ authenticated: true }));
@@ -427,7 +426,6 @@ const server = createServer((req, res) => {
       return;
     }
 
-
     if (url.pathname === "/api/runtime" && req.method === "GET") {
       json(res, 200, runnerStatus());
       return;
@@ -502,6 +500,7 @@ const server = createServer((req, res) => {
       json(res, 200, { items: database.getCommandSettings(communityId) });
       return;
     }
+
     if (url.pathname === "/api/communities" && req.method === "GET") {
       json(res, 200, { items: database.getCommunitiesSnapshot() });
       return;
@@ -555,14 +554,19 @@ const server = createServer((req, res) => {
 
 server.listen(port, host, () => {
   console.log(`Modexa API listening on http://${host}:${port}`);
+  startRunner();
 });
 
-process.on("SIGINT", () => {
+async function shutdown(): Promise<void> {
+  await stopRunner();
   database.close();
-  server.close(() => process.exit(0));
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+}
+
+process.on("SIGINT", () => {
+  void shutdown().then(() => process.exit(0));
 });
 
 process.on("SIGTERM", () => {
-  database.close();
-  server.close(() => process.exit(0));
+  void shutdown().then(() => process.exit(0));
 });
