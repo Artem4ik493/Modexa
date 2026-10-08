@@ -157,7 +157,28 @@ export function createModerationCommands(
       if (!target) return { content: `Участник ${targetArg} не найден.` };
 
       const membership = membershipService.findMembership(target.id, context.community.id);
-      if (!membership || membership.status !== "active") {
+      if (!membership && memberDirectory) {
+        const nativeIdentity = identityService.getUserIdentities(target.id)
+          .find((identity) => identity.platform === context.platform);
+        const native = nativeIdentity
+          ? await memberDirectory.getMember(
+              context.community.id,
+              nativeIdentity.externalId
+            )
+          : undefined;
+        if (native?.isMember !== false) {
+          membershipService.createMembership({
+            userId: target.id,
+            communityId: context.community.id,
+            now: native.joinedAt
+          });
+        }
+      }
+
+      const refreshedMembership =
+        membershipService.findMembership(target.id, context.community.id);
+
+      if (!refreshedMembership || refreshedMembership.status !== "active") {
         return { content: "Участник не состоит в этом сообществе." };
       }
 
