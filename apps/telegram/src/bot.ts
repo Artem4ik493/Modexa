@@ -382,6 +382,12 @@ export function createTelegramAdapter(
         options.identityResolver,
       bridgeService:
         options.bridgeService,
+      identityService:
+        options.identityService,
+      membershipService:
+        options.membershipService,
+      communityService:
+        options.communityService,
       database:
         options.database
     })
