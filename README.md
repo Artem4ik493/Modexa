@@ -1,59 +1,507 @@
 # Modexa
 
-Unified Telegram + Discord community automation platform.
+**Modexa** — единая платформа для управления Telegram- и Discord-сообществами.
 
-## Current platform
+## Возможности
 
-- Unified identity, communities, memberships and roles.
-- Member directory and `/role`.
-- Moderation Core + Telegram + Discord actions.
-- Persistent moderation cases in SQLite.
-- Telegram ↔ Discord bridge with persisted links.
-- Billing plans/entitlements foundation.
-- Automation engine and AutoMod rule engine.
-- Interaction dispatcher with buttons, callbacks and menus.
+- Единая система пользователей и внешних идентификаторов.
+- Сообщества, участники и роли.
+- Telegram- и Discord-адаптеры.
+- Модерация и сохранение moderation cases в SQLite.
+- Telegram ↔ Discord Bridge.
+- Интерактивные команды и меню.
+- Настройки команд для каждого сообщества.
+- Audit log.
+- Billing foundation.
+- Automation engine и AutoMod foundation.
+- HTTP API и веб-панель Dashboard.
+- Discord OAuth2 для входа в Dashboard.
+- Управление Runner из Dashboard/API.
 - SQLite backup snapshot API.
-- HTTP API and lightweight dashboard.
-- Docker / docker-compose production baseline.
+- Docker / docker-compose baseline.
 
-## Development
+## Требования
 
-```powershell
+- Windows 10/11, Linux или macOS
+- Node.js 24+
+- pnpm 12+
+- Git
+
+Проверка версий:
+
+~~~powershell
+node --version
+pnpm --version
+git --version
+~~~
+
+## Установка
+
+~~~powershell
+git clone https://github.com/Artem4ik493/Modexa.git
+cd Modexa
 pnpm install
-pnpm verify
-pnpm dev
-```
+~~~
 
-Copy `.env.example` to `.env` and configure the platform tokens.
+## Настройка .env
+
+Создайте .env на основе .env.example:
+
+~~~powershell
+Copy-Item .env.example .env
+~~~
+
+Минимальный набор:
+
+~~~env
+TELEGRAM_BOT_TOKEN=
+DISCORD_BOT_TOKEN=
+DISCORD_GUILD_ID=
+
+MODEXA_DATABASE_PATH=data/modexa.sqlite
+MODEXA_API_KEY=change-me
+
+PORT=3000
+HOST=0.0.0.0
+
+MODEXA_OWNER_EXTERNAL_IDS=
+
+DISCORD_CLIENT_ID=
+DISCORD_CLIENT_SECRET=
+DISCORD_BOT_PERMISSIONS=
+
+DISCORD_REDIRECT_URI=http://localhost:3000/auth/discord/callback
+MODEXA_DASHBOARD_URL=http://localhost:3000/
+~~~
+
+### Telegram
+
+TELEGRAM_BOT_TOKEN — токен Telegram-бота.
+
+### Discord Bot
+
+DISCORD_BOT_TOKEN — токен Discord-бота.
+
+### Discord OAuth2
+
+Для входа в Dashboard через Discord необходимо заполнить:
+
+~~~env
+DISCORD_CLIENT_ID=...
+DISCORD_CLIENT_SECRET=...
+DISCORD_REDIRECT_URI=http://localhost:3000/auth/discord/callback
+~~~
+
+В Discord Developer Portal Redirect URL должен точно совпадать с:
+
+~~~text
+http://localhost:3000/auth/discord/callback
+~~~
+
+OAuth использует scopes identify и guilds.
+
+После авторизации Dashboard получает информацию о пользователе и доступных ему Discord-серверах.
+
+**DISCORD_CLIENT_SECRET нельзя публиковать, коммитить в Git или отправлять в чат.**
+
+### Владелец Modexa
+
+MODEXA_OWNER_EXTERNAL_IDS — внешние ID владельцев через запятую:
+
+~~~env
+MODEXA_OWNER_EXTERNAL_IDS=123456789,987654321
+~~~
+
+### API key
+
+MODEXA_API_KEY используется для доступа к API без Discord OAuth:
+
+~~~env
+MODEXA_API_KEY=сложный-секретный-ключ
+~~~
+
+Для реального сервера обязательно замените change-me.
+
+## Запуск разработки
+
+Основной вариант:
+
+~~~powershell
+pnpm dev
+~~~
+
+Команда собирает Core, запускает API и Dashboard, а API автоматически запускает Runner.
+
+Dashboard:
+
+~~~text
+http://localhost:3000/
+~~~
+
+Health:
+
+~~~text
+http://localhost:3000/health
+~~~
+
+## Проверка проекта
+
+Полная проверка:
+
+~~~powershell
+pnpm verify
+~~~
+
+Отдельно тесты:
+
+~~~powershell
+pnpm test
+~~~
+
+Сборка:
+
+~~~powershell
+pnpm build
+~~~
+
+## Сборка отдельных частей
+
+Core:
+
+~~~powershell
+pnpm build:core
+~~~
+
+API:
+
+~~~powershell
+pnpm build:api
+~~~
+
+Запуск API отдельно:
+
+~~~powershell
+pnpm --filter @modexa/api dev
+~~~
 
 ## API
 
-```powershell
-pnpm build:api
-pnpm --filter @modexa/api dev
-```
+### Health
 
-Health: `/health`
+~~~text
+GET /health
+~~~
 
-Dashboard: open http://localhost:3000/ while the API is running.
+Пример:
 
-`pnpm dev` builds Core and starts the API, Dashboard and Runner together. Runner starts any configured Telegram/Discord adapters from `.env`.
+~~~powershell
+Invoke-WebRequest http://localhost:3000/health
+~~~
 
-Production-like checks:
+### Конфигурация
 
-```powershell
-pnpm build
-pnpm test
-```
+~~~text
+GET /api/config
+~~~
 
-Docker:
+Показывает состояние Discord OAuth, Dashboard и Runner.
 
-```powershell
+### Discord OAuth
+
+Начало авторизации:
+
+~~~text
+GET /auth/discord
+~~~
+
+Callback:
+
+~~~text
+GET /auth/discord/callback
+~~~
+
+Текущая OAuth-сессия:
+
+~~~text
+GET /api/auth/discord
+~~~
+
+Выход:
+
+~~~text
+DELETE /api/auth/discord
+~~~
+
+Список доступных Discord-серверов:
+
+~~~text
+GET /api/auth/discord/guilds
+~~~
+
+Ссылка на добавление бота:
+
+~~~text
+GET /api/auth/discord/invite
+~~~
+
+Можно передать communityId для конкретного сообщества.
+
+### Авторизация API
+
+Bearer:
+
+~~~http
+Authorization: Bearer YOUR_MODEXA_API_KEY
+~~~
+
+Или выполнить:
+
+~~~http
+POST /api/auth
+Content-Type: application/json
+
+{"key":"YOUR_MODEXA_API_KEY"}
+~~~
+
+После этого API выдаёт cookie-сессию.
+
+## Runner API
+
+Статус:
+
+~~~text
+GET /api/runtime
+~~~
+
+Запуск:
+
+~~~http
+POST /api/runtime
+Content-Type: application/json
+
+{"action":"start"}
+~~~
+
+Перезапуск:
+
+~~~http
+POST /api/runtime
+Content-Type: application/json
+
+{"action":"restart"}
+~~~
+
+Остановка:
+
+~~~http
+POST /api/runtime
+Content-Type: application/json
+
+{"action":"stop"}
+~~~
+
+Dashboard использует эти endpoints для управления Runner.
+
+## Управление сообществом
+
+Переключение режима:
+
+~~~http
+POST /api/community/mode
+Content-Type: application/json
+
+{
+  "communityId": "community-id",
+  "mode": "public"
+}
+~~~
+
+Допустимые значения: public и private.
+
+## Dashboard
+
+Dashboard доступен по адресу:
+
+~~~text
+http://localhost:3000/
+~~~
+
+Через него доступны:
+
+- Discord OAuth;
+- Discord-серверы пользователя;
+- состояние Runner;
+- запуск, остановка и перезапуск Runner;
+- состояние Telegram/Discord адаптеров;
+- сообщества;
+- настройки команд;
+- модерация;
+- audit log;
+- bridge;
+- automation;
+- billing;
+- backup snapshot.
+
+## Как проверить API вручную
+
+После pnpm dev:
+
+1. Откройте http://localhost:3000/health.
+2. Откройте http://localhost:3000/api/config.
+3. Откройте http://localhost:3000/api/runtime.
+4. Откройте http://localhost:3000/.
+5. Для проверки OAuth откройте http://localhost:3000/auth/discord.
+
+Если OAuth настроен правильно, откроется авторизация Discord.
+
+## Как остановить Modexa
+
+Если запущен pnpm dev, нажмите:
+
+~~~text
+Ctrl + C
+~~~
+
+API обрабатывает SIGINT/SIGTERM и закрывает базу данных.
+
+### Если Node.js остался висеть в Windows
+
+Посмотреть процессы:
+
+~~~powershell
+Get-Process node
+~~~
+
+Завершить все процессы Node.js:
+
+~~~powershell
+taskkill /F /IM node.exe
+~~~
+
+Или:
+
+~~~powershell
+Stop-Process -Name node -Force
+~~~
+
+### Найти процесс на порту 3000
+
+~~~powershell
+Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue
+~~~
+
+Подробно:
+
+~~~powershell
+Get-NetTCPConnection -LocalPort 3000 | Select-Object LocalAddress,LocalPort,State,OwningProcess
+~~~
+
+Завершить конкретный PID:
+
+~~~powershell
+Stop-Process -Id <PID> -Force
+~~~
+
+## SQLite
+
+По умолчанию база:
+
+~~~text
+data/modexa.sqlite
+~~~
+
+Путь можно изменить через MODEXA_DATABASE_PATH.
+
+Не рекомендуется коммитить рабочую SQLite-базу с пользовательскими данными.
+
+## Backup
+
+Snapshot базы:
+
+~~~text
+GET /api/backup
+~~~
+
+Endpoint требует авторизацию.
+
+## Docker
+
+Запуск:
+
+~~~powershell
 docker compose up --build -d
-```
+~~~
 
-## Public bot
+Остановка:
 
-Modexa is designed as a public bot: communities can connect it to Telegram or Discord and use the command suite without being tied to one private server. Administrators can enable or disable individual commands with `/command <команда> <on|off>` and inspect the current configuration with `/settings`.
+~~~powershell
+docker compose down
+~~~
 
-Included user-facing features include help/command discovery, bot info, server info, user profiles, usage statistics, warnings, mute lists, moderation, roles, bridge and automation foundations.
+Логи:
+
+~~~powershell
+docker compose logs -f
+~~~
+
+## Типичный цикл разработки
+
+После получения изменений:
+
+~~~powershell
+git pull
+pnpm install
+pnpm verify
+pnpm dev
+~~~
+
+После изменений:
+
+~~~powershell
+pnpm verify
+~~~
+
+После успешной проверки:
+
+~~~powershell
+git status
+git add .
+git commit -m "описание изменений"
+git push
+~~~
+
+## Структура проекта
+
+~~~text
+apps/
+  api/          HTTP API
+  dashboard/    веб-панель
+  discord/      Discord adapter
+  runner/       Runtime / Runner
+  telegram/     Telegram adapter
+
+packages/
+  core/         основная бизнес-логика
+
+scripts/
+  dev.mjs       dev launcher
+
+data/
+  modexa.sqlite SQLite database
+~~~
+
+## Безопасность
+
+- Не коммитьте .env.
+- Не публикуйте DISCORD_BOT_TOKEN.
+- Не публикуйте TELEGRAM_BOT_TOKEN.
+- Не публикуйте DISCORD_CLIENT_SECRET.
+- Не публикуйте MODEXA_API_KEY.
+- Не запускайте production с MODEXA_API_KEY=change-me.
+- Перед отправкой изменений запускайте pnpm verify.
+
+## Статус проекта
+
+Modexa находится в активной разработке.
+
+Текущая платформа включает Core, Telegram, Discord, Runner, API и Dashboard. Дальнейшая разработка направлена на полноценное управление сообществами и серверами через веб-панель.
