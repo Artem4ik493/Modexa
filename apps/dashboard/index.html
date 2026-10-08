@@ -168,7 +168,7 @@ async function loadModeration(id){
 }
 async function runtimeAction(action){try{const data=await post('/api/runtime',{action});renderRuntime(data);clearDashboardError();}catch(e){dashboardError(e instanceof Error?e.message:'Не удалось изменить состояние Runner');}}
 function renderRuntime(data){document.getElementById('runtimeState').textContent=data.state==='running'?'RUNNING':'STOPPED';document.getElementById('runtimeState').className=data.state==='running'?'ok':'danger';document.getElementById('runtimePill').textContent=data.state;document.getElementById('runtimePid').textContent=data.pid??'—';document.getElementById('runtimeDiscord').textContent=data.adapters?.discord?'configured':'not configured';document.getElementById('runtimeTelegram').textContent=data.adapters?.telegram?'configured':'not configured';}
-async function inviteBot(){try{const guildId=selectedCommunity||'';const data=await get('/api/auth/discord/invite'+(guildId?'?guildId='+encodeURIComponent(guildId):''));window.open(data.url,'_blank','noopener');document.getElementById('inviteStatus').textContent='Открыто приглашение Discord.';}catch(e){dashboardError(e instanceof Error?e.message:'Не удалось создать приглашение');}}
+async function inviteBot(){try{const guildId=selectedCommunity||'';const data=await get('/api/auth/discord/invite'+(guildId?'?communityId='+encodeURIComponent(guildId):''));window.open(data.url,'_blank','noopener');document.getElementById('inviteStatus').textContent='Открыто приглашение Discord.';}catch(e){dashboardError(e instanceof Error?e.message:'Не удалось создать приглашение');}}
 async function loadAll(){
  clearDashboardError();
  try{
