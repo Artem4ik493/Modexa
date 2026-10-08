@@ -306,6 +306,7 @@ export function createTelegramAdapter(
     commandSettingsService,
     moderationService,
     (action) => adapter.sendAction(action),
+    undefined,
     memberDirectoryProxy
   )) {
     registry.register(command);
