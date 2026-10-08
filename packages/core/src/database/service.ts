@@ -530,6 +530,37 @@ export class ModexaDatabase {
     ).run(linkId);
   }
 
+  getUserIdentities(userId: string): PersistedIdentity[] {
+    const rows = this.database.prepare(
+      `SELECT id, user_id, platform, external_id, username, display_name, avatar_url, created_at, updated_at
+       FROM identities
+       WHERE user_id = ?
+       ORDER BY id`
+    ).all(userId) as Array<{
+      id: string;
+      user_id: string;
+      platform: "telegram" | "discord";
+      external_id: string;
+      username: string | null;
+      display_name: string | null;
+      avatar_url: string | null;
+      created_at: string;
+      updated_at: string;
+    }>;
+
+    return rows.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      platform: row.platform,
+      externalId: row.external_id,
+      username: row.username ?? undefined,
+      displayName: row.display_name ?? undefined,
+      avatarUrl: row.avatar_url ?? undefined,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
+    }));
+  }
+
   getIdentityByExternalId(
     platform: "telegram" | "discord",
     externalId: string
