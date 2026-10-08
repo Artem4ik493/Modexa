@@ -163,9 +163,15 @@ export function buildDiscordSlashCommands(
             : name === "clear"
               ? {
                   options: [
-                    { name: "count", description: "1-100", type: 4, required: true }
+                    {
+                      name: "count",
+                      description: "1-100",
+                      type: 4,
+                      required: true
+                    }
                   ]
-              : name === "user"
+                }
+                          : name === "user"
               ? {
                   options: [
                     { name: "user", description: "Member", type: 6, required: false }
