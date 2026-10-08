@@ -31,6 +31,19 @@ export interface BridgeMessageGateway {
     platform: IdentityPlatform;
     channelExternalId: string;
     response: InteractionResponse;
+  }): Promise<string | undefined>;
+
+  editMessage(input: {
+    platform: IdentityPlatform;
+    channelExternalId: string;
+    messageExternalId: string;
+    response: InteractionResponse;
+  }): Promise<void>;
+
+  deleteMessage(input: {
+    platform: IdentityPlatform;
+    channelExternalId: string;
+    messageExternalId: string;
   }): Promise<void>;
 }
 
@@ -75,6 +88,11 @@ export class BridgeService {
   private readonly links = new Map<
     string,
     BridgeLink
+  >();
+
+  private readonly relayedMessages = new Map<
+    string,
+    string
   >();
 
   private nextRequestId = 1;
@@ -405,7 +423,8 @@ export class BridgeService {
     source: BridgeEndpoint,
     author: PlatformUser,
     content: string,
-    replyTo?: PlatformUser
+    replyTo?: PlatformUser,
+    sourceMessageExternalId?: string
   ): Promise<void> {
     if (!this.gateway || !content.trim()) {
       return;
@@ -450,14 +469,122 @@ export class BridgeService {
     };
 
     await Promise.all(
-      targets.map((target) =>
-        this.gateway!.sendMessage({
+      targets.map(async (target) => {
+        const targetMessageExternalId =
+          await this.gateway!.sendMessage({
+            platform: target.platform,
+            channelExternalId: target.channelExternalId,
+            response
+          });
+
+        if (
+          sourceMessageExternalId &&
+          targetMessageExternalId
+        ) {
+          this.relayedMessages.set(
+            this.relayMessageKey(
+              source,
+              sourceMessageExternalId,
+              target
+            ),
+            targetMessageExternalId
+          );
+        }
+      })
+    );
+  }
+
+  async relayMessageUpdate(
+    source: BridgeEndpoint,
+    sourceMessageExternalId: string,
+    author: PlatformUser,
+    content: string
+  ): Promise<void> {
+    if (!this.gateway) return;
+
+    const targets = this.getLinkedEndpoints(source.id);
+    if (targets.length === 0) return;
+
+    const prefix =
+      source.platform === "telegram" ? "[TG]" : "[DS]";
+    const name =
+      author.username
+        ? "@" + author.username
+        : author.displayName ?? author.externalId;
+
+    const response: InteractionResponse = {
+      content:
+        BRIDGE_RELAY_MARKER +
+        prefix +
+        " " +
+        name +
+        " > " +
+        content
+    };
+
+    await Promise.all(
+      targets.map(async (target) => {
+        const targetMessageExternalId =
+          this.relayedMessages.get(
+            this.relayMessageKey(
+              source,
+              sourceMessageExternalId,
+              target
+            )
+          );
+
+        if (!targetMessageExternalId) return;
+
+        await this.gateway!.editMessage({
           platform: target.platform,
           channelExternalId: target.channelExternalId,
+          messageExternalId: targetMessageExternalId,
           response
-        })
-      )
+        });
+      })
     );
+  }
+
+  async relayMessageDelete(
+    source: BridgeEndpoint,
+    sourceMessageExternalId: string
+  ): Promise<void> {
+    if (!this.gateway) return;
+
+    const targets = this.getLinkedEndpoints(source.id);
+    await Promise.all(
+      targets.map(async (target) => {
+        const key = this.relayMessageKey(
+          source,
+          sourceMessageExternalId,
+          target
+        );
+        const targetMessageExternalId =
+          this.relayedMessages.get(key);
+
+        if (!targetMessageExternalId) return;
+
+        await this.gateway!.deleteMessage({
+          platform: target.platform,
+          channelExternalId: target.channelExternalId,
+          messageExternalId: targetMessageExternalId
+        });
+
+        this.relayedMessages.delete(key);
+      })
+    );
+  }
+
+  private relayMessageKey(
+    source: BridgeEndpoint,
+    sourceMessageExternalId: string,
+    target: BridgeEndpoint
+  ): string {
+    return [
+      source.id,
+      sourceMessageExternalId,
+      target.id
+    ].join("|");
   }
 
   createLinkRequest(
