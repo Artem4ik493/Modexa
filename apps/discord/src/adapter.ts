@@ -514,6 +514,44 @@ export class DiscordAdapter
       // Continue with cached roles if role fetch fails.
     }
 
+    try {
+      const searchQuery = new URLSearchParams({
+        query: normalized,
+        limit: "1"
+      });
+      const matches =
+        (await this.client.rest.get(
+          Routes.guildMembersSearch(communityExternalId),
+          { query: searchQuery }
+        )) as Array<{
+          user?: {
+            id: string;
+            username: string;
+            global_name?: string | null;
+            avatar?: string | null;
+            bot?: boolean;
+          };
+          roles?: string[];
+          joined_at?: string | null;
+          pending?: boolean;
+        }>;
+
+      const match = matches.find((item) => item.user && !item.user.bot);
+      if (match?.user) {
+        return this.toPlatformMemberDetailsFromApi(guild, {
+          id: match.user.id,
+          username: match.user.username,
+          globalName: match.user.global_name ?? undefined,
+          avatar: match.user.avatar ?? null,
+          roles: match.roles ?? [],
+          joinedAt: match.joined_at ? new Date(match.joined_at) : undefined,
+          pending: match.pending
+        });
+      }
+    } catch {
+      // Fall back to paginated member listing below.
+    }
+
     let after: string | undefined;
 
     do {
