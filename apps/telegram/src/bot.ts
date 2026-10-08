@@ -291,7 +291,8 @@ export function createTelegramAdapter(
     options.membershipService!,
     options.communityService!,
     moderationService,
-    (action) => adapter.sendAction(action)
+    (action) => adapter.sendAction(action),
+    memberDirectoryProxy
   )) {
     registry.register(command);
   }
@@ -303,7 +304,8 @@ export function createTelegramAdapter(
     options.communityService!,
     commandSettingsService,
     moderationService,
-    (action) => adapter.sendAction(action)
+    (action) => adapter.sendAction(action),
+    memberDirectoryProxy
   )) {
     registry.register(command);
   }
