@@ -25,7 +25,6 @@ import {
   type Guild,
   type GuildMember,
   type Message,
-  type PartialMessage,
   type User,
   Routes
 } from "discord.js";
@@ -1190,7 +1189,7 @@ export class DiscordAdapter
   }
 
   private async createMessageEvent(
-    message: Message | PartialMessage
+    message: Message
   ): Promise<Extract<AdapterEvent, { type: "message.created" }>> {
     const place = this.createPlace(
       message.guild,
@@ -1480,10 +1479,9 @@ export class DiscordAdapter
         if (message.author?.bot) return;
 
         try {
-          const resolved =
-            message.partial
-              ? await message.fetch()
-              : message;
+          const resolved: Message = message.partial
+            ? await message.fetch()
+            : message;
 
           await this.emitEvent(
             await this.createMessageEvent(resolved)
@@ -1504,24 +1502,32 @@ export class DiscordAdapter
         if (!message.id) return;
 
         try {
-          let resolved = message;
           if (message.partial) {
             try {
-              resolved = await message.fetch();
+              const resolved = await message.fetch();
+              if (resolved.author.bot) return;
+
+              await this.emitEvent({
+                type: "message.deleted",
+                message: {
+                  ...(await this.createMessageEvent(resolved)).message,
+                  content: resolved.content
+                }
+              });
             } catch {
-              // Use the partial payload when the message is gone.
+              // A partial deleted message may no longer be fetchable.
             }
+          } else {
+            if (message.author.bot) return;
+
+            await this.emitEvent({
+              type: "message.deleted",
+              message: {
+                ...(await this.createMessageEvent(message)).message,
+                content: message.content
+              }
+            });
           }
-
-          if (!resolved.author || resolved.author.bot) return;
-
-          await this.emitEvent({
-            type: "message.deleted",
-            message: {
-              ...(await this.createMessageEvent(resolved)).message,
-              content: resolved.content ?? ""
-            }
-          });
         } catch {
           // A deleted/partial message may no longer be fetchable.
         }
