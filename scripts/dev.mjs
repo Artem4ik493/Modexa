@@ -75,4 +75,3 @@ if (apiAlreadyRunning) {
   start("api", "node", ["--env-file=.env", "--import=tsx", "apps/api/src/index.ts"]);
 }
 
-start("runner", "node", ["--env-file=.env", "--import=tsx", "apps/runner/src/index.ts"]);
