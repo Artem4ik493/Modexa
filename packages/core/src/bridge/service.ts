@@ -33,14 +33,14 @@ export interface BridgeMessageGateway {
     response: InteractionResponse;
   }): Promise<string | undefined>;
 
-  editMessage(input: {
+  editMessage?(input: {
     platform: IdentityPlatform;
     channelExternalId: string;
     messageExternalId: string;
     response: InteractionResponse;
   }): Promise<void>;
 
-  deleteMessage(input: {
+  deleteMessage?(input: {
     platform: IdentityPlatform;
     channelExternalId: string;
     messageExternalId: string;
@@ -535,7 +535,7 @@ export class BridgeService {
 
         if (!targetMessageExternalId) return;
 
-        await this.gateway!.editMessage({
+        await this.gateway!.editMessage?.({
           platform: target.platform,
           channelExternalId: target.channelExternalId,
           messageExternalId: targetMessageExternalId,
@@ -564,7 +564,7 @@ export class BridgeService {
 
         if (!targetMessageExternalId) return;
 
-        await this.gateway!.deleteMessage({
+        await this.gateway!.deleteMessage?.({
           platform: target.platform,
           channelExternalId: target.channelExternalId,
           messageExternalId: targetMessageExternalId
