@@ -92,6 +92,7 @@ for (const command of createModerationRestoreCommands(
 }
 const commandCatalog = listCommandDescriptors(commandRegistry);
 const dashboardPath = resolve(process.cwd(), "apps/dashboard/index.html");
+const dashboardAssetsPath = resolve(process.cwd(), "apps/dashboard/assets");
 
 const discordClientId = process.env.DISCORD_CLIENT_ID ?? "";
 const discordClientSecret = process.env.DISCORD_CLIENT_SECRET ?? "";
@@ -302,6 +303,53 @@ const server = createServer((req, res) => {
         "access-control-allow-headers": "authorization,content-type"
       });
       res.end();
+      return;
+    }
+
+    if (url.pathname.startsWith("/assets/")) {
+      const assetName = url.pathname.slice("/assets/".length);
+
+      if (
+        !assetName ||
+        assetName.includes("/") ||
+        assetName.includes("\\") ||
+        assetName.includes("..")
+      ) {
+        res.writeHead(400, { "content-type": "text/plain; charset=utf-8" });
+        res.end("Invalid asset path");
+        return;
+      }
+
+      const assetPath = resolve(dashboardAssetsPath, assetName);
+      const assetTypes: Record<string, string> = {
+        ".png": "image/png",
+        ".ico": "image/x-icon",
+        ".svg": "image/svg+xml",
+        ".webp": "image/webp",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg"
+      };
+      const extension = assetName.slice(assetName.lastIndexOf(".")).toLowerCase();
+      const contentType = assetTypes[extension];
+
+      if (!contentType) {
+        res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+        res.end("Asset not found");
+        return;
+      }
+
+      try {
+        const asset = readFileSync(assetPath);
+        res.writeHead(200, {
+          "content-type": contentType,
+          "cache-control": "public, max-age=3600"
+        });
+        res.end(asset);
+      } catch {
+        res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+        res.end("Asset not found");
+      }
+
       return;
     }
 
