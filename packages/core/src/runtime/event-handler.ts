@@ -312,6 +312,80 @@ async function handleMemberJoined(
       }
     );
 
+  // The platform identity resolver normally creates the user and
+  // membership. Keep an explicit persistence fallback here as well,
+  // because member.joined must be enough to register a participant
+  // even when the handler is used without a resolver.
+  if (
+    deps.identityService &&
+    deps.membershipService
+  ) {
+    let user =
+      deps.identityService.findUserByIdentity(
+        deps.platform,
+        member.user.externalId
+      );
+
+    if (!user) {
+      user =
+        deps.identityService.createUser({
+          displayName:
+            member.user.displayName ??
+            member.user.username ??
+            member.user.externalId,
+          now: member.createdAt
+        });
+
+      deps.identityService.attachIdentity({
+        userId: user.id,
+        platform: deps.platform,
+        externalId: member.user.externalId,
+        username: member.user.username,
+        displayName: member.user.displayName,
+        avatarUrl: member.user.avatarUrl,
+        now: member.createdAt
+      });
+    } else {
+      deps.identityService.attachIdentity({
+        userId: user.id,
+        platform: deps.platform,
+        externalId: member.user.externalId,
+        username: member.user.username,
+        displayName: member.user.displayName,
+        avatarUrl: member.user.avatarUrl,
+        now: member.createdAt
+      });
+    }
+
+    const community =
+      executionContext.community ??
+      deps.communityService?.findByIdentity(
+        deps.platform,
+        member.community.externalId
+      );
+
+    if (community) {
+      const membership =
+        deps.membershipService.findMembership(
+          user.id,
+          community.id
+        );
+
+      if (!membership) {
+        deps.membershipService.createMembership({
+          userId: user.id,
+          communityId: community.id,
+          now: member.createdAt
+        });
+      } else if (membership.status === "left") {
+        deps.membershipService.reactivate(
+          membership.id,
+          member.createdAt
+        );
+      }
+    }
+  }
+
   deps.auditService?.record({
     communityId:
       executionContext.community?.id ?? "system",
