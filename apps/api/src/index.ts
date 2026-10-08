@@ -2,6 +2,7 @@ import { createServer } from "http";
 import { randomBytes, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { parse as parseUrlEncoded } from "node:querystring";
 import type { IncomingMessage, ServerResponse } from "http";
 import { ModexaDatabase, BackupService } from "@modexa/core";
 
@@ -145,6 +146,24 @@ function authorized(req: IncomingMessage): boolean {
     ?.slice("modexa_api_key=".length);
 
   return session === apiKey;
+}
+
+async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+  let body = "";
+  for await (const chunk of req) body += chunk;
+  if (!body.trim()) return {};
+  try {
+    const parsed = JSON.parse(body);
+    return parsed && typeof parsed === "object"
+      ? parsed as Record<string, unknown>
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function apiKeyCookie(apiKeyValue: string): string {
+  return `modexa_api_key=${encodeURIComponent(apiKeyValue)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`;
 }
 
 const server = createServer((req, res) => {
@@ -381,6 +400,20 @@ const server = createServer((req, res) => {
     }
     if (url.pathname === "/api/communities" && req.method === "GET") {
       json(res, 200, { items: database.getCommunitiesSnapshot() });
+      return;
+    }
+
+    if (url.pathname === "/api/command-settings" && req.method === "POST") {
+      const body = await readJsonBody(req);
+      const communityId = typeof body.communityId === "string" ? body.communityId : "";
+      const commandName = typeof body.commandName === "string" ? body.commandName : "";
+      const enabled = typeof body.enabled === "boolean" ? body.enabled : undefined;
+      if (!communityId || !commandName || enabled === undefined) {
+        json(res, 400, { error: "communityId, commandName and enabled are required" });
+        return;
+      }
+      database.setCommandEnabled(communityId, commandName, enabled);
+      json(res, 200, { updated: true });
       return;
     }
 
