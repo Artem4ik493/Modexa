@@ -8,7 +8,8 @@ import type { IdentityPlatform } from "../identity/types.js";
 import type { Locale } from "../i18n/locale.js";
 import { translate } from "../i18n/translate.js";
 import type {
-  InteractionResponse
+  InteractionResponse,
+  InteractionMedia
 } from "../interactions/types.js";
 import type {
   CommunityService
@@ -424,7 +425,8 @@ export class BridgeService {
     author: PlatformUser,
     content: string,
     replyTo?: PlatformUser,
-    sourceMessageExternalId?: string
+    sourceMessageExternalId?: string,
+    media?: InteractionMedia
   ): Promise<void> {
     if (!this.gateway || !content.trim()) {
       return;
@@ -456,6 +458,7 @@ export class BridgeService {
       : undefined;
 
     const response: InteractionResponse = {
+      ...(media ? { media } : {}),
       content:
         BRIDGE_RELAY_MARKER +
         prefix +
@@ -498,7 +501,8 @@ export class BridgeService {
     source: BridgeEndpoint,
     sourceMessageExternalId: string,
     author: PlatformUser,
-    content: string
+    content: string,
+    media?: InteractionMedia
   ): Promise<void> {
     if (!this.gateway) return;
 
@@ -513,6 +517,7 @@ export class BridgeService {
         : author.displayName ?? author.externalId;
 
     const response: InteractionResponse = {
+      ...(media ? { media } : {}),
       content:
         BRIDGE_RELAY_MARKER +
         prefix +
