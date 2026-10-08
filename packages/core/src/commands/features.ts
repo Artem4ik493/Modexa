@@ -137,6 +137,11 @@ async function resolveTarget(
   return undefined;
 }
 
+function formatProfileDate(date: Date | undefined, locale?: string): string {
+  if (!date) return "—";
+  return date.toLocaleString(locale === "en" ? "en-US" : "ru-RU");
+}
+
 export function createPublicFeatureCommands(
   registry: CommandRegistry,
   identities: IdentityService,
@@ -248,17 +253,27 @@ export function createPublicFeatureCommands(
       aliases: ["profile", "юзер"],
       description: "Информация об участнике",
       handler: async (context) => {
-        const user = await resolveTarget(context, identities, memberships, memberDirectory);
+        const user = await resolveTarget(
+          context,
+          identities,
+          memberships,
+          memberDirectory
+        );
+
         if (!user) {
-          return panel("Профиль", "Участник не найден.", 0xff5d73);
+          return panel(
+            "Профиль",
+            "Участник не найден.",
+            0xff5d73
+          );
         }
+
         const accounts = identities
           .getUserIdentities(user.id)
-          .map(
-            (i) =>
-              i.platform +
-              ": " +
-              (i.username ? "@" + i.username : i.externalId)
+          .map((i) =>
+            i.platform +
+            ": " +
+            (i.username ? "@" + i.username : i.externalId)
           )
           .join(", ");
 
@@ -266,46 +281,62 @@ export function createPublicFeatureCommands(
           .getUserIdentities(user.id)
           .find((i) => i.platform === context.platform);
 
-        const native = nativeIdentity && memberDirectory && context.community
-          ? await memberDirectory.getMember(
-              context.community.id,
-              nativeIdentity.externalId
-            )
-          : undefined;
+        const native =
+          nativeIdentity &&
+          memberDirectory &&
+          context.community
+            ? await memberDirectory.getMember(
+                context.community.id,
+                nativeIdentity.externalId
+              )
+            : undefined;
 
         const platformRoles = native?.roles ?? [];
         const roleText = platformRoles.length
-          ? platformRoles.map((role) =>
-              context.platform === "discord"
-                ? "@" + role.replace(/^@/, "")
-                : role
-            ).join(", ")
+          ? platformRoles
+              .map((role) =>
+                context.platform === "discord"
+                  ? "@" + role.replace(/^@/, "")
+                  : role
+              )
+              .join(", ")
           : "нет";
 
-        const status = native?.status ?? "—";
+        const response = panel(
+          "👤 " + user.displayName,
+          "Профиль пользователя Modexa.",
+          0x8b5cf6,
+          [
+            { name: "Modexa ID", value: user.id },
+            { name: "Аккаунты", value: accounts || "нет" },
+            {
+              name: "ID платформы",
+              value: nativeIdentity?.externalId ?? "—"
+            },
+            { name: "Роли платформы", value: roleText },
+            { name: "Статус", value: native?.status ?? "—" },
+            {
+              name: "Вступил",
+              value: formatProfileDate(
+                native?.joinedAt,
+                context.execution.locale
+              )
+            }
+          ]
+        );
 
         return {
-          ...panel(
-            "👤 " + user.displayName,
-            "Профиль пользователя Modexa.",
-            0x8b5cf6,
-            [
-              { name: "Modexa ID", value: user.id },
-              { name: "Аккаунт", value: accounts || "нет" },
-              { name: "ID платформы", value: nativeIdentity?.externalId ?? "—" },
-              { name: "Роли платформы", value: roleText },
-              { name: "Статус", value: status }
-            ]
-          ),
-          imageUrl: nativeIdentity?.avatarUrl ?? cards.profile({
-            displayName: user.displayName,
-            userId: user.id,
-            accounts: accounts || "нет"
-          })
+          ...response,
+          imageUrl:
+            nativeIdentity?.avatarUrl ??
+            cards.profile({
+              displayName: user.displayName,
+              userId: user.id,
+              accounts: accounts || "нет"
+            })
         };
       }
-    },
-    {
+    },    {
       name: "stats",
       aliases: ["stat"],
       description: "Статистика использования",
