@@ -94,41 +94,6 @@ export function createPublicFeatureCommands(
       }
     },
     {
-      name: "help",
-      aliases: ["commands", "хелп"],
-      description: "Список доступных команд",
-      handler: async (context) => {
-        const list = registry
-          .listAvailable(context.execution.capabilities)
-          .filter((c) => c.name !== "help")
-          .filter(
-            (c) =>
-              !context.community ||
-              settings.isEnabled(context.community.id, c.name)
-          );
-        return panel(
-          "Команды Modexa",
-          list.length
-            ? list
-                .map(
-                  (c) =>
-                    `**/${c.name}** — ${c.description ?? "без описания"}`
-                )
-                .join("\n")
-            : "Нет доступных команд.",
-          0x5b8cff,
-          [{ name: "Доступно", value: String(list.length), inline: true }],
-          [
-            {
-              id: "help-settings",
-              label: "Настройки",
-              action: { type: "command", command: "settings" }
-            }
-          ]
-        );
-      }
-    },
-    {
       name: "command",
       aliases: ["cmd"],
       description: "Включить или выключить команду",
@@ -320,46 +285,6 @@ export function createPublicFeatureCommands(
         );
       }
     },
-    {
-      name: "settings",
-      aliases: ["config"],
-      description: "Настройки команд",
-      requiredCapabilities: ["community.manage"],
-      handler: async (context) => {
-        if (!context.community) {
-          return panel("Настройки", "Команда доступна только в сообществе.", 0xffb454);
-        }
-        const configured = new Map(
-          settings.list(context.community.id).map((x) => [x.commandName, x.enabled])
-        );
-        const commands = registry.list();
-        return panel(
-          "⚙️ Настройки команд",
-          commands
-            .map(
-              (c) =>
-                `**/${c.name}** — ${configured.get(c.name) === false ? "⛔ отключена" : "✅ включена"}`
-            )
-            .join("\n"),
-          0x5b8cff,
-          [{ name: "Команд", value: String(commands.length), inline: true }],
-          commands.slice(0, 20).map((c) => ({
-            id: "toggle-" + c.name,
-            label:
-              (configured.get(c.name) === false ? "Вкл " : "Выкл ") +
-              "/" +
-              c.name,
-            action: {
-              type: "command" as const,
-              command: "command",
-              args: [
-                c.name,
-                configured.get(c.name) === false ? "on" : "off"
-              ]
-            }
-          }))
-        );
-      }
-    }
+
   ];
 }
