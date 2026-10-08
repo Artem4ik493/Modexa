@@ -25,6 +25,7 @@ import {
   type Guild,
   type GuildMember,
   type Message,
+  type PartialMessage,
   type User,
   Routes
 } from "discord.js";
@@ -1189,8 +1190,8 @@ export class DiscordAdapter
   }
 
   private async createMessageEvent(
-    message: Message
-  ): Promise<AdapterEvent> {
+    message: Message | PartialMessage
+  ): Promise<Extract<AdapterEvent, { type: "message.created" }>> {
     const place = this.createPlace(
       message.guild,
       message.channelId,
