@@ -251,7 +251,7 @@ describe("member commands", () => {
       });
 
     expect(response.content).toContain(
-      "**🎭 Роли платформы:** Moderator, VIP"
+      "**🎭 Роли платформы:** @Moderator, @VIP"
     );
     expect(response.content).toContain(
       "**🟢 Статус:** member"
