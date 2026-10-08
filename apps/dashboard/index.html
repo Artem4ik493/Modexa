@@ -177,6 +177,24 @@ function renderServers(){
   document.getElementById('serverCount').textContent=communities.length+' серверов';
 }
 
+async function renderSelected(){
+  if(!selectedCommunity){
+    document.getElementById('selectedMode').textContent='—';
+    document.getElementById('serverDetails').textContent='Выберите сервер.';
+    return;
+  }
+  try{
+    const cs=await get('/api/communities');
+    const c=cs.items.find(x=>x.id===selectedCommunity);
+    if(!c){
+      document.getElementById('serverDetails').textContent='Сообщество ещё не зарегистрировано локально. Добавьте бота и дождитесь GuildCreate.';
+      return;
+    }
+    document.getElementById('selectedMode').textContent=c.mode||'public';
+    document.getElementById('serverDetails').innerHTML='<div class="setting"><span>Название</span><b>'+esc(c.name)+'</b></div><div class="setting"><span>Community ID</span><code>'+esc(c.id)+'</code></div><div class="setting"><span>Режим</span><div><button class="btn '+(c.mode==='public'?'primary':'')+'" onclick="setMode(\'public\')">Public</button> <button class="btn '+(c.mode==='private'?'primary':'')+'" onclick="setMode(\'private\')">Private</button></div></div>';
+  }catch{}
+}
+
 async function setMode(mode){if(!selectedCommunity)return toast('Сначала выберите сервер');try{await post('/api/community/mode',{communityId:selectedCommunity,mode});toast('Режим сообщества изменён');await loadAll()}catch(e){toast(e.message)}}
 
 async function loadCommands(){if(!selectedCommunity){document.getElementById('commandList').innerHTML='<div class="empty">Выберите сервер сверху.</div>';return}try{const d=await get('/api/commands?communityId='+encodeURIComponent(selectedCommunity));document.getElementById('commandCount').textContent=d.items.length+' команд';const groups={basic:'Основные',members:'Участники',moderation:'Модерация',settings:'Настройки',other:'Другое'};const names=['help','menu','info','server','user','stats','account','members','member','role','warn','mute','kick','ban','unmute','unban','warns','warnings','mutes','clear','command','settings','system'];const html=d.items.map(c=>{const cat=names.includes(c.name)?(c.name==='warn'||c.name==='mute'||c.name==='kick'||c.name==='ban'||c.name==='unmute'||c.name==='unban'||c.name==='warns'||c.name==='warnings'||c.name==='mutes'?'moderation':c.name==='member'||c.name==='members'||c.name==='user'||c.name==='role'?'members':c.name==='settings'||c.name==='command'||c.name==='system'?'settings':'basic'):'other';return '<div class="command"><div class="grow"><div class="command-name">/'+esc(c.name)+'</div><div class="command-desc">'+esc(c.descriptions?.ru||c.descriptions?.en||'Без описания')+'</div><div class="meta">'+groups[cat]+'</div></div><button class="switch '+(c.enabled?'on':'')+'" onclick="toggleCommand(\''+esc(c.name)+'\','+(c.enabled?'false':'true')+',this)"></button></div>'}).join('');document.getElementById('commandList').innerHTML=html}catch(e){document.getElementById('commandList').innerHTML='<div class="empty">Не удалось загрузить команды: '+esc(e.message)+'</div>'}}
