@@ -467,9 +467,28 @@ const server = createServer((req, res) => {
         return;
       }
 
+      const modexaIdentity = database.getIdentityByExternalId(
+        "discord",
+        session.user.id
+      );
+      const modexaUser = modexaIdentity
+        ? database.getUser(modexaIdentity.userId)
+        : undefined;
+
+      const linkedIdentities = modexaUser
+        ? database.getUserIdentities(modexaUser.id)
+        : [];
+
       json(res, 200, {
         authenticated: true,
-        user: session.user
+        user: session.user,
+        modexa: modexaUser
+          ? {
+              id: modexaUser.id,
+              displayName: modexaUser.displayName,
+              identities: linkedIdentities
+            }
+          : null
       });
       return;
     }
