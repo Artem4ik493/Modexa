@@ -252,9 +252,15 @@ describe("Telegram event handler", () => {
       )
     );
 
-    expect(actions[2]).toMatchObject({
+    await handler(
+      interactionEvent(
+        callbackTokens(actions[2]).slice(-2)[0]
+      )
+    );
+
+    expect(actions[3]).toMatchObject({
       type: "message.edit",
-      content: "Выберите действие:"
+      content: "Доступные команды:"
     });
   });
 
