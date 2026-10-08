@@ -252,13 +252,91 @@ services.bridgeService.setMessageGateway({
               : undefined;
           })();
 
-    await adapter.sendAction({
+    return await adapter.sendAction({
       type: "message.send",
       platform,
       channelExternalId,
       content:
         bound.content ?? "…",
       metadata
+    }).then((messageId) =>
+      typeof messageId === "string"
+        ? messageId
+        : undefined
+    );
+  },
+
+  async editMessage({
+    platform,
+    channelExternalId,
+    messageExternalId,
+    response
+  }) {
+    const adapter =
+      adapters.find(
+        (item) => item.platform === platform
+      );
+
+    if (!adapter) {
+      throw new Error(
+        `No ${platform} adapter is available for Bridge messaging`
+      );
+    }
+
+    const bound =
+      interactionStore.bindResponse(
+        response,
+        { platform }
+      );
+
+    const metadata =
+      platform === "telegram"
+        ? (() => {
+            const replyMarkup =
+              renderTelegramInteraction(bound);
+            return replyMarkup
+              ? { telegram: { replyMarkup } }
+              : undefined;
+          })()
+        : (() => {
+            const components =
+              renderDiscordInteraction(bound);
+            return components
+              ? { discord: { components } }
+              : undefined;
+          })();
+
+    await adapter.sendAction({
+      type: "message.edit",
+      platform,
+      channelExternalId,
+      messageExternalId,
+      content: bound.content ?? "…",
+      metadata
+    });
+  },
+
+  async deleteMessage({
+    platform,
+    channelExternalId,
+    messageExternalId
+  }) {
+    const adapter =
+      adapters.find(
+        (item) => item.platform === platform
+      );
+
+    if (!adapter) {
+      throw new Error(
+        `No ${platform} adapter is available for Bridge messaging`
+      );
+    }
+
+    await adapter.sendAction({
+      type: "message.delete",
+      platform,
+      channelExternalId,
+      messageExternalId
     });
   }
 });
