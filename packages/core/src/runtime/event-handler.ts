@@ -268,6 +268,26 @@ async function handleMessageUpdate(
     }
   );
 
+  if (
+    deps.bridgeService &&
+    executionContext.community &&
+    executionContext.channel
+  ) {
+    const source =
+      deps.bridgeService.findEndpointForExecution(
+        executionContext
+      );
+
+    if (source) {
+      await deps.bridgeService.relayMessageUpdate(
+        source,
+        message.externalId,
+        message.author,
+        message.content
+      );
+    }
+  }
+
   deps.auditService?.record({
     communityId: executionContext.community?.id ?? "system",
     action: "message.edit",
@@ -290,6 +310,24 @@ async function handleMessageDelete(
       channel: message.channel
     }
   );
+
+  if (
+    deps.bridgeService &&
+    executionContext.community &&
+    executionContext.channel
+  ) {
+    const source =
+      deps.bridgeService.findEndpointForExecution(
+        executionContext
+      );
+
+    if (source) {
+      await deps.bridgeService.relayMessageDelete(
+        source,
+        message.externalId
+      );
+    }
+  }
 
   deps.auditService?.record({
     communityId: executionContext.community?.id ?? "system",
@@ -367,7 +405,8 @@ async function handleMessage(
         source,
         message.author,
         message.content,
-        message.replyTo
+        message.replyTo,
+        message.externalId
       );
     }
   }
