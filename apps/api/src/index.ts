@@ -124,6 +124,7 @@ type DiscordSession = {
 
 const discordSessions = new Map<string, DiscordSession>();
 const oauthStates = new Map<string, number>();
+const oauthHandoffs = new Map<string, { sessionId: string; expiresAt: number }>();
 
 async function discordToken(code: string): Promise<{
   access_token: string;
@@ -413,11 +414,16 @@ const server = createServer((req, res) => {
         user
       });
 
-      // Return to the same origin that handled the OAuth callback.
-      // Using MODEXA_DASHBOARD_URL here can send the browser to another
-      // host/port, where the HttpOnly session cookie is not available.
+      // Also create a short-lived one-time handoff. This makes OAuth work
+      // even when the dashboard is opened as localhost vs 127.0.0.1.
+      const handoff = randomBytes(32).toString("hex");
+      oauthHandoffs.set(handoff, {
+        sessionId,
+        expiresAt: Date.now() + 60_000
+      });
+
       res.writeHead(302, {
-        location: "/",
+        location: "/?discord_handoff=" + encodeURIComponent(handoff),
         "set-cookie": cookie("modexa_session", sessionId, 7 * 24 * 60 * 60),
         "cache-control": "no-store"
       });
@@ -460,6 +466,31 @@ const server = createServer((req, res) => {
         "cache-control": "no-store"
       });
       res.end(JSON.stringify({ authenticated: true }));
+      return;
+    }
+
+    if (url.pathname === "/api/auth/discord/handoff" && req.method === "POST") {
+      const body = await readJsonBody(req);
+      const handoff = typeof body.handoff === "string" ? body.handoff : "";
+      const entry = handoff ? oauthHandoffs.get(handoff) : undefined;
+      if (!entry || entry.expiresAt <= Date.now()) {
+        if (handoff) oauthHandoffs.delete(handoff);
+        json(res, 401, { authenticated: false });
+        return;
+      }
+
+      oauthHandoffs.delete(handoff);
+      const session = discordSessions.get(entry.sessionId);
+      if (!session || session.expiresAt <= Date.now()) {
+        json(res, 401, { authenticated: false });
+        return;
+      }
+
+      json(res, 200, {
+        authenticated: true,
+        user: session.user,
+        sessionId: session.id
+      });
       return;
     }
 
