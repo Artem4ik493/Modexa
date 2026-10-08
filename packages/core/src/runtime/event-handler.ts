@@ -436,11 +436,26 @@ async function handleMessageUpdate(
       );
 
     if (source) {
+      const media =
+        message.metadata?.bridgeMedia &&
+        typeof message.metadata.bridgeMedia === "object"
+          ? message.metadata.bridgeMedia as {
+              type?: "image" | "animation" | "video";
+              url?: string;
+            }
+          : undefined;
+
       await deps.bridgeService.relayMessageUpdate(
         source,
         message.externalId,
         message.author,
-        message.content
+        message.content,
+        media?.type && media.url
+          ? {
+              type: media.type,
+              url: media.url
+            }
+          : undefined
       );
     }
   }
@@ -558,12 +573,27 @@ async function handleMessage(
       );
 
     if (source) {
+      const media =
+        message.metadata?.bridgeMedia &&
+        typeof message.metadata.bridgeMedia === "object"
+          ? message.metadata.bridgeMedia as {
+              type?: "image" | "animation" | "video";
+              url?: string;
+            }
+          : undefined;
+
       await deps.bridgeService.relayMessage(
         source,
         message.author,
         message.content,
         message.replyTo,
-        message.externalId
+        message.externalId,
+        media?.type && media.url
+          ? {
+              type: media.type,
+              url: media.url
+            }
+          : undefined
       );
     }
   }
