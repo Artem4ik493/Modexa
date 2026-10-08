@@ -911,6 +911,32 @@ export class ModexaDatabase {
           "DELETE FROM user_community_roles WHERE user_id = ?"
         ).run(sourceUserId);
 
+        // Reassign rows that reference users without ON DELETE CASCADE
+        // before deleting the source account during identity linking.
+        this.database.prepare(
+          `UPDATE moderation_cases
+           SET actor_user_id = ?
+           WHERE actor_user_id = ?`
+        ).run(targetUserId, sourceUserId);
+
+        this.database.prepare(
+          `UPDATE moderation_cases
+           SET target_user_id = ?
+           WHERE target_user_id = ?`
+        ).run(targetUserId, sourceUserId);
+
+        this.database.prepare(
+          `UPDATE audit_entries
+           SET actor_user_id = ?
+           WHERE actor_user_id = ?`
+        ).run(targetUserId, sourceUserId);
+
+        this.database.prepare(
+          `UPDATE audit_entries
+           SET target_user_id = ?
+           WHERE target_user_id = ?`
+        ).run(targetUserId, sourceUserId);
+
         this.database.prepare(
           "DELETE FROM users WHERE id = ?"
         ).run(sourceUserId);
