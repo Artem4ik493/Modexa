@@ -101,7 +101,13 @@ let authKey=localStorage.getItem('modexa_api_key')||'';
 let discordUser=null;
 function authHeaders(){return authKey?{Authorization:'Bearer '+authKey}:{}}
 async function get(path){
- const r=await fetch(API+path,{headers:authHeaders()});
+ const r=await fetch(API+path,{headers:authHeaders(),credentials:'same-origin'});
+ if(r.status===401){document.getElementById('login').classList.remove('hidden');document.getElementById('profile').style.display='none';throw new Error('unauthorized');}
+ if(!r.ok)throw new Error(await r.text());
+ return r.json();
+}
+async function post(path,body){
+ const r=await fetch(API+path,{method:'POST',headers:{...authHeaders(),'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify(body)});
  if(r.status===401){document.getElementById('login').classList.remove('hidden');document.getElementById('profile').style.display='none';throw new Error('unauthorized');}
  if(!r.ok)throw new Error(await r.text());
  return r.json();
