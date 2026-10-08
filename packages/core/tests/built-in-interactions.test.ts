@@ -215,7 +215,7 @@ describe("built-in menu commands", () => {
       result.response.buttons?.map(
         (button) => button.label
       )
-    ).toEqual(["Аккаунт", "Настройки", "Закрыть"]);
+    ).toEqual(["Помощь", "Аккаунт", "Настройки", "Закрыть"]);
   });
 
   it("renders the menu in English for an English user", async () => {
