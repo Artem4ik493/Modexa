@@ -8,7 +8,8 @@ import {
   type PlatformUser,
   type PlatformUserRole,
   type MemberDirectory,
-  type PlatformMemberDetails
+  type PlatformMemberDetails,
+  type Logger
 } from "@modexa/core";
 
 import {
@@ -61,7 +62,8 @@ export class TelegramAdapter
   private readonly recentMessageIds = new Map<string, number[]>();
 
   constructor(
-    private readonly bot: Bot
+    private readonly bot: Bot,
+    private readonly logger?: Logger
   ) {
     this.registerHandlers();
   }
@@ -457,6 +459,77 @@ export class TelegramAdapter
     // native status details.
     void communityExternalId;
     return [];
+  }
+
+  async findMemberByUsername(
+    communityExternalId: string,
+    username: string
+  ): Promise<PlatformMemberDetails | undefined> {
+    const normalized = username.replace(/^@/, "").trim().toLowerCase();
+
+    // Native lookup path #3: Telegram can enumerate administrators.
+    // This is useful even when the administrator has never written to
+    // the bot. For ordinary members Telegram Bot API does not expose a
+    // username -> user_id lookup.
+    try {
+      const administrators =
+        await this.bot.api.getChatAdministrators(
+          Number(communityExternalId)
+        );
+
+      const administrator =
+        administrators.find(
+          (item) =>
+            item.user.username?.toLowerCase() === normalized
+        );
+
+      if (administrator) {
+        const user = administrator.user;
+        const status = administrator.status;
+
+        return {
+          user: {
+            platform: "telegram",
+            externalId: String(user.id),
+            username: user.username,
+            displayName: user.first_name,
+            avatarUrl: await this.resolveAvatarUrl(user.id),
+            platformRole:
+              status === "creator" || status === "administrator"
+                ? "admin"
+                : "member"
+          },
+          roles:
+            status === "creator" || status === "administrator"
+              ? [status]
+              : [],
+          status
+        };
+      }
+
+      this.logger?.warn(
+        "telegram.member.lookup.administrators.not_found",
+        {
+          platform: "telegram",
+          adapterId: this.id,
+          communityId: communityExternalId,
+          username: normalized
+        }
+      );
+    } catch (error) {
+      this.logger?.error(
+        "telegram.member.lookup.administrators.failed",
+        {
+          platform: "telegram",
+          adapterId: this.id,
+          communityId: communityExternalId,
+          username: normalized
+        },
+        error
+      );
+    }
+
+    return undefined;
   }
 
   async resolveUser(
