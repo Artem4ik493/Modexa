@@ -171,7 +171,7 @@ export function buildDiscordSlashCommands(
                     }
                   ]
                 }
-                          : name === "user"
+            : name === "user"
               ? {
                   options: [
                     { name: "user", description: "Member", type: 6, required: false }
