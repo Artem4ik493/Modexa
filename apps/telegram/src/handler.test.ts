@@ -196,7 +196,7 @@ describe("Telegram event handler", () => {
 
     expect(
       callbackTokens(actions[0])
-    ).toHaveLength(3);
+    ).toHaveLength(4);
   });
 
   it("edits the message when a button is pressed", async () => {
@@ -204,7 +204,7 @@ describe("Telegram event handler", () => {
 
     await handler(messageEvent("/menu"));
 
-    const [accountToken] =
+    const [, accountToken] =
       callbackTokens(actions[0]);
 
     await handler(
@@ -264,7 +264,7 @@ describe("Telegram event handler", () => {
     await handler(messageEvent("/menu"));
 
     const closeToken =
-      callbackTokens(actions[0])[2];
+      callbackTokens(actions[0])[3];
 
     await handler(
       interactionEvent(closeToken)
