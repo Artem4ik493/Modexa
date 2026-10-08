@@ -35,6 +35,7 @@ export function createDiscordEventHandler(
       return {
         discord: {
           ...(components ? { components } : {}),
+          ...(response.media ? { media: response.media } : {}),
           ...(response.imageUrl
             ? { imageUrl: response.imageUrl }
             : {}),
