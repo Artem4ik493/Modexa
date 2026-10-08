@@ -3,205 +3,177 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Modexa — Dashboard</title>
+<title>Modexa — Control Center</title>
 <style>
-:root{
-  --bg:#070a12;--panel:#0d1220;--panel2:#11182a;--line:#202a42;--text:#f4f7ff;--muted:#8793ad;
-  --accent:#8b5cf6;--accent2:#5b8cff;--ok:#39d98a;--warn:#ffb454;--danger:#ff5d73;
-  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-}
-*{box-sizing:border-box}.login{position:fixed;inset:0;background:#070a12ee;backdrop-filter:blur(18px);display:grid;place-items:center;z-index:100}.login.hidden{display:none}.login-card{width:min(420px,calc(100% - 36px));background:#0d1220;border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:0 30px 100px #0008}.login-card h1{margin:0 0 8px}.login-card p{color:var(--muted);line-height:1.5}.login-card input{width:100%;box-sizing:border-box;margin:12px 0;padding:13px;border-radius:12px;border:1px solid var(--line);background:#11182a;color:#fff;outline:none}.login-error{color:var(--danger);font-size:12px;min-height:18px}.login-divider{display:flex;align-items:center;gap:10px;color:var(--muted);margin:18px 0}.login-divider:before,.login-divider:after{content:"";height:1px;background:var(--line);flex:1}.login-divider span{font-size:11px}
-body{margin:0;background:radial-gradient(900px 500px at 20% -10%,#28336b55,transparent 65%),radial-gradient(700px 500px at 100% 10%,#7c3aed20,transparent 65%),var(--bg);color:var(--text)}
-button{font:inherit;color:inherit}.app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
-aside{border-right:1px solid var(--line);background:#090d17cc;backdrop-filter:blur(20px);padding:22px 16px;position:sticky;top:0;height:100vh}
-.brand{display:flex;gap:12px;align-items:center;padding:4px 8px 28px}.logo{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-weight:900;box-shadow:0 10px 30px #6d28d955}.brand b{font-size:20px}.brand span{display:block;color:var(--muted);font-size:11px;margin-top:2px}
-nav{display:grid;gap:6px}.nav{border:1px solid transparent;background:transparent;padding:11px 12px;border-radius:12px;text-align:left;cursor:pointer;color:#aeb8ce}.nav:hover,.nav.active{background:#161d31;border-color:#293452;color:#fff}.nav small{float:right;color:#687590}
-.bottom{position:absolute;bottom:18px;left:16px;right:16px;border-top:1px solid var(--line);padding-top:14px;color:var(--muted);font-size:12px}
-main{padding:30px;max-width:1500px;width:100%;margin:auto}.top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:28px}.eyebrow{color:#9aa7c3;font-size:12px;text-transform:uppercase;letter-spacing:.14em}.title{font-size:32px;font-weight:800;letter-spacing:-.04em;margin:7px 0}.subtitle{color:var(--muted)}
-.actions{display:flex;gap:8px}.btn{border:1px solid var(--line);background:#11182a;padding:10px 14px;border-radius:11px;cursor:pointer}.btn.primary{background:linear-gradient(135deg,#7c3aed,#4f7cff);border:0}
-.page{display:none}.page.active{display:block}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.card{background:linear-gradient(180deg,#11182be8,#0d1220e8);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 18px 70px #0003}.metric .label{color:var(--muted);font-size:12px}.metric .value{font-size:30px;font-weight:800;margin:8px 0 3px}.metric .hint{font-size:12px;color:#7f8aa3}.ok{color:var(--ok)}.warn{color:var(--warn)}.danger{color:var(--danger)}
-.layout{display:grid;grid-template-columns:1.4fr .8fr;gap:14px;margin-top:14px}.section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.section-title h2{margin:0;font-size:16px}.muted{color:var(--muted)}
-.community{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}.community:last-child{border:0}.avatar{width:38px;height:38px;border-radius:11px;background:#171f35;display:grid;place-items:center;font-weight:800}.grow{flex:1}.name{font-weight:700}.meta{font-size:12px;color:var(--muted);margin-top:3px}.pill{font-size:11px;border-radius:999px;padding:5px 8px;background:#152235;color:#9ab0d9;border:1px solid #25334f}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:5px}
-.table{width:100%;border-collapse:collapse;font-size:13px}.table th,.table td{text-align:left;padding:12px;border-bottom:1px solid var(--line)}.table th{color:#74809a;font-weight:600}.empty{text-align:center;padding:30px;color:var(--muted)}
-.settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.setting{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
-.switch{width:42px;height:24px;border-radius:999px;background:#273149;border:0;position:relative}.switch:after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;top:3px;left:3px;background:#fff;transition:.2s}.switch.on{background:var(--accent)}.switch.on:after{left:21px}
-@media(max-width:1000px){.app{grid-template-columns:1fr}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}nav{grid-template-columns:repeat(3,1fr)}.bottom{display:none}.grid{grid-template-columns:repeat(2,1fr)}.layout{grid-template-columns:1fr}}@media(max-width:650px){main{padding:18px}.grid,.settings{grid-template-columns:1fr}.top{display:block}.actions{margin-top:15px}nav{grid-template-columns:repeat(2,1fr)}}
+:root{--bg:#070912;--panel:#0d1220;--panel2:#11182a;--line:#202a42;--text:#f4f7ff;--muted:#8490aa;--accent:#8b5cf6;--accent2:#4f7cff;--ok:#35d58a;--warn:#ffb454;--danger:#ff5d73;--shadow:0 22px 80px #0004;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(900px 500px at 15% -10%,#3d4aa844,transparent 65%),radial-gradient(800px 600px at 100% 0,#7c3aed22,transparent 65%),var(--bg);color:var(--text)}
+button,input,select,textarea{font:inherit}button{color:inherit}.app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+aside{position:sticky;top:0;height:100vh;padding:20px 14px;border-right:1px solid var(--line);background:#090d17dd;backdrop-filter:blur(20px)}
+.brand{display:flex;gap:11px;align-items:center;padding:4px 8px 24px}.logo{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 12px 35px #6d28d955}.brand b{font-size:19px}.brand small{display:block;color:var(--muted);margin-top:2px}
+.profile{padding:10px;border:1px solid var(--line);border-radius:13px;background:#11182a;margin:0 6px 15px}.profile-name{font-weight:700}.profile-sub{font-size:11px;color:var(--muted);margin-top:3px}
+nav{display:grid;gap:5px}.nav{border:1px solid transparent;background:transparent;text-align:left;padding:10px 11px;border-radius:11px;cursor:pointer;color:#aeb8ce}.nav:hover,.nav.active{background:#161d31;border-color:#293452;color:#fff}.nav .icon{display:inline-block;width:22px;color:#8490aa}
+.aside-bottom{position:absolute;left:14px;right:14px;bottom:15px;border-top:1px solid var(--line);padding:12px 8px;color:var(--muted);font-size:11px}
+main{width:100%;max-width:1500px;margin:auto;padding:28px 30px}.top{display:flex;gap:18px;align-items:center;justify-content:space-between;margin-bottom:24px}.eyebrow{font-size:11px;color:#8995b0;text-transform:uppercase;letter-spacing:.16em}.title{font-size:30px;font-weight:850;letter-spacing:-.04em;margin:5px 0}.subtitle{font-size:13px;color:var(--muted)}.top-actions{display:flex;gap:8px;align-items:center}
+.btn{border:1px solid var(--line);background:#11182a;padding:9px 13px;border-radius:10px;cursor:pointer}.btn:hover{border-color:#394765;background:#151e32}.btn.primary{border:0;background:linear-gradient(135deg,var(--accent),var(--accent2))}.btn.danger{border-color:#5a2734;color:#ff9aaa;background:#26131a}
+.select{border:1px solid var(--line);background:#11182a;color:#fff;border-radius:10px;padding:9px 12px;min-width:220px;outline:none}
+.page{display:none}.page.active{display:block}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}.two{display:grid;grid-template-columns:1.25fr .75fr;gap:13px}.card{background:linear-gradient(180deg,#11182be8,#0d1220e8);border:1px solid var(--line);border-radius:17px;padding:17px;box-shadow:var(--shadow)}.metric .label{font-size:11px;color:var(--muted)}.metric .value{font-size:29px;font-weight:850;margin:8px 0 2px}.hint{font-size:11px;color:#687590}.ok{color:var(--ok)}.warn{color:var(--warn)}.danger-text{color:var(--danger)}
+.section{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}.section h2{font-size:15px;margin:0}.muted{color:var(--muted)}.pill{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;background:#152035;border:1px solid #263452;color:#9fb0d0;font-size:10px}.dot{width:6px;height:6px;border-radius:50%;background:var(--ok)}
+.row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.row:last-child{border-bottom:0}.grow{flex:1}.name{font-weight:700}.meta{font-size:11px;color:var(--muted);margin-top:3px}.avatar{width:37px;height:37px;border-radius:11px;background:#182139;display:grid;place-items:center;font-weight:800}
+.setting{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:13px 0;border-bottom:1px solid var(--line)}.setting:last-child{border-bottom:0}.switch{width:44px;height:25px;border:0;border-radius:99px;background:#273149;position:relative;cursor:pointer}.switch:after{content:"";position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:.18s}.switch.on{background:var(--accent)}.switch.on:after{left:22px}
+.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;font-size:12px}.table th,.table td{padding:11px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}.table th{font-size:10px;color:#74809a;text-transform:uppercase}.empty{text-align:center;padding:30px;color:var(--muted)}
+.command-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.command{padding:13px;border:1px solid var(--line);border-radius:13px;background:#0e1525;display:flex;align-items:center;gap:12px}.command-name{font-weight:700}.command-desc{font-size:11px;color:var(--muted);margin-top:3px}.command-cat{font-size:10px;color:#9ba8c1;margin-bottom:9px;text-transform:uppercase;letter-spacing:.1em}
+.form{display:grid;gap:10px}.input,.textarea,.select2{width:100%;border:1px solid var(--line);background:#0b1120;color:#fff;border-radius:10px;padding:10px 11px;outline:none}.textarea{min-height:90px;resize:vertical}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.toast{position:fixed;right:18px;bottom:18px;z-index:150;padding:12px 15px;border:1px solid #31415f;background:#11182a;border-radius:12px;box-shadow:var(--shadow);display:none;font-size:12px}.toast.show{display:block}.login{position:fixed;inset:0;z-index:100;background:#070912ee;backdrop-filter:blur(18px);display:grid;place-items:center}.login.hidden{display:none}.login-card{width:min(430px,calc(100% - 32px));padding:28px;border:1px solid var(--line);border-radius:22px;background:#0d1220;box-shadow:0 35px 100px #0009}.login-card h1{margin:0 0 8px}.login-card p{color:var(--muted);line-height:1.5;font-size:13px}.login-error{min-height:18px;color:#ff9aaa;font-size:12px;margin-top:10px}
+@media(max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}.grid3{grid-template-columns:1fr 1fr}}@media(max-width:780px){.app{display:block}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}nav{grid-template-columns:repeat(3,1fr)}.aside-bottom{display:none}main{padding:20px}.top{display:block}.top-actions{margin-top:14px;flex-wrap:wrap}.command-grid{grid-template-columns:1fr}}@media(max-width:560px){nav{grid-template-columns:repeat(2,1fr)}.grid,.grid3,.form-grid{grid-template-columns:1fr}.title{font-size:25px}.select{min-width:180px;width:100%}}
 </style>
 </head>
 <body>
-<div class="login" id="login"><div class="login-card"><div class="logo" style="margin-bottom:18px">M</div><h1>Добро пожаловать в Modexa</h1><p>Управляйте Discord-серверами, модерацией, AutoMod, рейтингом и автоматизациями из одной панели.</p><button class="btn primary" style="width:100%;margin-top:8px" onclick="discordLogin()">Войти через Discord</button><div class="login-divider"><span>или</span></div><details><summary class="muted">Вход по API-ключу</summary><input id="apiKey" type="password" placeholder="MODEXA_API_KEY" autocomplete="current-password"><button class="btn" style="width:100%" onclick="login()">Войти</button></details><div class="login-error" id="loginError"></div></div></div>
-<div id="dashboardError" style="display:none;position:fixed;top:18px;right:18px;max-width:420px;padding:12px 14px;border:1px solid #5a2230;background:#26131a;color:#ff9aaa;border-radius:12px;z-index:120;font-size:12px;box-shadow:0 16px 50px #0006"></div>
+<div class="login" id="login"><div class="login-card"><div class="logo">M</div><h1>Modexa Control Center</h1><p>Управляйте подключёнными сообществами, командами, модерацией, автоматизациями и Runner из одной панели.</p><button class="btn primary" style="width:100%;margin-top:8px" onclick="discordLogin()">Войти через Discord</button><div style="display:flex;align-items:center;gap:10px;margin:17px 0;color:var(--muted);font-size:11px"><span style="height:1px;background:var(--line);flex:1"></span>или<span style="height:1px;background:var(--line);flex:1"></span></div><input id="apiKey" class="input" type="password" placeholder="MODEXA_API_KEY"><button class="btn" style="width:100%;margin-top:8px" onclick="login()">Войти по API-ключу</button><div class="login-error" id="loginError"></div></div></div>
+<div class="toast" id="toast"></div>
 <div class="app">
 <aside>
-  <div class="brand"><div class="logo">M</div><div><b>Modexa</b><span>Community OS</span></div></div>
-  <div id="profile" style="display:none;margin:-8px 8px 18px;padding:10px;border:1px solid var(--line);border-radius:13px;background:#11182a"><div class="meta">Вы вошли как</div><div class="name" id="profileName">—</div><button class="btn" style="width:100%;margin-top:8px" onclick="logout()">Выйти</button></div>
+  <div class="brand"><div class="logo">M</div><div><b>Modexa</b><small>Community OS</small></div></div>
+  <div class="profile" id="profile" style="display:none"><div class="profile-sub">Авторизован</div><div class="profile-name" id="profileName">—</div><button class="btn" style="width:100%;margin-top:9px" onclick="logout()">Выйти</button></div>
   <nav>
-    <button class="nav active" data-page="overview">Обзор</button>
-    <button class="nav" data-page="communities">Сообщества</button>
-    <button class="nav" data-page="moderation">Модерация</button>
-    <button class="nav" data-page="automod">AutoMod</button>
-    <button class="nav" data-page="audit">Audit</button>
-    <button class="nav" data-page="ranking">Ranking</button>
-    <button class="nav" data-page="welcome">Welcome</button>
-    <button class="nav" data-page="commands">Commands</button>
-    <button class="nav" data-page="automations">Автоматизации</button>
-    <button class="nav" data-page="bridge">Bridge</button>
-    <button class="nav" data-page="billing">Billing</button>
-    <button class="nav" data-page="runtime">Сервер / Bot</button>
-    <button class="nav" data-page="settings">Настройки</button>
+    <button class="nav active" data-page="overview"><span class="icon">◈</span>Обзор</button>
+    <button class="nav" data-page="servers"><span class="icon">▦</span>Сервера</button>
+    <button class="nav" data-page="commands"><span class="icon">⌘</span>Команды</button>
+    <button class="nav" data-page="moderation"><span class="icon">◆</span>Модерация</button>
+    <button class="nav" data-page="automations"><span class="icon">↯</span>Автоматизации</button>
+    <button class="nav" data-page="bridge"><span class="icon">↔</span>Bridge</button>
+    <button class="nav" data-page="audit"><span class="icon">≡</span>Audit</button>
+    <button class="nav" data-page="system"><span class="icon">⚙</span>Система</button>
+    <button class="nav" data-page="runtime"><span class="icon">●</span>Bot Runtime</button>
   </nav>
-  <div class="bottom">Modexa v1 · API <span id="apiDot">●</span></div>
+  <div class="aside-bottom">Modexa · Control Center<br>API <span id="apiDot" class="ok">● online</span></div>
 </aside>
+
 <main>
-  <div class="top">
-    <div><div class="eyebrow">Control Center</div><div class="title" id="pageTitle">Обзор</div><div class="subtitle">Управление сообществами, безопасностью и автоматизацией.</div></div>
-    <div class="actions"><button class="btn" onclick="loadAll()">↻ Обновить</button><button class="btn primary" onclick="showPage('communities')">+ Сообщество</button></div>
+<div class="top">
+  <div><div class="eyebrow">Control Center</div><div class="title" id="pageTitle">Обзор</div><div class="subtitle" id="pageSubtitle">Состояние Modexa и выбранного сообщества.</div></div>
+  <div class="top-actions"><select class="select" id="communitySelect" onchange="changeCommunity(this.value)"><option value="">Выберите сервер…</option></select><button class="btn" onclick="loadAll()">↻</button></div>
+</div>
+
+<section class="page active" id="overview">
+  <div class="grid">
+    <div class="card metric"><div class="label">СООБЩЕСТВА</div><div class="value" id="mCommunities">—</div><div class="hint">подключено к Modexa</div></div>
+    <div class="card metric"><div class="label">АКТИВНЫЕ</div><div class="value ok" id="mActive">—</div><div class="hint">публичные сообщества</div></div>
+    <div class="card metric"><div class="label">MODERATION</div><div class="value" id="mCases">—</div><div class="hint">всего кейсов</div></div>
+    <div class="card metric"><div class="label">RUNNER</div><div class="value" id="mRunner">—</div><div class="hint">текущее состояние ботов</div></div>
   </div>
+  <div class="two" style="margin-top:13px">
+    <div class="card"><div class="section"><h2>Подключённые сервера</h2><span class="pill"><span class="dot"></span>Live</span></div><div id="overviewServers"></div></div>
+    <div class="card"><div class="section"><h2>Система</h2><span class="pill" id="systemPill">—</span></div><div class="setting"><span>API</span><b id="healthText">—</b></div><div class="setting"><span>Runner</span><b id="runnerText">—</b></div><div class="setting"><span>Maintenance</span><b id="maintenanceText">—</b></div><div class="setting"><span>OAuth Discord</span><b id="oauthText">—</b></div></div>
+  </div>
+</section>
 
-  <section class="page active" id="overview">
-    <div class="grid">
-      <div class="card metric"><div class="label">Сообщества</div><div class="value" id="mCommunities">—</div><div class="hint">подключено к Modexa</div></div>
-      <div class="card metric"><div class="label">Активные</div><div class="value ok" id="mActive">—</div><div class="hint">публичные сообщества</div></div>
-      <div class="card metric"><div class="label">Moderation cases</div><div class="value" id="mCases">—</div><div class="hint">всего кейсов</div></div>
-      <div class="card metric"><div class="label">Активные кейсы</div><div class="value warn" id="mActiveCases">—</div><div class="hint">требуют внимания</div></div>
+<section class="page" id="servers">
+  <div class="card"><div class="section"><h2>Discord-сервера</h2><span class="muted" id="serverCount">—</span></div><div id="serverList"></div></div>
+  <div class="card" style="margin-top:13px"><div class="section"><h2>Выбранное сообщество</h2><span class="pill" id="selectedMode">—</span></div><div id="serverDetails" class="muted">Выберите сервер.</div></div>
+</section>
+
+<section class="page" id="commands">
+  <div class="card"><div class="section"><div><h2>Управление командами</h2><div class="meta">Переключатели изменяют реальные настройки выбранного сообщества.</div></div><span class="pill" id="commandCount">—</span></div><div id="commandList" class="command-grid"></div></div>
+</section>
+
+<section class="page" id="moderation">
+  <div class="card"><div class="section"><h2>Moderation cases</h2><span class="pill">SQLite</span></div><div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Действие</th><th>Платформа</th><th>Статус</th><th>Причина</th><th>Target</th></tr></thead><tbody id="modTable"><tr><td colspan="6" class="empty">Выберите сервер.</td></tr></tbody></table></div></div>
+</section>
+
+<section class="page" id="automations">
+  <div class="two">
+    <div class="card"><div class="section"><h2>Автоматизации</h2><button class="btn" onclick="loadAutomations()">↻</button></div><div id="automationList"></div></div>
+    <div class="card"><div class="section"><h2>Создать автоматизацию</h2><span class="pill">Core</span></div>
+      <div class="form">
+        <input id="autoName" class="input" placeholder="Название, например Утренняя очистка">
+        <select id="autoTrigger" class="select2"><option value="interval">Интервал</option><option value="message">Сообщение содержит</option><option value="command">Команда</option></select>
+        <input id="autoTriggerValue" class="input" placeholder="Секунды / текст / команда">
+        <select id="autoAction" class="select2"><option value="command">Выполнить команду</option><option value="webhook">Webhook</option></select>
+        <input id="autoActionValue" class="input" placeholder="Команда или URL">
+        <button class="btn primary" onclick="createAutomation()">Создать</button>
+        <div class="meta">Интервалы Core ограничены минимумом 60 секунд.</div>
+      </div>
     </div>
-    <div class="layout">
-      <div class="card"><div class="section-title"><h2>Сообщества</h2><span class="pill">Live</span></div><div id="overviewCommunities"></div></div>
-      <div class="card"><div class="section-title"><h2>Система</h2><span class="pill"><span class="dot"></span>Online</span></div><div class="setting"><span>API</span><b id="healthText">—</b></div><div class="setting"><span>Последняя синхронизация</span><span class="muted" id="updated">—</span></div><div class="setting"><span>Dashboard</span><span class="ok">Ready</span></div></div>
-    </div>
-  </section>
+  </div>
+</section>
 
-  <section class="page" id="communities"><div class="card"><div class="section-title"><h2>Мои Discord-серверы</h2><span class="muted" id="communityCount">—</span></div><div id="communityList"></div></div></section>
+<section class="page" id="bridge">
+  <div class="card"><div class="section"><h2>Telegram ↔ Discord Bridge</h2><button class="btn" onclick="loadBridge()">↻</button></div><div id="bridgeList"></div></div>
+</section>
 
-  <section class="page" id="automod"><div class="card"><div class="section-title"><h2>AutoMod</h2><span class="pill">Juniper-style</span></div><div class="grid"><div class="card"><b>Links / Invites</b><p class="muted">Фильтрация внешних ссылок, Discord-инвайтов и phishing-паттернов.</p></div><div class="card"><b>Bad Words</b><p class="muted">Регулярные и словарные фильтры с whitelist.</p></div><div class="card"><b>Flood / Repeated Text</b><p class="muted">Окна, пороги и автоматические infractions.</p></div><div class="card"><b>Caps / Emotes / Mentions / Zalgo</b><p class="muted">Расширенные контентные фильтры.</p></div></div></div></section>
-  <section class="page" id="audit"><div class="card"><div class="section-title"><h2>Audit Log</h2><span class="muted">200 последних событий</span></div><div style="overflow:auto"><table class="table"><thead><tr><th>Время</th><th>Действие</th><th>Actor</th><th>Target</th><th>Причина</th></tr></thead><tbody id="auditTable"><tr><td colspan="5" class="empty">Выберите сервер.</td></tr></tbody></table></div></div></section>
-  <section class="page" id="ranking"><div class="card"><div class="section-title"><h2>Member Ranking</h2><span class="pill">EXP + levels + rewards</span></div><div class="empty">Рейтинг, XP, cookies, voice activity и level rewards подключены в Core. Здесь будет их управление.</div></div></section>
-  <section class="page" id="welcome"><div class="card"><div class="section-title"><h2>Welcome & Rejoin</h2><span class="pill">Notifications</span></div><div class="empty">Welcome/leave templates, starting roles и восстановление ролей/ника при rejoin.</div></div></section>
-  <section class="page" id="commands"><div class="card"><div class="section-title"><h2>Commands</h2><span class="pill">Custom + built-in</span></div><div class="empty">Custom Commands поддерживают aliases, message/alias/role actions, роли/каналы доступа и cooldown.</div></div></section>
+<section class="page" id="audit">
+  <div class="card"><div class="section"><h2>Audit Log</h2><span class="muted">последние 200 событий</span></div><div class="table-wrap"><table class="table"><thead><tr><th>Время</th><th>Действие</th><th>Actor</th><th>Target</th><th>Причина</th></tr></thead><tbody id="auditTable"><tr><td colspan="5" class="empty">Выберите сервер.</td></tr></tbody></table></div></div>
+</section>
 
-  <section class="page" id="moderation"><div class="card"><div class="section-title"><h2>Последние moderation cases</h2><span class="pill">SQLite</span></div><div style="overflow:auto"><table class="table"><thead><tr><th>ID</th><th>Действие</th><th>Платформа</th><th>Статус</th><th>Причина</th></tr></thead><tbody id="modTable"><tr><td colspan="5" class="empty">Выберите сообщество на странице «Сообщества».</td></tr></tbody></table></div></div></section>
+<section class="page" id="system">
+  <div class="grid3">
+    <div class="card"><div class="section"><h2>Maintenance mode</h2><span class="pill">/system</span></div><p class="muted">Глобальный режим обслуживания Modexa. Это та же настройка, которую меняет системная команда.</p><div class="setting"><span>Состояние</span><button id="maintenanceSwitch" class="switch" onclick="toggleMaintenance()"></button></div></div>
+    <div class="card"><div class="section"><h2>Backup</h2><span class="pill">SQLite</span></div><p class="muted">Получить текущий snapshot базы через API.</p><button class="btn" onclick="downloadBackup()">Получить backup JSON</button></div>
+    <div class="card"><div class="section"><h2>API</h2><span class="pill">Diagnostics</span></div><div class="setting"><span>Health</span><b id="systemHealth">—</b></div><div class="setting"><span>OAuth</span><b id="systemOAuth">—</b></div></div>
+  </div>
+</section>
 
-  <section class="page" id="automations"><div class="card"><div class="section-title"><h2>Автоматизации</h2><span class="muted">Core engine</span></div><div class="empty">Автоматизации подключаются из команд и API. Здесь будет визуальный редактор триггер → действие.</div></div></section>
-  <section class="page" id="bridge"><div class="card"><div class="section-title"><h2>Telegram ↔ Discord Bridge</h2><span class="muted">Cross-platform</span></div><div class="empty">Здесь появятся endpoints, связанные каналы, заявки и управление синхронизацией.</div></div></section>
-  <section class="page" id="billing"><div class="card"><div class="section-title"><h2>Billing & Entitlements</h2><span class="muted">Plans</span></div><div class="settings"><div class="card"><b>Free</b><p class="muted">Базовые команды и модерация.</p></div><div class="card"><b>Pro</b><p class="muted">Автоматизации, расширенные лимиты и SaaS-функции.</p></div></div></div></section>
-  <section class="page" id="runtime"><div class="card"><div class="section-title"><h2>Bot Runtime</h2><span class="pill" id="runtimePill">—</span></div><div class="settings"><div class="setting"><span>Состояние</span><b id="runtimeState">—</b></div><div class="setting"><span>PID</span><span class="muted" id="runtimePid">—</span></div><div class="setting"><span>Discord adapter</span><span id="runtimeDiscord">—</span></div><div class="setting"><span>Telegram adapter</span><span id="runtimeTelegram">—</span></div></div><div class="actions" style="margin-top:18px"><button class="btn primary" onclick="runtimeAction('start')">Запустить</button><button class="btn" onclick="runtimeAction('restart')">Перезапустить</button><button class="btn" onclick="runtimeAction('stop')">Остановить</button></div><p class="muted" style="margin-top:14px">Эти кнопки управляют реальным процессом Runner, который обслуживает Discord и Telegram.</p></div><div class="card" style="margin-top:14px"><div class="section-title"><h2>Discord</h2><span class="muted">OAuth + подключение сервера</span></div><p class="muted">Если бота ещё нет на сервере, откройте приглашение Discord и выберите сервер.</p><button class="btn primary" onclick="inviteBot()">Добавить Modexa на сервер</button><span id="inviteStatus" class="muted" style="margin-left:10px"></span></div></section>
-  <section class="page" id="settings"><div class="card"><div class="section-title"><h2>Настройки Dashboard</h2><span class="muted">Local UI</span></div><div class="setting"><span>Автообновление</span><button id="auto" class="switch on" onclick="this.classList.toggle('on')"></button></div><div class="setting"><span>Компактный режим</span><button class="switch" onclick="this.classList.toggle('on')"></button></div><div class="setting"><span>Интервал синхронизации</span><span class="pill">30 сек</span></div></div></section>
+<section class="page" id="runtime">
+  <div class="two">
+    <div class="card"><div class="section"><h2>Bot Runtime</h2><span class="pill" id="runtimePill">—</span></div><div class="setting"><span>Состояние</span><b id="runtimeState">—</b></div><div class="setting"><span>PID</span><span id="runtimePid" class="muted">—</span></div><div class="setting"><span>Discord</span><span id="runtimeDiscord">—</span></div><div class="setting"><span>Telegram</span><span id="runtimeTelegram">—</span></div><div class="setting"><span>Запущен</span><span id="runtimeStarted" class="muted">—</span></div><div class="top-actions" style="margin-top:16px"><button class="btn primary" onclick="runtimeAction('start')">Запустить</button><button class="btn" onclick="runtimeAction('restart')">Перезапустить</button><button class="btn danger" onclick="runtimeAction('stop')">Остановить</button></div></div>
+    <div class="card"><div class="section"><h2>Discord</h2><span class="pill">OAuth</span></div><p class="muted">Добавьте Modexa на выбранный Discord-сервер с текущими разрешениями из DISCORD_BOT_PERMISSIONS.</p><button class="btn primary" onclick="inviteBot()">Добавить бота</button><div id="inviteStatus" class="meta" style="margin-top:9px"></div></div>
+  </div>
+</section>
 </main>
 </div>
-<script>
-const API=location.protocol==='file:'?'http://localhost:3000':'';
-const titles={overview:'Обзор',communities:'Сообщества',moderation:'Модерация',automod:'AutoMod',audit:'Audit',ranking:'Ranking',welcome:'Welcome',commands:'Commands',automations:'Автоматизации',bridge:'Bridge',billing:'Billing',runtime:'Сервер / Bot',settings:'Настройки'};
-let communities=[];let selectedCommunity=null;
-let lastError='';
-let oauthConfigured=false;
-function dashboardError(message){lastError=message;const el=document.getElementById('dashboardError');if(el){el.textContent=message;el.style.display='block';}}
-function clearDashboardError(){lastError='';const el=document.getElementById('dashboardError');if(el){el.textContent='';el.style.display='none';}}
-function selectCommunity(id){selectedCommunity=id;showPage('moderation');loadModeration(id);}
-function esc(v){return String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-function showPage(id){
- document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===id));
- document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('active',x.dataset.page===id));
- document.getElementById('pageTitle').textContent=titles[id];
- if((id==='moderation'||id==='audit')&&communities[0]){loadModeration(communities[0].communityId||communities[0].id);if(id==='audit')loadAudit(communities[0].communityId||communities[0].id);}
-}
-let authKey=localStorage.getItem('modexa_api_key')||'';
-let discordUser=null;
-function authHeaders(){return authKey?{Authorization:'Bearer '+authKey}:{}}
-async function get(path){
- const r=await fetch(API+path,{headers:authHeaders(),credentials:'same-origin'});
- if(r.status===401){document.getElementById('login').classList.remove('hidden');document.getElementById('profile').style.display='none';throw new Error('unauthorized');}
- if(!r.ok)throw new Error(await r.text());
- return r.json();
-}
-async function post(path,body){
- const r=await fetch(API+path,{method:'POST',headers:{...authHeaders(),'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify(body)});
- if(r.status===401){document.getElementById('login').classList.remove('hidden');document.getElementById('profile').style.display='none';throw new Error('unauthorized');}
- if(!r.ok)throw new Error(await r.text());
- return r.json();
-}
-async function discordLogin(){try{const c=await fetch(API+'/api/config').then(r=>r.json());if(!c.oauth?.discord){document.getElementById('loginError').textContent='Discord OAuth не настроен. Заполните DISCORD_CLIENT_ID и DISCORD_CLIENT_SECRET в .env.';return;}location.href=API+'/auth/discord';}catch{document.getElementById('loginError').textContent='API недоступен.';}}
-async function initAuth(){
- if(authKey)return true;
- try{
-  const r=await fetch(API+'/api/auth/discord');
-  if(!r.ok)throw new Error('unauthorized');
-  const data=await r.json();
-  discordUser=data.user;
-  document.getElementById('login').classList.add('hidden');
-  document.getElementById('profile').style.display='block';
-  document.getElementById('profileName').textContent=data.user.global_name||data.user.username;
-  return true;
- }catch{
-  document.getElementById('login').classList.remove('hidden');
-  return false;
- }
-}
-async function login(){
- const key=document.getElementById('apiKey').value.trim();
- if(!key)return;
- const r=await fetch(API+'/api/auth',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({key})});
- if(!r.ok){document.getElementById('loginError').textContent='Неверный API-ключ.';return;}
- authKey=key;localStorage.setItem('modexa_api_key',key);document.getElementById('login').classList.add('hidden');loadAll();
-}
-async function logout(){
- await fetch(API+'/api/auth/discord',{method:'DELETE'});
- await fetch(API+'/api/auth',{method:'DELETE'});
- authKey='';localStorage.removeItem('modexa_api_key');discordUser=null;document.getElementById('login').classList.remove('hidden');document.getElementById('profile').style.display='none';
-}
 
-function renderCommunities(target){
- const el=document.getElementById(target);
- if(!communities.length){el.innerHTML='<div class="empty">У вас нет серверов, где есть права владельца или администратора.</div>';return;}
- el.innerHTML=communities.map(c=>`<div class="community" onclick="selectCommunity('${esc(c.communityId||c.id)}')" style="cursor:pointer"><div class="avatar">${esc(c.name[0]||'M')}</div><div class="grow"><div class="name">${esc(c.name)}</div><div class="meta">${esc(c.id)} · ${c.botInstalled?'Modexa connected':'Bot not installed'}</div></div><span class="pill">${c.botInstalled?'<span class="dot"></span>Connected':'Invite bot'}</span></div>`).join('');
-}
-async function loadAudit(id){
- try{
-  const data=await get('/api/audit?communityId='+encodeURIComponent(id));
-  document.getElementById('auditTable').innerHTML=data.items.map(x=>`<tr><td>${esc(new Date(x.createdAt).toLocaleString('ru-RU'))}</td><td>${esc(x.action)}</td><td>${esc(x.actorUserId||'—')}</td><td>${esc(x.targetUserId||'—')}</td><td>${esc(x.reason||'—')}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">Событий нет.</td></tr>';
- }catch(e){document.getElementById('auditTable').innerHTML='<tr><td colspan="5" class="empty">Не удалось загрузить audit.</td></tr>';}
-}
-async function loadModeration(id){
- try{
-  const data=await get('/api/moderation?communityId='+encodeURIComponent(id));
-  document.getElementById('modTable').innerHTML=data.items.slice(0,50).map(x=>`<tr><td><code>${esc(x.id.slice(0,16))}</code></td><td>${esc(x.action)}</td><td>${esc(x.platform)}</td><td class="${x.status==='active'?'warn':''}">${esc(x.status)}</td><td>${esc(x.reason||'—')}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">Кейсов нет.</td></tr>';
- }catch(e){document.getElementById('modTable').innerHTML='<tr><td colspan="5" class="empty">Не удалось загрузить кейсы.</td></tr>';}
-}
-async function runtimeAction(action){try{const data=await post('/api/runtime',{action});renderRuntime(data);clearDashboardError();}catch(e){dashboardError(e instanceof Error?e.message:'Не удалось изменить состояние Runner');}}
-function renderRuntime(data){document.getElementById('runtimeState').textContent=data.state==='running'?'RUNNING':'STOPPED';document.getElementById('runtimeState').className=data.state==='running'?'ok':'danger';document.getElementById('runtimePill').textContent=data.state;document.getElementById('runtimePid').textContent=data.pid??'—';document.getElementById('runtimeDiscord').textContent=data.adapters?.discord?'configured':'not configured';document.getElementById('runtimeTelegram').textContent=data.adapters?.telegram?'configured':'not configured';}
-async function inviteBot(){try{const guildId=selectedCommunity||'';const data=await get('/api/auth/discord/invite'+(guildId?'?communityId='+encodeURIComponent(guildId):''));window.open(data.url,'_blank','noopener');document.getElementById('inviteStatus').textContent='Открыто приглашение Discord.';}catch(e){dashboardError(e instanceof Error?e.message:'Не удалось создать приглашение');}}
-async function loadAll(){
- clearDashboardError();
- try{
-  const [h,o,runtime]=await Promise.all([get('/health'),get('/api/overview'),get('/api/runtime')]);
-  if(discordUser||!authKey){
-    try{
-      const c=await get('/api/auth/discord/guilds');
-      communities=c.items||[];
-    }catch(e){
-      if(!communities.length) throw e;
-    }
-  }else{
-    const c=await get('/api/communities');
-    communities=c.items||[];
-  }
-  document.getElementById('apiDot').style.color='var(--ok)';
-  document.getElementById('healthText').textContent=h.status;
-  document.getElementById('mCommunities').textContent=o.communities;
-  document.getElementById('mActive').textContent=o.activeCommunities;
-  document.getElementById('mCases').textContent=o.moderationCases;
-  document.getElementById('mActiveCases').textContent=o.activeModerationCases;
-  renderRuntime(runtime);
-  document.getElementById('updated').textContent=new Date().toLocaleTimeString('ru-RU');
-  document.getElementById('communityCount').textContent=communities.length+' всего';
-  renderCommunities('overviewCommunities');renderCommunities('communityList');
- }catch(e){
-  document.getElementById('apiDot').style.color='var(--danger)';
-  document.getElementById('healthText').textContent='Offline';
-  dashboardError(e instanceof Error?e.message:'Не удалось загрузить Dashboard');
- }
-}
-document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>showPage(b.dataset.page)));
-void initAuth().then((ok)=>{if(ok)loadAll()});setInterval(()=>{if(authKey||discordUser)loadAll()},30000);
+<script>
+const API='';
+const titles={overview:['Обзор','Состояние Modexa и выбранного сообщества.'],servers:['Сервера','Подключение и режимы сообществ.'],commands:['Команды','Настройка доступности зарегистрированных команд.'],moderation:['Модерация','Реальные moderation cases из SQLite.'],automations:['Автоматизации','Триггеры и действия AutomationService.'],bridge:['Bridge','Подключённые Telegram ↔ Discord каналы.'],audit:['Audit','История действий сообщества.'],system:['Система','Глобальные настройки и диагностика.'],runtime:['Bot Runtime','Управление реальным процессом Runner.']};
+let authKey=localStorage.getItem('modexa_api_key')||'',discordUser=null,communities=[],selectedCommunity=localStorage.getItem('modexa_community')||'',maintenance=false;
+
+function esc(v){return String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function toast(msg){const e=document.getElementById('toast');e.textContent=msg;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2600);}
+function authHeaders(){return authKey?{Authorization:'Bearer '+authKey}:{}}
+function showLogin(msg=''){document.getElementById('login').classList.remove('hidden');if(msg)document.getElementById('loginError').textContent=msg;}
+async function request(path,options={}){const r=await fetch(API+path,{...options,headers:{...authHeaders(),...(options.headers||{})},credentials:'same-origin'});if(r.status===401){showLogin('Сессия истекла или API-ключ недействителен.');throw new Error('unauthorized')}if(!r.ok)throw new Error(await r.text());return r.status===204?null:r.json();}
+async function get(path){return request(path)}
+async function post(path,body){return request(path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})}
+
+async function discordLogin(){try{const c=await fetch('/api/config').then(r=>r.json());if(!c.oauth?.discord){showLogin('Discord OAuth не настроен. Проверьте DISCORD_CLIENT_ID и DISCORD_CLIENT_SECRET.');return}location.href='/auth/discord'}catch{showLogin('API недоступен.');}}
+async function login(){const key=document.getElementById('apiKey').value.trim();if(!key)return;try{await fetch('/api/auth',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({key})}).then(async r=>{if(!r.ok)throw new Error('bad');return r.json()});authKey=key;localStorage.setItem('modexa_api_key',key);document.getElementById('login').classList.add('hidden');await loadAll()}catch{showLogin('Неверный API-ключ.')}} 
+async function initAuth(){if(authKey){document.getElementById('login').classList.add('hidden');return true}try{const d=await fetch('/api/auth/discord').then(async r=>{if(!r.ok)throw 0;return r.json()});discordUser=d.user;document.getElementById('profile').style.display='block';document.getElementById('profileName').textContent=d.user.global_name||d.user.username;document.getElementById('login').classList.add('hidden');return true}catch{showLogin();return false}}
+async function logout(){try{await fetch('/api/auth/discord',{method:'DELETE'});await fetch('/api/auth',{method:'DELETE'})}catch{}authKey='';localStorage.removeItem('modexa_api_key');location.reload()}
+
+function showPage(id){document.querySelectorAll('.page').forEach(e=>e.classList.toggle('active',e.id===id));document.querySelectorAll('.nav').forEach(e=>e.classList.toggle('active',e.dataset.page===id));document.getElementById('pageTitle').textContent=titles[id][0];document.getElementById('pageSubtitle').textContent=titles[id][1];if(id==='commands')loadCommands();if(id==='moderation')loadModeration();if(id==='automations')loadAutomations();if(id==='bridge')loadBridge();if(id==='audit')loadAudit();if(id==='system')loadSystem();if(id==='runtime')loadRuntime()}
+document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
+
+function changeCommunity(id){selectedCommunity=id;localStorage.setItem('modexa_community',id);renderSelected();loadCommands();loadModeration();loadAudit();loadAutomations();}
+
+function renderCommunitySelect(){const s=document.getElementById('communitySelect');s.innerHTML='<option value="">Выберите сервер…</option>'+communities.map(c=>'<option value="'+esc(c.communityId||c.id)+'">'+esc(c.name)+'</option>').join('');if(selectedCommunity&&communities.some(c=>(c.communityId||c.id)===selectedCommunity))s.value=selectedCommunity;else if(communities[0]){selectedCommunity=communities[0].communityId||communities[0].id;s.value=selectedCommunity;localStorage.setItem('modexa_community',selectedCommunity)}}
+function renderServers(){const html=communities.length?communities.map(c=>{const id=c.communityId||c.id;return '<div class="row"><div class="avatar">'+esc((c.name||'M')[0])+'</div><div class="grow"><div class="name">'+esc(c.name)+'</div><div class="meta">'+esc(c.id)+' · '+(c.botInstalled?'бот подключён':'бот не подключён')+'</div></div><span class="pill">'+(c.botInstalled?'<span class="dot"></span>Connected':'Not installed')+'</span><button class="btn" onclick="changeCommunity(\''+esc(id)+'\');showPage(\'commands\')">Управлять</button></div>'}).join(''):'<div class="empty">Discord-сервера не найдены.</div>';document.getElementById('serverList').innerHTML=html;document.getElementById('overviewServers').innerHTML=html;document.getElementById('serverCount').textContent=communities.length+' серверов'}
+async function renderSelected(){if(!selectedCommunity){document.getElementById('selectedMode').textContent='—';document.getElementById('serverDetails').textContent='Выберите сервер.';return}try{const cs=await get('/api/communities');const c=cs.items.find(x=>x.id===selectedCommunity);if(!c){document.getElementById('serverDetails').textContent='Сообщество ещё не зарегистрировано локально. Добавьте бота и дождитесь GuildCreate.';return}document.getElementById('selectedMode').textContent=c.mode||'public';document.getElementById('serverDetails').innerHTML='<div class="setting"><span>Название</span><b>'+esc(c.name)+'</b></div><div class="setting"><span>Community ID</span><code>'+esc(c.id)+'</code></div><div class="setting"><span>Режим</span><div><button class="btn '+(c.mode==='public'?'primary':'')+'" onclick="setMode(\'public\')">Public</button> <button class="btn '+(c.mode==='private'?'primary':'')+'" onclick="setMode(\'private\')">Private</button></div></div>'}catch{}}
+
+async function setMode(mode){if(!selectedCommunity)return toast('Сначала выберите сервер');try{await post('/api/community/mode',{communityId:selectedCommunity,mode});toast('Режим сообщества изменён');await loadAll()}catch(e){toast(e.message)}}
+
+async function loadCommands(){if(!selectedCommunity){document.getElementById('commandList').innerHTML='<div class="empty">Выберите сервер сверху.</div>';return}try{const d=await get('/api/commands?communityId='+encodeURIComponent(selectedCommunity));document.getElementById('commandCount').textContent=d.items.length+' команд';const groups={basic:'Основные',members:'Участники',moderation:'Модерация',settings:'Настройки',other:'Другое'};const names=['help','menu','info','server','user','stats','account','members','member','role','warn','mute','kick','ban','unmute','unban','warns','warnings','mutes','clear','command','settings','system'];const html=d.items.map(c=>{const cat=names.includes(c.name)?(c.name==='warn'||c.name==='mute'||c.name==='kick'||c.name==='ban'||c.name==='unmute'||c.name==='unban'||c.name==='warns'||c.name==='warnings'||c.name==='mutes'?'moderation':c.name==='member'||c.name==='members'||c.name==='user'||c.name==='role'?'members':c.name==='settings'||c.name==='command'||c.name==='system'?'settings':'basic'):'other';return '<div class="command"><div class="grow"><div class="command-name">/'+esc(c.name)+'</div><div class="command-desc">'+esc(c.descriptions?.ru||c.descriptions?.en||'Без описания')+'</div><div class="meta">'+groups[cat]+'</div></div><button class="switch '+(c.enabled?'on':'')+'" onclick="toggleCommand(\''+esc(c.name)+'\','+(c.enabled?'false':'true')+',this)"></button></div>'}).join('');document.getElementById('commandList').innerHTML=html}catch(e){document.getElementById('commandList').innerHTML='<div class="empty">Не удалось загрузить команды: '+esc(e.message)+'</div>'}}
+async function toggleCommand(name,enabled,button){try{await post('/api/command-settings',{communityId:selectedCommunity,commandName:name,enabled});button.classList.toggle('on',enabled);toast('/'+name+' '+(enabled?'включена':'отключена'))}catch(e){toast(e.message)}}
+
+async function loadModeration(){if(!selectedCommunity)return;try{const d=await get('/api/moderation?communityId='+encodeURIComponent(selectedCommunity));document.getElementById('modTable').innerHTML=d.items.map(x=>'<tr><td>'+esc(String(x.id).slice(0,14))+'</td><td>'+esc(x.action)+'</td><td>'+esc(x.platform)+'</td><td class="'+(x.status==='active'?'warn':'')+'">'+esc(x.status)+'</td><td>'+esc(x.reason||'—')+'</td><td>'+esc(x.targetUserId||'—')+'</td></tr>').join('')||'<tr><td colspan="6" class="empty">Кейсов нет.</td></tr>'}catch(e){toast(e.message)}}
+async function loadAudit(){if(!selectedCommunity)return;try{const d=await get('/api/audit?communityId='+encodeURIComponent(selectedCommunity));document.getElementById('auditTable').innerHTML=d.items.map(x=>'<tr><td>'+esc(new Date(x.createdAt).toLocaleString('ru-RU'))+'</td><td>'+esc(x.action)+'</td><td>'+esc(x.actorUserId||'—')+'</td><td>'+esc(x.targetUserId||'—')+'</td><td>'+esc(x.reason||'—')+'</td></tr>').join('')||'<tr><td colspan="5" class="empty">Событий нет.</td></tr>'}catch(e){toast(e.message)}}
+
+async function loadAutomations(){if(!selectedCommunity){document.getElementById('automationList').innerHTML='<div class="empty">Выберите сервер.</div>';return}try{const d=await get('/api/automations?communityId='+encodeURIComponent(selectedCommunity));document.getElementById('automationList').innerHTML=d.items.map(a=>'<div class="row"><div class="grow"><div class="name">'+esc(a.name)+'</div><div class="meta">'+esc(a.trigger.type)+' → '+esc(a.action.type)+' · '+(a.enabled?'активна':'выключена')+'</div></div><button class="switch '+(a.enabled?'on':'')+'" onclick="toggleAutomation(\''+esc(a.id)+'\','+(a.enabled?'false':'true'),this)"></button></div>').join('')||'<div class="empty">Автоматизаций нет.</div>'}catch(e){toast(e.message)}}
+async function toggleAutomation(id,enabled,button){try{await post('/api/automations/'+encodeURIComponent(id),{enabled});button.classList.toggle('on',enabled);toast('Автоматизация '+(enabled?'включена':'отключена'))}catch(e){toast(e.message)}}
+async function createAutomation(){if(!selectedCommunity)return toast('Выберите сервер');const name=document.getElementById('autoName').value.trim(),tt=document.getElementById('autoTrigger').value,tv=document.getElementById('autoTriggerValue').value.trim(),at=document.getElementById('autoAction').value,av=document.getElementById('autoActionValue').value.trim();if(!name||!tv||!av)return toast('Заполните все поля');let trigger=tt==='interval'?{type:'interval',intervalSeconds:Number(tv)}:tt==='message'?{type:'message',pattern:tv}:{type:'command',command:tv};let action=at==='command'?{type:'command',command:av}:{type:'webhook',url:av};try{await post('/api/automations',{communityId:selectedCommunity,name,trigger,action});document.getElementById('autoName').value='';toast('Автоматизация создана');loadAutomations()}catch(e){toast(e.message)}}
+
+async function loadBridge(){try{const d=await get('/api/bridge');const links=d.links||[];document.getElementById('bridgeList').innerHTML=links.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.first?.communityName||'Community')+' · '+esc(x.first?.channelName||'channel')+' ↔ '+esc(x.second?.communityName||'Community')+' · '+esc(x.second?.channelName||'channel')+'</div><div class="meta">'+esc(x.first?.platform)+' ↔ '+esc(x.second?.platform)+'</div></div><span class="pill">Connected</span></div>').join('')||'<div class="empty">Bridge links пока не настроены.</div>'}catch(e){toast(e.message)}}
+
+async function loadSystem(){try{const [s,c,h]=await Promise.all([get('/api/system'),get('/api/config'),get('/health')]);maintenance=s.maintenanceMode;document.getElementById('maintenanceSwitch').classList.toggle('on',maintenance);document.getElementById('systemHealth').textContent=h.status;document.getElementById('systemOAuth').textContent=c.oauth?.discord?'configured':'not configured'}catch(e){toast(e.message)}}
+async function toggleMaintenance(){try{maintenance=!maintenance;await post('/api/system',{maintenanceMode:maintenance});document.getElementById('maintenanceSwitch').classList.toggle('on',maintenance);toast('Maintenance mode '+(maintenance?'включён':'выключен'));loadAll()}catch(e){maintenance=!maintenance;toast(e.message)}}
+async function downloadBackup(){try{const d=await get('/api/backup');const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='modexa-backup.json';a.click();URL.revokeObjectURL(url)}catch(e){toast(e.message)}}
+
+async function loadRuntime(){try{const d=await get('/api/runtime');document.getElementById('runtimePill').textContent=d.state;document.getElementById('runtimeState').textContent=d.state.toUpperCase();document.getElementById('runtimeState').className=d.state==='running'?'ok':'danger-text';document.getElementById('runtimePid').textContent=d.pid??'—';document.getElementById('runtimeDiscord').textContent=d.adapters?.discord?'configured':'not configured';document.getElementById('runtimeTelegram').textContent=d.adapters?.telegram?'configured':'not configured';document.getElementById('runtimeStarted').textContent=d.startedAt?new Date(d.startedAt).toLocaleString('ru-RU'):'—';document.getElementById('mRunner').textContent=d.state==='running'?'ON':'OFF';document.getElementById('runnerText').textContent=d.state}catch(e){toast(e.message)}}
+async function runtimeAction(action){try{const d=await post('/api/runtime',{action});await loadRuntime();toast('Runner: '+d.state)}catch(e){toast(e.message)}}
+async function inviteBot(){try{const d=await get('/api/auth/discord/invite'+(selectedCommunity?'?communityId='+encodeURIComponent(selectedCommunity):''));window.open(d.url,'_blank','noopener');document.getElementById('inviteStatus').textContent='Приглашение открыто.'}catch(e){toast(e.message)}}
+
+async function loadAll(){try{const [h,o,c,r,s]=await Promise.all([get('/health'),get('/api/overview'),get('/api/config'),get('/api/runtime'),get('/api/system')]);document.getElementById('apiDot').textContent='● online';document.getElementById('healthText').textContent=h.status;document.getElementById('mCommunities').textContent=o.communities;document.getElementById('mActive').textContent=o.activeCommunities;document.getElementById('mCases').textContent=o.moderationCases;document.getElementById('mRunner').textContent=r.state==='running'?'ON':'OFF';document.getElementById('runnerText').textContent=r.state;document.getElementById('maintenanceText').textContent=s.maintenanceMode?'ON':'OFF';document.getElementById('oauthText').textContent=c.oauth?.discord?'OK':'OFF';document.getElementById('systemPill').textContent=r.state==='running'?'Online':'Degraded';maintenance=s.maintenanceMode;document.getElementById('maintenanceSwitch').classList.toggle('on',maintenance);let g;try{g=await get('/api/auth/discord/guilds');communities=g.items||[]}catch{const local=await get('/api/communities');communities=local.items||[]}renderCommunitySelect();renderServers();await renderSelected();await loadRuntime();}catch(e){document.getElementById('apiDot').textContent='● offline';showLogin(e.message)}}
+
+initAuth().then(ok=>{if(ok)loadAll()});setInterval(()=>{if(authKey||discordUser)loadAll()},30000);
 </script>
 </body>
 </html>
