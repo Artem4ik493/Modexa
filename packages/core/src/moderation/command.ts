@@ -186,6 +186,32 @@ export function createModerationCommands(
         .find((identity) => identity.platform === context.platform);
       if (!targetIdentity) return { content: "Не найден аккаунт участника на текущей платформе." };
 
+      // Telegram does not allow bots to restrict/ban chat administrators.
+      // Check the native status before creating a moderation case so a
+      // failed API call can never leave a fake active mute/ban in Modexa.
+      if (
+        context.platform === "telegram" &&
+        action !== "warn" &&
+        memberDirectory
+      ) {
+        const nativeTarget =
+          await memberDirectory.getMember(
+            context.community.id,
+            targetIdentity.externalId
+          );
+
+        if (
+          nativeTarget?.status === "administrator" ||
+          nativeTarget?.status === "creator"
+        ) {
+          return {
+            content:
+              "❌ Нельзя применить " + actionLabel(action) +
+              " к администратору Telegram."
+          };
+        }
+      }
+
       const communityIdentity = communityService.getCommunityIdentities(context.community.id)
         .find((identity) => identity.platform === context.platform);
       if (!communityIdentity) return { content: "Не найден внешний идентификатор сообщества." };
@@ -210,8 +236,21 @@ export function createModerationCommands(
       try {
         await executeAction(actionWithMetadata);
       } catch (error) {
+        // A moderation case represents a successfully applied action.
+        // If the platform rejects it, immediately revoke the case so
+        // /mutes, history and dashboards do not report a fake action.
+        try {
+          moderationService.revokeCase(
+            context.user.id,
+            created.case.id
+          );
+        } catch {
+          // Preserve the original platform error for the user.
+        }
+
         return {
-          content: `❌ Не удалось применить ${actionLabel(action)}: ${error instanceof Error ? error.message : "неизвестная ошибка"}`
+          content: "❌ Не удалось применить " + actionLabel(action) +
+            ": " + (error instanceof Error ? error.message : "неизвестная ошибка")
         };
       }
 
