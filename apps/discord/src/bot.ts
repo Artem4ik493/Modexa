@@ -317,9 +317,9 @@ export function createDiscordAdapter(
     membershipService,
     communityService,
     moderationService,
-    (action) => {
+    async (action) => {
       if (!adapter) throw new Error("Discord adapter is not ready");
-      return adapter.sendAction(action);
+      await adapter.sendAction(action);
     },
     memberDirectoryProxy
   )) {
@@ -333,9 +333,9 @@ export function createDiscordAdapter(
     communityService,
     commandSettingsService,
     moderationService,
-    (action) => {
+    async (action) => {
       if (!adapter) throw new Error("Discord adapter is not ready");
-      return adapter.sendAction(action);
+      await adapter.sendAction(action);
     },
     undefined,
     memberDirectoryProxy
