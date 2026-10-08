@@ -163,53 +163,68 @@ export class TelegramAdapter
         }
 
         if (imageUrl) {
-          const sent = await this.bot.api.sendPhoto(
-            Number(
-              action.channelExternalId
-            ),
-            imageUrl,
-            {
-              caption: content,
-              ...(parseMode
-                ? {
-                    parse_mode:
-                      parseMode
-                  }
-                : {}),
-              ...(replyMarkup
-                ? {
-                    reply_markup:
-                      replyMarkup
-                  }
-                : {})
-            }
-          );
+          try {
+            const sent = await this.bot.api.sendPhoto(
+              Number(
+                action.channelExternalId
+              ),
+              imageUrl,
+              {
+                caption: content,
+                ...(parseMode
+                  ? {
+                      parse_mode:
+                        parseMode
+                    }
+                  : {}),
+                ...(replyMarkup
+                  ? {
+                      reply_markup:
+                        replyMarkup
+                    }
+                  : {})
+              }
+            );
 
-          return String(sent.message_id);
-        } else {
-          const sent = await this.bot.api.sendMessage(
-            Number(
-              action.channelExternalId
-            ),
-            content,
-            {
-              ...(parseMode
-                ? {
-                    parse_mode:
-                      parseMode
-                  }
-                : {}),
-              ...(replyMarkup
-                ? {
-                    reply_markup:
-                      replyMarkup
-                  }
-                : {})
-            }
-          );
-
-          return String(sent.message_id);
+            return String(sent.message_id);
+          } catch (error) {
+            // Telegram must be able to fetch the URL itself. Bot API
+            // file URLs (and private/local URLs) are not always
+            // reachable from Telegram's servers. Never let an avatar
+            // or optional image make the whole command fail.
+            this.logger?.warn(
+              "telegram.message.image_fallback",
+              {
+                platform: "telegram",
+                channelExternalId: action.channelExternalId
+              },
+              error
+            );
+          }
         }
+
+        const sent = await this.bot.api.sendMessage(
+          Number(
+            action.channelExternalId
+          ),
+          content,
+          {
+            ...(parseMode
+              ? {
+                  parse_mode:
+                    parseMode
+                }
+              : {}),
+            ...(replyMarkup
+              ? {
+                  reply_markup:
+                    replyMarkup
+                }
+              : {})
+          }
+        );
+
+        return String(sent.message_id);
 
         return;
       }
