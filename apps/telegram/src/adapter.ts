@@ -114,6 +114,41 @@ export class TelegramAdapter
             action.metadata
           );
 
+        const media =
+          action.metadata?.telegram &&
+          typeof action.metadata.telegram === "object" &&
+          "media" in action.metadata.telegram &&
+          action.metadata.telegram.media &&
+          typeof action.metadata.telegram.media === "object"
+            ? action.metadata.telegram.media as { type?: string; url?: string }
+            : undefined;
+
+        if (media?.url && media.type === "animation") {
+          const sent = await this.bot.api.sendAnimation(
+            Number(action.channelExternalId),
+            media.url,
+            {
+              caption: content,
+              ...(parseMode ? { parse_mode: parseMode } : {}),
+              ...(replyMarkup ? { reply_markup: replyMarkup } : {})
+            }
+          );
+          return String(sent.message_id);
+        }
+
+        if (media?.url && media.type === "video") {
+          const sent = await this.bot.api.sendVideo(
+            Number(action.channelExternalId),
+            media.url,
+            {
+              caption: content,
+              ...(parseMode ? { parse_mode: parseMode } : {}),
+              ...(replyMarkup ? { reply_markup: replyMarkup } : {})
+            }
+          );
+          return String(sent.message_id);
+        }
+
         const parseMode = this.getParseMode(action.metadata);
         const content = this.getPanelContent(action.content, action.metadata);
 
