@@ -1,6 +1,7 @@
 import {
   type AdapterAction,
   type AdapterEvent,
+  type AdapterMessageCreatedEvent,
   type PlatformAdapter,
   type PlatformChannel,
   type PlatformCommunity,
@@ -101,7 +102,7 @@ export class TelegramAdapter
 
   async sendAction(
     action: AdapterAction
-  ): Promise<void> {
+  ): Promise<string | void> {
     switch (action.type) {
       case "message.send": {
         const replyMarkup =
@@ -122,6 +123,9 @@ export class TelegramAdapter
           typeof action.metadata.telegram.media === "object"
             ? action.metadata.telegram.media as { type?: string; url?: string }
             : undefined;
+
+        const parseMode = this.getParseMode(action.metadata);
+        const content = this.getPanelContent(action.content, action.metadata);
 
         if (media?.url && media.type === "animation") {
           const sent = await this.bot.api.sendAnimation(
@@ -148,9 +152,6 @@ export class TelegramAdapter
           );
           return String(sent.message_id);
         }
-
-        const parseMode = this.getParseMode(action.metadata);
-        const content = this.getPanelContent(action.content, action.metadata);
 
         if (imageUrl) {
           const sent = await this.bot.api.sendPhoto(
@@ -1128,12 +1129,11 @@ export class TelegramAdapter
       async (ctx) => {
         if (!ctx.message) return;
 
-        const event =
-          await this.createMessageEvent(ctx);
+        const event = await this.createMessageEvent(ctx);
 
         await this.emitEvent({
-          ...event,
-          type: "message.updated"
+          type: "message.updated",
+          message: event.message
         });
       }
     );
