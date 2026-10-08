@@ -1217,6 +1217,30 @@ export class DiscordAdapter
         message.member
       );
 
+    const attachment =
+      message.attachments.find((item) => Boolean(item.url));
+
+    const bridgeMedia =
+      attachment?.url
+        ? attachment.contentType?.startsWith("video/")
+          ? {
+              type: "video" as const,
+              url: attachment.url
+            }
+          : attachment.contentType === "image/gif" ||
+              attachment.url.toLowerCase().includes(".gif")
+            ? {
+                type: "animation" as const,
+                url: attachment.url
+              }
+            : attachment.contentType?.startsWith("image/")
+              ? {
+                  type: "image" as const,
+                  url: attachment.url
+                }
+              : undefined
+        : undefined;
+
     return {
       type: "message.created",
 
@@ -1255,7 +1279,12 @@ export class DiscordAdapter
         content: message.content,
 
         createdAt:
-          message.createdAt
+          message.createdAt,
+
+        metadata:
+          bridgeMedia
+            ? { bridgeMedia }
+            : undefined
       }
     };
   }
