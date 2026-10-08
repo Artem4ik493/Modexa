@@ -2,6 +2,7 @@ import type { CommandContext, CommandDefinition } from "../types.js";
 import type { CommandRegistry } from "../commands.js";
 import type { IdentityService } from "../identity/service.js";
 import type { MembershipService } from "../memberships/service.js";
+import type { MemberDirectory, PlatformMemberDetails } from "../members/command.js";
 import type { CommunityService } from "../communities/service.js";
 import type { ModerationService } from "../moderation/service.js";
 import type { AdapterAction } from "../adapters/actions.js";
@@ -33,27 +34,107 @@ function panel(
   };
 }
 
-function resolveTarget(
+async function resolveTarget(
   context: CommandContext,
   identities: IdentityService,
-  memberships: MembershipService
+  memberships: MembershipService,
+  memberDirectory?: MemberDirectory
 ) {
   if (!context.args[0]) return context.user;
-  const name = context.args[0].replace(/^@/, "").toLowerCase();
-  const direct = identities.findUserByUsername(name, context.platform);
-  if (direct) return direct;
-  if (!context.community) return undefined;
-  return memberships
-    .getCommunityMemberships(context.community.id)
-    .map((m) => identities.getUser(m.userId))
-    .filter((u): u is NonNullable<typeof u> => Boolean(u))
-    .find((u) =>
-      identities.getUserIdentities(u.id).some(
-        (i) =>
-          i.platform === context.platform &&
-          i.username?.toLowerCase() === name
-      )
+
+  const name = context.args[0]
+    .replace(/^<@!?/, "")
+    .replace(/>$/, "")
+    .replace(/^@/, "")
+    .toLowerCase();
+
+  const direct =
+    identities.findUserByUsername(
+      name,
+      context.platform
     );
+
+  if (direct) return direct;
+
+  const byIdentity =
+    identities.findUserByIdentity(
+      context.platform,
+      name
+    );
+
+  if (byIdentity) return byIdentity;
+
+  if (context.community) {
+    const known = memberships
+      .getCommunityMemberships(context.community.id)
+      .map((m) => identities.getUser(m.userId))
+      .filter((u): u is NonNullable<typeof u> => Boolean(u))
+      .find((u) =>
+        identities.getUserIdentities(u.id).some(
+          (i) =>
+            i.platform === context.platform &&
+            i.username?.toLowerCase() === name
+        )
+      );
+
+    if (known) return known;
+  }
+
+  if (memberDirectory && context.community) {
+    const native: PlatformMemberDetails | undefined =
+      /^\d+$/.test(name)
+        ? await memberDirectory.getMember(
+            context.community.id,
+            name
+          )
+        : await memberDirectory.findMemberByUsername?.(
+            context.community.id,
+            name
+          );
+
+    if (native) {
+      let user =
+        identities.findUserByIdentity(
+          native.user.platform,
+          native.user.externalId
+        );
+
+      if (!user) {
+        user = identities.createUser({
+          displayName:
+            native.user.displayName ??
+            native.user.username ??
+            native.user.externalId
+        });
+        identities.attachIdentity({
+          userId: user.id,
+          platform: native.user.platform,
+          externalId: native.user.externalId,
+          username: native.user.username,
+          displayName: native.user.displayName,
+          avatarUrl: native.user.avatarUrl
+        });
+      }
+
+      if (
+        native.isMember !== false &&
+        !memberships.findMembership(
+          user.id,
+          context.community.id
+        )
+      ) {
+        memberships.createMembership({
+          userId: user.id,
+          communityId: context.community.id,
+          now: native.joinedAt
+        });
+      }
+
+      return user;
+    }
+  }
+
+  return undefined;
 }
 
 export function createPublicFeatureCommands(
@@ -64,7 +145,8 @@ export function createPublicFeatureCommands(
   settings: CommandSettingsService,
   moderation: ModerationService,
   executeAction?: (action: AdapterAction) => Promise<void>,
-  cards = new CardImageService()
+  cards = new CardImageService(),
+  memberDirectory?: MemberDirectory
 ): CommandDefinition[] {
   return [
     {
@@ -166,7 +248,7 @@ export function createPublicFeatureCommands(
       aliases: ["profile", "юзер"],
       description: "Информация об участнике",
       handler: async (context) => {
-        const user = resolveTarget(context, identities, memberships);
+        const user = await resolveTarget(context, identities, memberships, memberDirectory);
         if (!user) {
           return panel("Профиль", "Участник не найден.", 0xff5d73);
         }
@@ -179,6 +261,29 @@ export function createPublicFeatureCommands(
               (i.username ? "@" + i.username : i.externalId)
           )
           .join(", ");
+
+        const nativeIdentity = identities
+          .getUserIdentities(user.id)
+          .find((i) => i.platform === context.platform);
+
+        const native = nativeIdentity && memberDirectory && context.community
+          ? await memberDirectory.getMember(
+              context.community.id,
+              nativeIdentity.externalId
+            )
+          : undefined;
+
+        const platformRoles = native?.roles ?? [];
+        const roleText = platformRoles.length
+          ? platformRoles.map((role) =>
+              context.platform === "discord"
+                ? "@" + role.replace(/^@/, "")
+                : role
+            ).join(", ")
+          : "нет";
+
+        const status = native?.status ?? "—";
+
         return {
           ...panel(
             "👤 " + user.displayName,
@@ -186,10 +291,13 @@ export function createPublicFeatureCommands(
             0x8b5cf6,
             [
               { name: "Modexa ID", value: user.id },
-              { name: "Аккаунты", value: accounts || "нет" }
+              { name: "Аккаунт", value: accounts || "нет" },
+              { name: "ID платформы", value: nativeIdentity?.externalId ?? "—" },
+              { name: "Роли платформы", value: roleText },
+              { name: "Статус", value: status }
             ]
           ),
-          imageUrl: cards.profile({
+          imageUrl: nativeIdentity?.avatarUrl ?? cards.profile({
             displayName: user.displayName,
             userId: user.id,
             accounts: accounts || "нет"
