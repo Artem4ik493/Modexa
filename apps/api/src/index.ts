@@ -4,7 +4,20 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { IncomingMessage, ServerResponse } from "http";
-import { ModexaDatabase, BackupService } from "@modexa/core";
+import {
+  ModexaDatabase,
+  BackupService,
+  CommandRegistry,
+  listCommandDescriptors,
+  createBuiltinCommands,
+  createPublicFeatureCommands,
+  createMemberCommand,
+  createMembersCommand,
+  createRoleCommand,
+  createModerationCommands,
+  createModerationRestoreCommands,
+  createRuntimeServices
+} from "@modexa/core";
 
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST ?? "0.0.0.0";
@@ -13,6 +26,66 @@ const database = new ModexaDatabase({
   path: process.env.MODEXA_DATABASE_PATH ?? "data/modexa.sqlite"
 });
 const backup = new BackupService(database);
+const runtimeServices = createRuntimeServices(undefined, database);
+
+const commandRegistry = new CommandRegistry();
+createBuiltinCommands(
+  commandRegistry,
+  runtimeServices.communityService,
+  runtimeServices.identityService,
+  runtimeServices.membershipService,
+  runtimeServices.accessControlService,
+  database,
+  runtimeServices.bridgeService
+);
+
+for (const command of createPublicFeatureCommands(
+  commandRegistry,
+  runtimeServices.identityService,
+  runtimeServices.membershipService,
+  runtimeServices.communityService,
+  runtimeServices.commandSettingsService,
+  runtimeServices.moderationService,
+  undefined,
+  undefined,
+  undefined
+)) {
+  commandRegistry.register(command);
+}
+
+commandRegistry.register(createMemberCommand(
+  runtimeServices.identityService,
+  runtimeServices.membershipService,
+  runtimeServices.accessControlService
+));
+commandRegistry.register(createMembersCommand(
+  runtimeServices.identityService,
+  runtimeServices.membershipService,
+  runtimeServices.accessControlService
+));
+commandRegistry.register(createRoleCommand(
+  runtimeServices.identityService,
+  runtimeServices.membershipService,
+  runtimeServices.accessControlService
+));
+for (const command of createModerationCommands(
+  runtimeServices.identityService,
+  runtimeServices.membershipService,
+  runtimeServices.communityService,
+  runtimeServices.moderationService
+)) {
+  commandRegistry.register(command);
+}
+for (const command of createModerationRestoreCommands(
+  runtimeServices.identityService,
+  runtimeServices.membershipService,
+  runtimeServices.communityService,
+  runtimeServices.moderationService,
+  async () => undefined
+)) {
+  commandRegistry.register(command);
+}
+const commandCatalog = listCommandDescriptors(commandRegistry);
 const dashboardPath = resolve(process.cwd(), "apps/dashboard/index.html");
 
 const discordClientId = process.env.DISCORD_CLIENT_ID ?? "";
@@ -477,8 +550,9 @@ const server = createServer((req, res) => {
     }
 
     if (url.pathname === "/api/automations" && req.method === "GET") {
+      const communityId = url.searchParams.get("communityId") ?? undefined;
       json(res, 200, {
-        items: database.getRuntimeState("automations") ?? []
+        items: runtimeServices.automationService.list(communityId)
       });
       return;
     }
@@ -487,6 +561,28 @@ const server = createServer((req, res) => {
       json(res, 200, {
         endpoints: database.getBridgeEndpoints(),
         links: database.getBridgeLinks()
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/commands" && req.method === "GET") {
+      const communityId = url.searchParams.get("communityId");
+      if (!communityId) {
+        json(res, 400, { error: "communityId is required" });
+        return;
+      }
+
+      const settings = new Map(
+        database
+          .getCommandSettings(communityId)
+          .map((item) => [item.commandName, item.enabled])
+      );
+
+      json(res, 200, {
+        items: commandCatalog.map((command) => ({
+          ...command,
+          enabled: settings.get(command.name) ?? true
+        }))
       });
       return;
     }
@@ -503,6 +599,79 @@ const server = createServer((req, res) => {
 
     if (url.pathname === "/api/communities" && req.method === "GET") {
       json(res, 200, { items: database.getCommunitiesSnapshot() });
+      return;
+    }
+
+    if (url.pathname === "/api/system" && req.method === "GET") {
+      json(res, 200, {
+        maintenanceMode: database.getSystemSetting("maintenance_mode") === "true"
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/system" && req.method === "POST") {
+      const body = await readJsonBody(req);
+      if (typeof body.maintenanceMode !== "boolean") {
+        json(res, 400, { error: "maintenanceMode must be boolean" });
+        return;
+      }
+
+      database.setSystemSetting(
+        "maintenance_mode",
+        String(body.maintenanceMode)
+      );
+
+      json(res, 200, {
+        updated: true,
+        maintenanceMode: body.maintenanceMode
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/automations" && req.method === "POST") {
+      const body = await readJsonBody(req);
+      const communityId = typeof body.communityId === "string" ? body.communityId : "";
+      const name = typeof body.name === "string" ? body.name : "";
+      const trigger = body.trigger;
+      const action = body.action;
+
+      if (!communityId || !name || !trigger || typeof trigger !== "object" || !action || typeof action !== "object") {
+        json(res, 400, { error: "communityId, name, trigger and action are required" });
+        return;
+      }
+
+      try {
+        const automation = runtimeServices.automationService.create({
+          communityId,
+          name,
+          trigger: trigger as never,
+          action: action as never
+        });
+        json(res, 201, automation);
+      } catch (error) {
+        json(res, 400, {
+          error: error instanceof Error ? error.message : "automation_create_failed"
+        });
+      }
+      return;
+    }
+
+    if (url.pathname.startsWith("/api/automations/") && req.method === "POST") {
+      const id = decodeURIComponent(url.pathname.slice("/api/automations/".length));
+      const body = await readJsonBody(req);
+
+      if (typeof body.enabled !== "boolean") {
+        json(res, 400, { error: "enabled must be boolean" });
+        return;
+      }
+
+      try {
+        json(res, 200, runtimeServices.automationService.setEnabled(id, body.enabled));
+      } catch (error) {
+        json(res, 404, {
+          error: error instanceof Error ? error.message : "automation_not_found"
+        });
+      }
       return;
     }
 
