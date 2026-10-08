@@ -312,6 +312,29 @@ export function createMemberCommand(
         }
       }
 
+      if (!user && target && memberDirectory) {
+        native =
+          /^\d+$/.test(target)
+            ? await memberDirectory.getMember(
+                context.community.id,
+                target
+              )
+            : await memberDirectory.findMemberByUsername?.(
+                context.community.id,
+                target
+              );
+
+        if (native) {
+          user = ensureLocalMember(
+            native,
+            context.community.id,
+            identityService,
+            membershipService,
+            accessControlService
+          );
+        }
+      }
+
       if (!user) {
         return {
           content: t("member.not_found", {
