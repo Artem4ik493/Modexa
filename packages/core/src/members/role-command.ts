@@ -13,7 +13,7 @@ export function createRoleCommand(
 ): CommandDefinition {
   return {
     name: "role",
-    description: "View or change a community role",
+    descriptionKey: "command.role.description",
     requiredCapabilities: ["member.view"],
     handler: async (context: CommandContext): Promise<CommandResponse> => {
       if (!context.community) return { content: "Команду /role можно использовать только в сообществе." };
