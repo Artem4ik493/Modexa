@@ -5,6 +5,7 @@ import type {
 import type {
   AdapterCommandInvocation,
   AdapterEvent,
+  AdapterMemberEvent,
   AdapterInteraction,
   AdapterMessage
 } from "../adapters/events.js";
