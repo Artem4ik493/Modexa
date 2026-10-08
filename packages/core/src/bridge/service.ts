@@ -50,6 +50,15 @@ export interface BridgeMessageGateway {
 
 const BRIDGE_RELAY_MARKER = "\u2063\u200B\u2063";
 
+function bridgeMediaLabel(media?: InteractionMedia): string {
+  if (!media) return "";
+  switch (media.type) {
+    case "animation": return "GIF";
+    case "image": return "ФОТО";
+    case "video": return "Видео";
+  }
+}
+
 export interface CreateBridgeLinkRequestInput {
   sourceEndpointId: BridgeEndpointId;
   targetEndpointId: BridgeEndpointId;
@@ -457,8 +466,8 @@ export class BridgeService {
           replyTo.externalId
       : undefined;
 
+    const mediaLabel = bridgeMediaLabel(media);
     const response: InteractionResponse = {
-      ...(media ? { media } : {}),
       content:
         BRIDGE_RELAY_MARKER +
         prefix +
@@ -468,7 +477,8 @@ export class BridgeService {
           ? " в ответ на " + replyName
           : "") +
         " > " +
-        content
+        content +
+        (mediaLabel ? "\n" + mediaLabel : "")
     };
 
     await Promise.all(
@@ -516,15 +526,16 @@ export class BridgeService {
         ? "@" + author.username
         : author.displayName ?? author.externalId;
 
+    const mediaLabel = bridgeMediaLabel(media);
     const response: InteractionResponse = {
-      ...(media ? { media } : {}),
       content:
         BRIDGE_RELAY_MARKER +
         prefix +
         " " +
         name +
         " > " +
-        content
+        content +
+        (mediaLabel ? "\n" + mediaLabel : "")
     };
 
     await Promise.all(
