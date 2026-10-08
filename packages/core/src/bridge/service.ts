@@ -428,7 +428,7 @@ export class BridgeService {
     sourceMessageExternalId?: string,
     media?: InteractionMedia
   ): Promise<void> {
-    if (!this.gateway || !content.trim()) {
+    if (!this.gateway || (!content.trim() && !media)) {
       return;
     }
 
