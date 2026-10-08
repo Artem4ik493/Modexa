@@ -152,7 +152,7 @@ export class DiscordAdapter
           const embeds =
             this.getEmbeds(action.metadata);
 
-          await pending.editReply({
+          const sent = await pending.editReply({
             ...(embeds.length > 0 ? {} : { content: action.content }),
             components:
               this.getComponents(
@@ -161,7 +161,7 @@ export class DiscordAdapter
             ...(embeds.length > 0 ? { embeds } : {})
           });
 
-          return;
+          return sent.id;
         }
 
         const channel =
@@ -172,7 +172,7 @@ export class DiscordAdapter
         const embeds =
           this.getEmbeds(action.metadata);
 
-        await channel.send({
+        const sent = await channel.send({
           ...(embeds.length > 0 ? {} : { content: action.content }),
           components:
             this.getComponents(
@@ -181,7 +181,7 @@ export class DiscordAdapter
           ...(embeds.length > 0 ? { embeds } : {})
         });
 
-        return;
+        return sent.id;
       }
 
       case "message.edit": {
