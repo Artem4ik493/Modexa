@@ -337,6 +337,7 @@ export function createDiscordAdapter(
       if (!adapter) throw new Error("Discord adapter is not ready");
       return adapter.sendAction(action);
     },
+    undefined,
     memberDirectoryProxy
   )) {
     registry.register(command);
