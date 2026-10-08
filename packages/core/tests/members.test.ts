@@ -386,6 +386,14 @@ describe("member commands", () => {
 
       const communityId = "telegram-community";
 
+      database.upsertCommunity({
+        id: communityId,
+        name: "Telegram Test",
+        mode: "public",
+        createdAt: new Date("2026-01-01"),
+        updatedAt: new Date("2026-01-01")
+      });
+
       for (const role of createBuiltinCommunityRoles(communityId)) {
         accessControlService.registerCommunityRole(role);
       }
