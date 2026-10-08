@@ -71,6 +71,18 @@ import type {
   AuditService
 } from "../audit/service.js";
 
+import type {
+  IdentityService
+} from "../identity/service.js";
+
+import type {
+  MembershipService
+} from "../memberships/service.js";
+
+import type {
+  CommunityService
+} from "../communities/service.js";
+
 const EMPTY_CONTENT_FALLBACK =
   "…";
 
@@ -114,6 +126,15 @@ export interface PlatformEventHandlerDeps {
 
   auditService?:
     AuditService;
+
+  identityService?:
+    IdentityService;
+
+  membershipService?:
+    MembershipService;
+
+  communityService?:
+    CommunityService;
 
   renderMetadata(
     response: BoundInteractionResponse
@@ -162,6 +183,27 @@ export function createPlatformEventHandler(
           await handleInteraction(
             deps,
             event.interaction
+          );
+          return;
+
+        case "member.joined":
+          await handleMemberJoined(
+            deps,
+            event.member
+          );
+          return;
+
+        case "member.left":
+          await handleMemberLeft(
+            deps,
+            event.member
+          );
+          return;
+
+        case "member.banned":
+          await handleMemberBanned(
+            deps,
+            event.member
           );
           return;
 
@@ -252,6 +294,120 @@ function buildExecutionContext(
       resolved
     }
   );
+}
+
+async function handleMemberJoined(
+  deps: PlatformEventHandlerDeps,
+  member: AdapterMemberEvent
+): Promise<void> {
+  const executionContext =
+    buildExecutionContext(
+      deps,
+      {
+        correlationId:
+          deps.platform + "-member-join-" + member.externalId,
+        author: member.user,
+        community: member.community
+      }
+    );
+
+  deps.auditService?.record({
+    communityId:
+      executionContext.community?.id ?? "system",
+    action: "member.joined",
+    actorUserId:
+      executionContext.user.id
+  });
+}
+
+async function handleMemberLeft(
+  deps: PlatformEventHandlerDeps,
+  member: AdapterMemberEvent
+): Promise<void> {
+  if (!deps.identityService || !deps.membershipService) {
+    return;
+  }
+
+  const community =
+    deps.communityService?.findByIdentity(
+      deps.platform,
+      member.community.externalId
+    );
+
+  if (!community) {
+    return;
+  }
+
+  const user =
+    deps.identityService.findUserByIdentity(
+      deps.platform,
+      member.user.externalId
+    );
+
+  if (!user) {
+    return;
+  }
+
+  const membership =
+    deps.membershipService.findMembership(
+      user.id,
+      community.id
+    );
+
+  if (membership && membership.status === "active") {
+    deps.membershipService.leave(membership.id);
+  }
+
+  deps.auditService?.record({
+    communityId: community.id,
+    action: "member.left",
+    actorUserId: user.id
+  });
+}
+
+async function handleMemberBanned(
+  deps: PlatformEventHandlerDeps,
+  member: AdapterMemberEvent
+): Promise<void> {
+  if (!deps.identityService || !deps.membershipService) {
+    return;
+  }
+
+  const community =
+    deps.communityService?.findByIdentity(
+      deps.platform,
+      member.community.externalId
+    );
+
+  if (!community) {
+    return;
+  }
+
+  const user =
+    deps.identityService.findUserByIdentity(
+      deps.platform,
+      member.user.externalId
+    );
+
+  if (!user) {
+    return;
+  }
+
+  const membership =
+    deps.membershipService.findMembership(
+      user.id,
+      community.id
+    );
+
+  if (membership && membership.status !== "banned") {
+    deps.membershipService.ban(membership.id);
+  }
+
+  deps.auditService?.record({
+    communityId: community.id,
+    action: "member.banned",
+    actorUserId: user.id
+  });
 }
 
 async function handleMessageUpdate(
