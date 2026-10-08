@@ -1262,6 +1262,10 @@ export class DiscordAdapter
                 interaction.options.getString("command") ?? "",
                 interaction.options.getString("state") ?? ""
               ].filter(Boolean)
+            : interaction.commandName === "clear"
+              ? [
+                  String(interaction.options.getInteger("count") ?? "")
+                ].filter(Boolean)
             : interaction.commandName === "user"
               ? (() => {
                   const target = interaction.options.getUser("user");
