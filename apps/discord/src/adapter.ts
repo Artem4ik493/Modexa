@@ -441,6 +441,10 @@ export class DiscordAdapter
       },
       joinedAt: data.joinedAt,
       roles: roleData.names,
+      roleMentions: data.roles
+        .map((roleId) => guild.roles.cache.get(roleId))
+        .filter((role): role is NonNullable<typeof role> => Boolean(role))
+        .map((role) => `<@&${role.id}>`),
       status: data.pending
         ? "pending"
         : platformRole,
