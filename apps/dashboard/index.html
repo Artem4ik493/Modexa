@@ -47,6 +47,7 @@ main{padding:30px;max-width:1500px;width:100%;margin:auto}.top{display:flex;just
     <button class="nav" data-page="automations">Автоматизации</button>
     <button class="nav" data-page="bridge">Bridge</button>
     <button class="nav" data-page="billing">Billing</button>
+    <button class="nav" data-page="runtime">Сервер / Bot</button>
     <button class="nav" data-page="settings">Настройки</button>
   </nav>
   <div class="bottom">Modexa v1 · API <span id="apiDot">●</span></div>
@@ -83,14 +84,16 @@ main{padding:30px;max-width:1500px;width:100%;margin:auto}.top{display:flex;just
   <section class="page" id="automations"><div class="card"><div class="section-title"><h2>Автоматизации</h2><span class="muted">Core engine</span></div><div class="empty">Автоматизации подключаются из команд и API. Здесь будет визуальный редактор триггер → действие.</div></div></section>
   <section class="page" id="bridge"><div class="card"><div class="section-title"><h2>Telegram ↔ Discord Bridge</h2><span class="muted">Cross-platform</span></div><div class="empty">Здесь появятся endpoints, связанные каналы, заявки и управление синхронизацией.</div></div></section>
   <section class="page" id="billing"><div class="card"><div class="section-title"><h2>Billing & Entitlements</h2><span class="muted">Plans</span></div><div class="settings"><div class="card"><b>Free</b><p class="muted">Базовые команды и модерация.</p></div><div class="card"><b>Pro</b><p class="muted">Автоматизации, расширенные лимиты и SaaS-функции.</p></div></div></div></section>
+  <section class="page" id="runtime"><div class="card"><div class="section-title"><h2>Bot Runtime</h2><span class="pill" id="runtimePill">—</span></div><div class="settings"><div class="setting"><span>Состояние</span><b id="runtimeState">—</b></div><div class="setting"><span>PID</span><span class="muted" id="runtimePid">—</span></div><div class="setting"><span>Discord adapter</span><span id="runtimeDiscord">—</span></div><div class="setting"><span>Telegram adapter</span><span id="runtimeTelegram">—</span></div></div><div class="actions" style="margin-top:18px"><button class="btn primary" onclick="runtimeAction('start')">Запустить</button><button class="btn" onclick="runtimeAction('restart')">Перезапустить</button><button class="btn" onclick="runtimeAction('stop')">Остановить</button></div><p class="muted" style="margin-top:14px">Эти кнопки управляют реальным процессом Runner, который обслуживает Discord и Telegram.</p></div><div class="card" style="margin-top:14px"><div class="section-title"><h2>Discord</h2><span class="muted">OAuth + подключение сервера</span></div><p class="muted">Если бота ещё нет на сервере, откройте приглашение Discord и выберите сервер.</p><button class="btn primary" onclick="inviteBot()">Добавить Modexa на сервер</button><span id="inviteStatus" class="muted" style="margin-left:10px"></span></div></section>
   <section class="page" id="settings"><div class="card"><div class="section-title"><h2>Настройки Dashboard</h2><span class="muted">Local UI</span></div><div class="setting"><span>Автообновление</span><button id="auto" class="switch on" onclick="this.classList.toggle('on')"></button></div><div class="setting"><span>Компактный режим</span><button class="switch" onclick="this.classList.toggle('on')"></button></div><div class="setting"><span>Интервал синхронизации</span><span class="pill">30 сек</span></div></div></section>
 </main>
 </div>
 <script>
 const API=location.protocol==='file:'?'http://localhost:3000':'';
-const titles={overview:'Обзор',communities:'Сообщества',moderation:'Модерация',automod:'AutoMod',audit:'Audit',ranking:'Ranking',welcome:'Welcome',commands:'Commands',automations:'Автоматизации',bridge:'Bridge',billing:'Billing',settings:'Настройки'};
+const titles={overview:'Обзор',communities:'Сообщества',moderation:'Модерация',automod:'AutoMod',audit:'Audit',ranking:'Ranking',welcome:'Welcome',commands:'Commands',automations:'Автоматизации',bridge:'Bridge',billing:'Billing',runtime:'Сервер / Bot',settings:'Настройки'};
 let communities=[];let selectedCommunity=null;
 let lastError='';
+let oauthConfigured=false;
 function dashboardError(message){lastError=message;const el=document.getElementById('dashboardError');if(el){el.textContent=message;el.style.display='block';}}
 function clearDashboardError(){lastError='';const el=document.getElementById('dashboardError');if(el){el.textContent='';el.style.display='none';}}
 function selectCommunity(id){selectedCommunity=id;showPage('moderation');loadModeration(id);}
@@ -116,7 +119,7 @@ async function post(path,body){
  if(!r.ok)throw new Error(await r.text());
  return r.json();
 }
-function discordLogin(){location.href=API+'/auth/discord';}
+async function discordLogin(){try{const c=await fetch(API+'/api/config').then(r=>r.json());if(!c.oauth?.discord){document.getElementById('loginError').textContent='Discord OAuth не настроен. Заполните DISCORD_CLIENT_ID и DISCORD_CLIENT_SECRET в .env.';return;}location.href=API+'/auth/discord';}catch{document.getElementById('loginError').textContent='API недоступен.';}}
 async function initAuth(){
  if(authKey)return true;
  try{
@@ -163,10 +166,13 @@ async function loadModeration(id){
   document.getElementById('modTable').innerHTML=data.items.slice(0,50).map(x=>`<tr><td><code>${esc(x.id.slice(0,16))}</code></td><td>${esc(x.action)}</td><td>${esc(x.platform)}</td><td class="${x.status==='active'?'warn':''}">${esc(x.status)}</td><td>${esc(x.reason||'—')}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">Кейсов нет.</td></tr>';
  }catch(e){document.getElementById('modTable').innerHTML='<tr><td colspan="5" class="empty">Не удалось загрузить кейсы.</td></tr>';}
 }
+async function runtimeAction(action){try{const data=await post('/api/runtime',{action});renderRuntime(data);clearDashboardError();}catch(e){dashboardError(e instanceof Error?e.message:'Не удалось изменить состояние Runner');}}
+function renderRuntime(data){document.getElementById('runtimeState').textContent=data.state==='running'?'RUNNING':'STOPPED';document.getElementById('runtimeState').className=data.state==='running'?'ok':'danger';document.getElementById('runtimePill').textContent=data.state;document.getElementById('runtimePid').textContent=data.pid??'—';document.getElementById('runtimeDiscord').textContent=data.adapters?.discord?'configured':'not configured';document.getElementById('runtimeTelegram').textContent=data.adapters?.telegram?'configured':'not configured';}
+async function inviteBot(){try{const guildId=selectedCommunity||'';const data=await get('/api/auth/discord/invite'+(guildId?'?guildId='+encodeURIComponent(guildId):''));window.open(data.url,'_blank','noopener');document.getElementById('inviteStatus').textContent='Открыто приглашение Discord.';}catch(e){dashboardError(e instanceof Error?e.message:'Не удалось создать приглашение');}}
 async function loadAll(){
  clearDashboardError();
  try{
-  const [h,o]=await Promise.all([get('/health'),get('/api/overview')]);
+  const [h,o,runtime]=await Promise.all([get('/health'),get('/api/overview'),get('/api/runtime')]);
   if(discordUser||!authKey){
     try{
       const c=await get('/api/auth/discord/guilds');
@@ -184,6 +190,7 @@ async function loadAll(){
   document.getElementById('mActive').textContent=o.activeCommunities;
   document.getElementById('mCases').textContent=o.moderationCases;
   document.getElementById('mActiveCases').textContent=o.activeModerationCases;
+  renderRuntime(runtime);
   document.getElementById('updated').textContent=new Date().toLocaleTimeString('ru-RU');
   document.getElementById('communityCount').textContent=communities.length+' всего';
   renderCommunities('overviewCommunities');renderCommunities('communityList');
