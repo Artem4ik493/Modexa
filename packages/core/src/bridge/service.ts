@@ -675,7 +675,14 @@ export class BridgeService {
       link
     );
 
-    this.database?.upsertBridgeLink(link);
+    // The bridge service can be restored from memory while the SQLite
+    // endpoint rows may have been created in another runtime/process.
+    // Always persist both endpoints before inserting the FK-dependent link.
+    if (this.database) {
+      this.database.upsertBridgeEndpoint(source);
+      this.database.upsertBridgeEndpoint(target);
+      this.database.upsertBridgeLink(link);
+    }
 
     return {
       request,
