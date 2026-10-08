@@ -992,9 +992,19 @@ export class DiscordAdapter
 
     const embedValue = "embed" in discord ? discord.embed : undefined;
     const imageUrl = "imageUrl" in discord && typeof discord.imageUrl === "string" ? discord.imageUrl : undefined;
+    const media =
+      "media" in discord &&
+      discord.media &&
+      typeof discord.media === "object"
+        ? discord.media as { type?: string; url?: string }
+        : undefined;
 
     if (!embedValue || typeof embedValue !== "object") {
-      return imageUrl ? [{ image: { url: imageUrl } }] : [];
+      if (imageUrl) return [{ image: { url: imageUrl } }];
+      if (media?.url && (media.type === "image" || media.type === "animation")) {
+        return [{ image: { url: media.url } }];
+      }
+      return [];
     }
 
     const source = embedValue as Record<string, unknown>;
@@ -1009,6 +1019,9 @@ export class DiscordAdapter
     if (typeof source.thumbnailUrl === "string") embed.thumbnail = { url: source.thumbnailUrl };
     if (typeof source.imageUrl === "string") embed.image = { url: source.imageUrl };
     if (imageUrl && !embed.image) embed.image = { url: imageUrl };
+    if (!embed.image && media?.url && (media.type === "image" || media.type === "animation")) {
+      embed.image = { url: media.url };
+    }
     return Object.keys(embed).length > 0 ? [embed] : [];
   }
 
