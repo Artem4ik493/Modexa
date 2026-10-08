@@ -192,7 +192,7 @@ export class TelegramAdapter
             // file URLs (and private/local URLs) are not always
             // reachable from Telegram's servers. Never let an avatar
             // or optional image make the whole command fail.
-            this.logger?.warn(
+            this.logger?.error(
               "telegram.message.image_fallback",
               {
                 platform: "telegram",
