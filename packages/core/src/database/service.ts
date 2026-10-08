@@ -903,6 +903,12 @@ export class ModexaDatabase {
     return row.file;
   }
 
+  revokeSystemRole(userId: string, roleId: string): void {
+    this.database.prepare(
+      "DELETE FROM user_system_roles WHERE user_id = ? AND role_id = ?"
+    ).run(userId, roleId);
+  }
+
   getUserSystemRoleIds(userId: string): string[] {
     const rows = this.database.prepare(
       `SELECT role_id FROM user_system_roles WHERE user_id = ? ORDER BY role_id`
