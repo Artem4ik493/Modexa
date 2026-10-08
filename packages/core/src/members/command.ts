@@ -281,6 +281,22 @@ export function createMemberCommand(
 
       let native: PlatformMemberDetails | undefined;
 
+      if (!user && target) {
+        user = membershipService
+          .getCommunityMemberships(context.community.id)
+          .map((membership) => identityService.getUser(membership.userId))
+          .filter((candidate): candidate is NonNullable<typeof candidate> => Boolean(candidate))
+          .find((candidate) =>
+            identityService
+              .getUserIdentities(candidate.id)
+              .some(
+                (identity) =>
+                  identity.platform === context.execution.platform &&
+                  identity.username?.toLowerCase() === target.toLowerCase()
+              )
+          );
+      }
+
       if (
         !user &&
         target &&
