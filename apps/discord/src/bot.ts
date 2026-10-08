@@ -320,7 +320,8 @@ export function createDiscordAdapter(
     (action) => {
       if (!adapter) throw new Error("Discord adapter is not ready");
       return adapter.sendAction(action);
-    }
+    },
+    memberDirectoryProxy
   )) {
     registry.register(command);
   }
@@ -335,7 +336,8 @@ export function createDiscordAdapter(
     (action) => {
       if (!adapter) throw new Error("Discord adapter is not ready");
       return adapter.sendAction(action);
-    }
+    },
+    memberDirectoryProxy
   )) {
     registry.register(command);
   }
