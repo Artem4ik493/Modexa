@@ -413,8 +413,11 @@ const server = createServer((req, res) => {
         user
       });
 
+      // Return to the same origin that handled the OAuth callback.
+      // Using MODEXA_DASHBOARD_URL here can send the browser to another
+      // host/port, where the HttpOnly session cookie is not available.
       res.writeHead(302, {
-        location: dashboardUrl,
+        location: "/",
         "set-cookie": cookie("modexa_session", sessionId, 7 * 24 * 60 * 60),
         "cache-control": "no-store"
       });
