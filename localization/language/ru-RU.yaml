@@ -4,6 +4,7 @@ interaction.forbidden: 'Это действие принадлежит друг�
 interaction.unhandled: 'Это действие не поддерживается.'
 interaction.failed: 'Что-то пошло не так. Попробуйте ещё раз.'
 command.ping.description: 'Проверить, что Modexa работает'
+command.dm_only: 'Эта команда доступна только в личном чате с ботом.'
 command.forbidden: 'У вас недостаточно прав для использования команд в этом сообществе.'
 command.permission_denied: 'У вас нет прав для использования этой команды.'
 command.not_found: 'Команда не найдена. Для просмотра доступных команд для вашей роли {role} используйте /help.'
