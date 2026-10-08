@@ -73,7 +73,14 @@ export class TelegramAdapter
 
     this.started = true;
 
-    await this.bot.start();
+    await this.bot.start({
+      allowed_updates: [
+        "message",
+        "edited_message",
+        "callback_query",
+        "chat_member"
+      ]
+    });
   }
 
   async stop(): Promise<void> {
