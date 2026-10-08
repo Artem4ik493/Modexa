@@ -139,7 +139,25 @@ async function post(path,body){return request(path,{method:'POST',headers:{'cont
 
 async function discordLogin(){try{const c=await fetch('/api/config').then(r=>r.json());if(!c.oauth?.discord){showLogin('Discord OAuth не настроен. Проверьте DISCORD_CLIENT_ID и DISCORD_CLIENT_SECRET.');return}location.href='/auth/discord'}catch{showLogin('API недоступен.');}}
 async function login(){const key=document.getElementById('apiKey').value.trim();if(!key)return;try{await fetch('/api/auth',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({key})}).then(async r=>{if(!r.ok)throw new Error('bad');return r.json()});authKey=key;localStorage.setItem('modexa_api_key',key);document.getElementById('login').classList.add('hidden');await loadAll()}catch{showLogin('Неверный API-ключ.')}} 
-async function initAuth(){if(authKey){document.getElementById('login').classList.add('hidden');return true}try{const d=await fetch('/api/auth/discord').then(async r=>{if(!r.ok)throw 0;return r.json()});discordUser=d.user;document.getElementById('profile').style.display='block';document.getElementById('profileName').textContent=d.modexa?.displayName||d.user.global_name||d.user.username;document.querySelector('#profile .profile-sub').textContent=d.modexa?('Modexa · '+d.modexa.id):'Discord · аккаунт не привязан к Modexa';document.getElementById('login').classList.add('hidden');return true}catch{showLogin();return false}}
+async function initAuth(){
+  if(authKey){document.getElementById('login').classList.add('hidden');return true}
+  try{
+    const params=new URLSearchParams(location.search);
+    const handoff=params.get('discord_handoff');
+    if(handoff){
+      const r=await fetch('/api/auth/discord/handoff',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({handoff})});
+      if(!r.ok)throw 0;
+      history.replaceState({},document.title,location.pathname+location.hash);
+    }
+    const d=await fetch('/api/auth/discord',{credentials:'same-origin'}).then(async r=>{if(!r.ok)throw 0;return r.json()});
+    discordUser=d.user;
+    document.getElementById('profile').style.display='block';
+    document.getElementById('profileName').textContent=d.modexa?.displayName||d.user.global_name||d.user.username;
+    document.querySelector('#profile .profile-sub').textContent=d.modexa?('Modexa · '+d.modexa.id):'Discord · аккаунт не привязан к Modexa';
+    document.getElementById('login').classList.add('hidden');
+    return true
+  }catch{showLogin();return false}
+}
 async function logout(){try{await fetch('/api/auth/discord',{method:'DELETE'});await fetch('/api/auth',{method:'DELETE'})}catch{}authKey='';localStorage.removeItem('modexa_api_key');location.reload()}
 
 function showPage(id){document.querySelectorAll('.page').forEach(e=>e.classList.toggle('active',e.id===id));document.querySelectorAll('.nav').forEach(e=>e.classList.toggle('active',e.dataset.page===id));document.getElementById('pageTitle').textContent=titles[id][0];document.getElementById('pageSubtitle').textContent=titles[id][1];if(id==='commands')loadCommands();if(id==='moderation')loadModeration();if(id==='automations')loadAutomations();if(id==='bridge')loadBridge();if(id==='audit')loadAudit();if(id==='system')loadSystem();if(id==='runtime')loadRuntime()}
