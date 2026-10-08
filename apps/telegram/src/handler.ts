@@ -35,6 +35,7 @@ export function createTelegramEventHandler(
       return {
         telegram: {
           ...(replyMarkup ? { replyMarkup } : {}),
+          ...(response.media ? { media: response.media } : {}),
           ...(response.imageUrl
             ? { imageUrl: response.imageUrl }
             : {}),
