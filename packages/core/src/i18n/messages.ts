@@ -157,7 +157,9 @@ const MESSAGE_KEYS = [
   "members.title",
   "members.empty",
   "members.page",
-  "members.page_not_found"
+  "members.page_not_found",
+  "members.previous",
+  "members.next"
 ] as const;
 
 export type MessageKey =
