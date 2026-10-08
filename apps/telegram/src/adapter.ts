@@ -739,6 +739,52 @@ export class TelegramAdapter
         author.id
       );
 
+    let bridgeMedia:
+      | {
+          type: "image" | "animation" | "video";
+          url: string;
+        }
+      | undefined;
+
+    try {
+      if ("animation" in message && message.animation) {
+        const file = await this.bot.api.getFile(
+          message.animation.file_id
+        );
+        if (file.file_path) {
+          bridgeMedia = {
+            type: "animation",
+            url: `https://api.telegram.org/file/bot${this.bot.token}/${file.file_path}`
+          };
+        }
+      } else if ("video" in message && message.video) {
+        const file = await this.bot.api.getFile(
+          message.video.file_id
+        );
+        if (file.file_path) {
+          bridgeMedia = {
+            type: "video",
+            url: `https://api.telegram.org/file/bot${this.bot.token}/${file.file_path}`
+          };
+        }
+      } else if ("photo" in message && message.photo?.length) {
+        const photo = message.photo.at(-1);
+        if (photo) {
+          const file = await this.bot.api.getFile(
+            photo.file_id
+          );
+          if (file.file_path) {
+            bridgeMedia = {
+              type: "image",
+              url: `https://api.telegram.org/file/bot${this.bot.token}/${file.file_path}`
+            };
+          }
+        }
+      }
+    } catch {
+      // Media is optional for bridge relay.
+    }
+
     return {
       type:
         "message.created",
@@ -808,7 +854,12 @@ export class TelegramAdapter
         createdAt:
           new Date(
             message.date * 1000
-          )
+          ),
+
+        metadata:
+          bridgeMedia
+            ? { bridgeMedia }
+            : undefined
       }
     };
   }
