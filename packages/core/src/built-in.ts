@@ -1011,9 +1011,9 @@ export function createBuiltinCommands(
                   : (command.description ?? t("help.no_description"));
               return `/${command.name}${aliases} — ${description}`;
             });
-            return `**${group}**\\n${lines.join("\\n")}`;
+            return `**${group}**\n${lines.join("\n")}`;
           })
-          .join("\\n\\n");
+          .join("\n\n");
 
         const categoryButtons = [
           ["🛡 Модерация", "moderation"],
