@@ -161,7 +161,7 @@ describe("Platform event handler with real identities", () => {
       messageEvent("telegram", "/menu")
     );
 
-    // Account button is the first one.
+    // Account button is the second one.
     await handler({
       type: "interaction.created",
       interaction: {
@@ -174,7 +174,7 @@ describe("Platform event handler with real identities", () => {
         },
         destinationExternalId: "42",
         messageExternalId: "10",
-        token: tokensOf(actions[0])[0],
+        token: tokensOf(actions[0])[1],
         createdAt: new Date()
       }
     });
