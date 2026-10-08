@@ -237,9 +237,15 @@ services.bridgeService.setMessageGateway({
                 bound
               );
 
-            return replyMarkup
-              ? { telegram: { replyMarkup } }
-              : undefined;
+            return {
+              telegram: {
+                ...(replyMarkup ? { replyMarkup } : {}),
+                ...(bound.media ? { media: bound.media } : {}),
+                ...(bound.imageUrl ? { imageUrl: bound.imageUrl } : {}),
+                ...(bound.embed ? { embed: bound.embed } : {}),
+                ...(bound.format === "markdown" ? { parseMode: "Markdown" } : {})
+              }
+            };
           })()
         : (() => {
             const components =
@@ -247,9 +253,14 @@ services.bridgeService.setMessageGateway({
                 bound
               );
 
-            return components
-              ? { discord: { components } }
-              : undefined;
+            return {
+              discord: {
+                ...(components ? { components } : {}),
+                ...(bound.media ? { media: bound.media } : {}),
+                ...(bound.imageUrl ? { imageUrl: bound.imageUrl } : {}),
+                ...(bound.embed ? { embed: bound.embed } : {})
+              }
+            };
           })();
 
     return await adapter.sendAction({
@@ -294,16 +305,27 @@ services.bridgeService.setMessageGateway({
         ? (() => {
             const replyMarkup =
               renderTelegramInteraction(bound);
-            return replyMarkup
-              ? { telegram: { replyMarkup } }
-              : undefined;
+            return {
+              telegram: {
+                ...(replyMarkup ? { replyMarkup } : {}),
+                ...(bound.media ? { media: bound.media } : {}),
+                ...(bound.imageUrl ? { imageUrl: bound.imageUrl } : {}),
+                ...(bound.embed ? { embed: bound.embed } : {}),
+                ...(bound.format === "markdown" ? { parseMode: "Markdown" } : {})
+              }
+            };
           })()
         : (() => {
             const components =
               renderDiscordInteraction(bound);
-            return components
-              ? { discord: { components } }
-              : undefined;
+            return {
+              discord: {
+                ...(components ? { components } : {}),
+                ...(bound.media ? { media: bound.media } : {}),
+                ...(bound.imageUrl ? { imageUrl: bound.imageUrl } : {}),
+                ...(bound.embed ? { embed: bound.embed } : {})
+              }
+            };
           })();
 
     await adapter.sendAction({
