@@ -151,9 +151,15 @@ export class DiscordAdapter
 
           const embeds =
             this.getEmbeds(action.metadata);
+          const media =
+            this.getBridgeMedia(action.metadata);
+          const sendContent =
+            media?.type === "video"
+              ? `${action.content}\n${media.url}`
+              : action.content;
 
           const sent = await pending.editReply({
-            ...(embeds.length > 0 ? {} : { content: action.content }),
+            ...(embeds.length > 0 ? {} : { content: sendContent }),
             components:
               this.getComponents(
                 action.metadata
@@ -171,9 +177,15 @@ export class DiscordAdapter
 
         const embeds =
           this.getEmbeds(action.metadata);
+        const media =
+          this.getBridgeMedia(action.metadata);
+        const sendContent =
+          media?.type === "video"
+            ? `${action.content}\n${media.url}`
+            : action.content;
 
         const sent = await channel.send({
-          ...(embeds.length > 0 ? {} : { content: action.content }),
+          ...(embeds.length > 0 ? {} : { content: sendContent }),
           components:
             this.getComponents(
               action.metadata
@@ -1023,6 +1035,34 @@ export class DiscordAdapter
       embed.image = { url: media.url };
     }
     return Object.keys(embed).length > 0 ? [embed] : [];
+  }
+
+  private getBridgeMedia(
+    metadata:
+      | Record<string, unknown>
+      | undefined
+  ): { type: string; url: string } | undefined {
+    const discord = metadata?.discord;
+    if (!discord || typeof discord !== "object" || !("media" in discord)) {
+      return undefined;
+    }
+
+    const media = discord.media;
+    if (
+      !media ||
+      typeof media !== "object" ||
+      !("url" in media) ||
+      typeof media.url !== "string" ||
+      !("type" in media) ||
+      typeof media.type !== "string"
+    ) {
+      return undefined;
+    }
+
+    return {
+      type: media.type,
+      url: media.url
+    };
   }
 
   private getComponents(
