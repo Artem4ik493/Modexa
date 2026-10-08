@@ -23,6 +23,7 @@ const MESSAGE_KEYS = [
   "menu.settings",
   "menu.back",
   "menu.close",
+  "menu.help",
   "command.account.description",
   "account.dm_only",
   "account.title",
