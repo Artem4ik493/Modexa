@@ -150,6 +150,7 @@ const MESSAGE_KEYS = [
   "member.platform_joined",
   "member.platform_status",
   "command.members.description",
+  "command.role.description",
   "members.community_only",
   "members.title",
   "members.empty",
