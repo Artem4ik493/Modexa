@@ -5,6 +5,7 @@ import type { MembershipService } from "../memberships/service.js";
 import type { PlatformUser } from "../adapters/types.js";
 import type { User } from "../identity/types.js";
 import { createTranslator } from "../i18n/translate.js";
+import type { Logger } from "../diagnostics/types.js";
 
 export interface PlatformMemberDetails {
   user: PlatformUser;
@@ -235,7 +236,8 @@ export function createMemberCommand(
   identityService: IdentityService,
   membershipService: MembershipService,
   accessControlService: AccessControlService,
-  memberDirectory?: MemberDirectory
+  memberDirectory?: MemberDirectory,
+  logger?: Logger
 ): CommandDefinition {
   return {
     name: "member",
@@ -260,31 +262,48 @@ export function createMemberCommand(
         .replace(/^@/, "")
         .trim();
 
-      let user = target
-        ? identityService.findUserByUsername(
+      let user: User | undefined;
+      let native: PlatformMemberDetails | undefined;
+
+      // Lookup #1: persisted Modexa identity.
+      if (target) {
+        user =
+          identityService.findUserByUsername(
             target,
             context.execution.platform
-          )
-        : context.user;
-
-      if (
-        !user &&
-        target
-      ) {
-        user =
+          ) ??
           identityService.findUserByIdentity(
             context.execution.platform,
             target
           );
+
+        if (!user) {
+          logger?.warn(
+            "member.lookup.local.not_found",
+            {
+              platform: context.execution.platform,
+              communityId: context.community.id,
+              username: target
+            }
+          );
+        }
+      } else {
+        user = context.user;
       }
 
-      let native: PlatformMemberDetails | undefined;
-
+      // Lookup #2: persisted community membership. This catches
+      // participants whose identity profile is present only through
+      // the community membership cache/database.
       if (!user && target) {
         user = membershipService
           .getCommunityMemberships(context.community.id)
-          .map((membership) => identityService.getUser(membership.userId))
-          .filter((candidate): candidate is NonNullable<typeof candidate> => Boolean(candidate))
+          .map((membership) =>
+            identityService.getUser(membership.userId)
+          )
+          .filter(
+            (candidate): candidate is NonNullable<typeof candidate> =>
+              Boolean(candidate)
+          )
           .find((candidate) =>
             identityService
               .getUserIdentities(candidate.id)
@@ -294,54 +313,60 @@ export function createMemberCommand(
                   identity.username?.toLowerCase() === target.toLowerCase()
               )
           );
-      }
 
-      if (
-        !user &&
-        target &&
-        memberDirectory
-      ) {
-        native =
-          /^\d+$/.test(target)
-            ? await memberDirectory.getMember(
-                context.community.id,
-                target
-              )
-            : await memberDirectory.findMemberByUsername?.(
-                context.community.id,
-                target
-              );
-
-        if (native) {
-          user = ensureLocalMember(
-            native,
-            context.community.id,
-            identityService,
-            membershipService,
-            accessControlService
+        if (!user) {
+          logger?.warn(
+            "member.lookup.membership.not_found",
+            {
+              platform: context.execution.platform,
+              communityId: context.community.id,
+              username: target
+            }
           );
         }
       }
 
+      // Lookup #3: native platform directory.
       if (!user && target && memberDirectory) {
-        native =
-          /^\d+$/.test(target)
-            ? await memberDirectory.getMember(
-                context.community.id,
-                target
-              )
-            : await memberDirectory.findMemberByUsername?.(
-                context.community.id,
-                target
-              );
+        try {
+          native =
+            /^\d+$/.test(target)
+              ? await memberDirectory.getMember(
+                  context.community.id,
+                  target
+                )
+              : await memberDirectory.findMemberByUsername?.(
+                  context.community.id,
+                  target
+                );
 
-        if (native) {
-          user = ensureLocalMember(
-            native,
-            context.community.id,
-            identityService,
-            membershipService,
-            accessControlService
+          if (native) {
+            user = ensureLocalMember(
+              native,
+              context.community.id,
+              identityService,
+              membershipService,
+              accessControlService
+            );
+          } else {
+            logger?.warn(
+              "member.lookup.native.not_found",
+              {
+                platform: context.execution.platform,
+                communityId: context.community.id,
+                username: target
+              }
+            );
+          }
+        } catch (error) {
+          logger?.error(
+            "member.lookup.native.failed",
+            {
+              platform: context.execution.platform,
+              communityId: context.community.id,
+              username: target
+            },
+            error
           );
         }
       }
