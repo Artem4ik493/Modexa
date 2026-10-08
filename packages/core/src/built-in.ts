@@ -931,7 +931,6 @@ export function createBuiltinCommands(
       descriptionKey:
         "command.account.description",
       requiredCapabilities: ["account.manage"],
-      dmOnly: true,
       handler: (context) =>
         handleAccount(
           context,
