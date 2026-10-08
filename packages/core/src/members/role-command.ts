@@ -102,10 +102,30 @@ export function createRoleCommand(
       const roles = accessControlService.getUserCommunityRoles(target.id, context.community.id);
 
       if (!requestedRole) {
+        const nativeIdentity = identityService
+          .getUserIdentities(target.id)
+          .find((identity) => identity.platform === context.platform);
+        const native = nativeIdentity && memberDirectory
+          ? await memberDirectory.getMember(
+              context.community.id,
+              nativeIdentity.externalId
+            )
+          : undefined;
+        const platformRoles = native?.roles ?? [];
+
         return {
           content: [
             `👤 ${target.displayName}`,
-            `Роли: ${roles.map(role => role.name).join(", ") || "MEMBER"}`
+            `Роли Modexa: ${roles.map(role => role.name).join(", ") || "MEMBER"}`,
+            `Роли платформы: ${platformRoles.length > 0
+              ? platformRoles
+                  .map((role) =>
+                    context.platform === "discord"
+                      ? "@" + role.replace(/^@/, "")
+                      : role
+                  )
+                  .join(", ")
+              : "нет"}`
           ].join("\n")
         };
       }
@@ -131,6 +151,15 @@ export function createRoleCommand(
         if (role.id !== targetRole.id) {
           accessControlService.revokeCommunityRole(target.id, role.id);
         }
+      }
+
+      const alreadyAssigned =
+        roles.length === 1 && roles[0]?.id === targetRole.id;
+
+      if (alreadyAssigned) {
+        return {
+          content: `ℹ️ ${target.displayName}: роль **${targetRole.name}** уже назначена.`
+        };
       }
 
       accessControlService.assignCommunityRole(target.id, targetRole.id);
