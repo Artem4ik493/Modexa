@@ -267,6 +267,8 @@ export function createMemberCommand(
 
       // Lookup #1: persisted Modexa identity.
       if (target) {
+        // First try the persisted username index, then a persisted
+        // platform external ID. This must work after a restart too.
         user =
           identityService.findUserByUsername(
             target,
@@ -288,7 +290,38 @@ export function createMemberCommand(
           );
         }
       } else {
-        user = context.user;
+        // /member without an argument means "me". The execution
+        // context already contains the real Modexa user, but hydrate
+        // it from the persisted platform identity when this is a
+        // fresh process or a separately restored runtime.
+        user =
+          identityService.getUser(context.user.id) ??
+          identityService.findUserByIdentity(
+            context.execution.platform,
+            context.user.id
+          ) ??
+          context.user;
+
+        const persistedIdentity =
+          identityService
+            .getUserIdentities(user.id)
+            .find(
+              (identity) =>
+                identity.platform ===
+                context.execution.platform
+            );
+
+        if (!persistedIdentity) {
+          logger?.warn(
+            "member.lookup.self_identity.not_found",
+            {
+              platform: context.execution.platform,
+              communityId: context.community.id,
+              userId: user.id,
+              externalId: context.user.id
+            }
+          );
+        }
       }
 
       // Lookup #2: persisted community membership. This catches
