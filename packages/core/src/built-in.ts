@@ -47,16 +47,14 @@ function createMenuResponse(
   return {
     content: t("menu.title"),
     buttons: [
-      ...(canManageSystem
-        ? [{
-            id: "system",
-            label: t("menu.system"),
-            action: {
-              type: "command" as const,
-              command: "/system"
-            }
-          }]
-        : []),
+      {
+        id: "help",
+        label: "❓ Помощь",
+        action: {
+          type: "command",
+          command: "/help"
+        }
+      },
       {
         id: "account",
         label: t("menu.account"),
@@ -73,6 +71,16 @@ function createMenuResponse(
           command: "/settings"
         }
       },
+      ...(canManageSystem
+        ? [{
+            id: "system",
+            label: t("menu.system"),
+            action: {
+              type: "command" as const,
+              command: "/system"
+            }
+          }]
+        : []),
       createCloseButton(t)
     ]
   };
@@ -960,33 +968,53 @@ export function createBuiltinCommands(
         const t = createTranslator(
           context.execution?.locale
         );
-
-        const commandList = registry
+        const available = registry
           .listAvailable(context.execution.capabilities)
-          .map((command) => {
-            const aliases =
-              command.aliases &&
-              command.aliases.length > 0
-                ? ` (${command.aliases.map((alias) => `/${alias}`).join(", ")})`
-                : "";
+          .filter((command) => command.name !== "help");
 
-            const description =
-              command.descriptionKey
-                ? t(command.descriptionKey)
-                : (command.description ??
-                  t("help.no_description"));
+        const groupFor = (name: string): string => {
+          if ([
+            "warn","mute","kick","ban","unmute","unban",
+            "clear","warns","remwarn","resetwarns","case","modhistory"
+          ].includes(name)) return "🛡 Модерация";
+          if (["member","members","role"].includes(name)) return "👥 Участники";
+          if (["settings","command"].includes(name)) return "⚙️ Настройки";
+          if (["account","link"].includes(name)) return "🔗 Аккаунт";
+          return "📦 Основное";
+        };
 
-            return `/${command.name}${aliases} — ${description}`;
+        const groups = new Map<string, CommandDefinition[]>();
+        for (const command of available) {
+          const group = groupFor(command.name);
+          const items = groups.get(group) ?? [];
+          items.push(command);
+          groups.set(group, items);
+        }
+
+        const commandList = [...groups.entries()]
+          .map(([group, commands]) => {
+            const lines = commands.map((command) => {
+              const aliases =
+                command.aliases && command.aliases.length > 0
+                  ? ` (${command.aliases.map((alias) => `/${alias}`).join(", ")})`
+                  : "";
+              const description =
+                command.descriptionKey
+                  ? t(command.descriptionKey)
+                  : (command.description ?? t("help.no_description"));
+              return `/${command.name}${aliases} — ${description}`;
+            });
+            return `**${group}**\n${lines.join("\n")}`;
           })
-          .join("\n");
+          .join("\n\n");
 
         return {
           content: commandList
-            ? `${t("help.title")}\n${commandList}`
-            : t("help.empty")
+            ? `${t("help.title")}\n\n${commandList}`
+            : t("help.empty"),
+          buttons: [createBackButton(t), createCloseButton(t)]
         };
-      }
-    }
+      }}
   ];
 
   for (const command of commands) {
