@@ -304,9 +304,9 @@ export function createDiscordAdapter(
     communityService,
     moderationService,
     memberDirectoryProxy,
-    (action) => {
+    async (action) => {
       if (!adapter) throw new Error("Discord adapter is not ready");
-      return adapter.sendAction(action);
+      await adapter.sendAction(action);
     }
   )) {
     registry.register(command);
@@ -428,8 +428,13 @@ export function createDiscordAdapter(
 
   adapter.onEvent(
     createDiscordEventHandler({
-      responder:
-        adapter,
+      responder: {
+        id: adapter.id,
+        sendAction: async (action) => { await adapter.sendAction(action); },
+        answerInteraction: (interactionExternalId, text) => {
+          adapter.answerInteraction(interactionExternalId, text);
+        }
+      },
       logger,
       commandService,
       dispatcher,
