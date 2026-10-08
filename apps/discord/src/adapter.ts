@@ -1423,23 +1423,71 @@ export class DiscordAdapter
     this.client.on(
       Events.MessageCreate,
       async (message) => {
-        if (message.author.bot) {
-          return;
-        }
+        if (message.author.bot) return;
 
         try {
           await this.emitEvent(
-            await this.createMessageEvent(
-              message
-            )
+            await this.createMessageEvent(message)
           );
         } catch {
-          // The application handler logs its
-          // own failures. Never crash the process.
+          // The application handler logs its own failures.
         }
       }
     );
 
+    this.client.on(
+      Events.MessageUpdate,
+      async (_oldMessage, message) => {
+        if (message.author?.bot) return;
+
+        try {
+          const resolved =
+            message.partial
+              ? await message.fetch()
+              : message;
+
+          await this.emitEvent(
+            await this.createMessageEvent(resolved)
+              .then((event) => ({
+                ...event,
+                type: "message.updated" as const
+              }))
+          );
+        } catch {
+          // Partials/deleted messages may be unavailable.
+        }
+      }
+    );
+
+    this.client.on(
+      Events.MessageDelete,
+      async (message) => {
+        if (!message.id) return;
+
+        try {
+          let resolved = message;
+          if (message.partial) {
+            try {
+              resolved = await message.fetch();
+            } catch {
+              // Use the partial payload when the message is gone.
+            }
+          }
+
+          if (!resolved.author || resolved.author.bot) return;
+
+          await this.emitEvent({
+            type: "message.deleted",
+            message: {
+              ...(await this.createMessageEvent(resolved)).message,
+              content: resolved.content ?? ""
+            }
+          });
+        } catch {
+          // A deleted/partial message may no longer be fetchable.
+        }
+      }
+    );
     this.client.on(
       Events.InteractionCreate,
       async (interaction) => {
