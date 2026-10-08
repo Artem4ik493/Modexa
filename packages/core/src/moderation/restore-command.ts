@@ -70,7 +70,7 @@ export function createModerationRestoreCommands(
         const native = identity
           ? await memberDirectory.getMember(context.community.id, identity.externalId)
           : undefined;
-        if (native?.isMember !== false) {
+        if (native && native.isMember !== false) {
           membership = memberships.createMembership({
             userId: target.id,
             communityId: context.community.id,
