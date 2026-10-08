@@ -27,12 +27,6 @@ export function createModerationRestoreCommands(
             (i) => i.platform === context.platform && i.username?.toLowerCase() === arg
           ));
 
-      if (!target && context.platform === "discord") {
-        const native = await (context.args[0] && context.args[0].match(/^\d+$/)
-          ? undefined
-          : undefined);
-        void native;
-      }
       if (!target) return { content: "Участник не найден." };
       const membership = memberships.findMembership(target.id, context.community.id);
       if (!membership || membership.status !== "active") return { content: "Участник не состоит в этом сообществе." };
