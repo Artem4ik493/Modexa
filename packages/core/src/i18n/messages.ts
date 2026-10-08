@@ -14,6 +14,7 @@ const MESSAGE_KEYS = [
   "interaction.failed",
   "command.ping.description",
   "command.forbidden",
+  "command.dm_only",
   "command.permission_denied",
   "command.not_found",
   "command.ping.pong",
