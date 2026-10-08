@@ -27,7 +27,7 @@ const database = new ModexaDatabase({
 });
 const backup = new BackupService(database);
 const runtimeServices = createRuntimeServices(undefined, database);
-const accessControlService = accessControlService;
+const accessControlService = runtimeServices.accessControlService;
 
 if (!accessControlService) {
   throw new Error("Modexa AccessControlService is not initialized");
