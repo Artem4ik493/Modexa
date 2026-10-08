@@ -304,7 +304,7 @@ export function createTelegramAdapter(
     options.communityService!,
     commandSettingsService,
     moderationService,
-    (action) => adapter.sendAction(action),
+    async (action) => { await adapter.sendAction(action); },
     undefined,
     memberDirectoryProxy
   )) {
@@ -369,8 +369,13 @@ export function createTelegramAdapter(
 
   adapter.onEvent(
     createTelegramEventHandler({
-      responder:
-        adapter,
+      responder: {
+        id: adapter.id,
+        sendAction: async (action) => { await adapter.sendAction(action); },
+        answerInteraction: (interactionExternalId, text) => {
+          adapter.answerInteraction(interactionExternalId, text);
+        }
+      },
       logger,
       commandService,
       dispatcher,
