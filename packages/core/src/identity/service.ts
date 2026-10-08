@@ -110,6 +110,14 @@ export class IdentityService {
         now
       });
 
+    // Update SQLite first. If a foreign-key constraint fails,
+    // keep the in-memory identities/users untouched so the runtime
+    // cannot end up half-merged.
+    this.database?.reassignUserReferences(
+      sourceUserIds,
+      user.id
+    );
+
     for (const sourceUser of sourceUsers) {
       for (
         const identity of
@@ -123,11 +131,6 @@ export class IdentityService {
           now;
       }
     }
-
-    this.database?.reassignUserReferences(
-      sourceUserIds,
-      user.id
-    );
 
     for (const sourceUserId of sourceUserIds) {
       this.users.delete(
