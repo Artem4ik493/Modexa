@@ -65,8 +65,14 @@ export interface InteractionEmbed {
   imageUrl?: string;
 }
 
+export interface InteractionMedia {
+  type: "image" | "animation" | "video";
+  url: string;
+}
+
 export interface InteractionResponse {
   content?: string;
+  media?: InteractionMedia;
   embed?: InteractionEmbed;
 
   format?: "plain" | "markdown";
@@ -144,6 +150,7 @@ export interface BoundInteractionMenu
 
 export interface BoundInteractionResponse {
   content?: string;
+  media?: InteractionMedia;
   embed?: InteractionEmbed;
 
   format?: "plain" | "markdown";
