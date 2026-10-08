@@ -991,7 +991,22 @@ export function createBuiltinCommands(
           groups.set(group, items);
         }
 
-        const commandList = [...groups.entries()]
+        const category = context.args[0]?.toLowerCase();
+        const categoryAliases: Record<string, string> = {
+          moderation: "🛡 Модерация",
+          mod: "🛡 Модерация",
+          members: "👥 Участники",
+          users: "👥 Участники",
+          settings: "⚙️ Настройки",
+          account: "🔗 Аккаунт",
+          basic: "📦 Основное"
+        };
+        const selectedGroup = categoryAliases[category ?? ""];
+        const entries = selectedGroup
+          ? [[selectedGroup, groups.get(selectedGroup) ?? []] as const]
+          : [...groups.entries()];
+
+        const commandList = entries
           .map(([group, commands]) => {
             const lines = commands.map((command) => {
               const aliases =
@@ -1004,15 +1019,37 @@ export function createBuiltinCommands(
                   : (command.description ?? t("help.no_description"));
               return `/${command.name}${aliases} — ${description}`;
             });
-            return `**${group}**\n${lines.join("\n")}`;
+            return `**${group}**\\n${lines.join("\\n")}`;
           })
-          .join("\n\n");
+          .join("\\n\\n");
+
+        const categoryButtons = [
+          ["🛡 Модерация", "moderation"],
+          ["👥 Участники", "members"],
+          ["⚙️ Настройки", "settings"],
+          ["🔗 Аккаунт", "account"],
+          ["📦 Основное", "basic"]
+        ]
+          .filter(([label]) => !selectedGroup || label === selectedGroup)
+          .map(([label, value]) => ({
+            id: `help-${value}`,
+            label,
+            action: {
+              type: "command" as const,
+              command: "/help",
+              args: [value]
+            }
+          }));
 
         return {
           content: commandList
-            ? `${t("help.title")}\n\n${commandList}`
+            ? `${t("help.title")}\\n\\n${commandList}`
             : t("help.empty"),
-          buttons: [createBackButton(t), createCloseButton(t)]
+          buttons: [
+            ...categoryButtons,
+            ...(selectedGroup ? [createBackButton(t)] : []),
+            createCloseButton(t)
+          ]
         };
       }}
   ];
