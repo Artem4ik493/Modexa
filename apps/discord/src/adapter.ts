@@ -1459,6 +1459,88 @@ export class DiscordAdapter
     );
 
     this.client.on(
+      Events.GuildMemberAdd,
+      async (member) => {
+        if (member.user.bot) return;
+
+        await this.emitEvent({
+          type: "member.joined",
+          member: {
+            externalId: member.id,
+            platform: "discord",
+            user: this.toPlatformUser(
+              member.user,
+              undefined,
+              member.id === member.guild.ownerId
+                ? "owner"
+                : member.permissions.has(
+                    PermissionsBitField.Flags.Administrator
+                  )
+                  ? "admin"
+                  : "member"
+            ),
+            community: {
+              platform: "discord",
+              externalId: member.guild.id,
+              name: member.guild.name
+            },
+            createdAt: new Date()
+          }
+        });
+      }
+    );
+
+    this.client.on(
+      Events.GuildMemberRemove,
+      async (member) => {
+        if (member.user.bot) return;
+
+        await this.emitEvent({
+          type: "member.left",
+          member: {
+            externalId: member.id,
+            platform: "discord",
+            user: this.toPlatformUser(
+              member.user
+            ),
+            community: {
+              platform: "discord",
+              externalId: member.guild.id,
+              name: member.guild.name
+            },
+            createdAt: new Date()
+          }
+        });
+      }
+    );
+
+    this.client.on(
+      Events.GuildBanAdd,
+      async (ban) => {
+        if (ban.user.bot) return;
+
+        const guild = ban.guild;
+
+        await this.emitEvent({
+          type: "member.banned",
+          member: {
+            externalId: ban.user.id,
+            platform: "discord",
+            user: this.toPlatformUser(
+              ban.user
+            ),
+            community: {
+              platform: "discord",
+              externalId: guild.id,
+              name: guild.name
+            },
+            createdAt: new Date()
+          }
+        });
+      }
+    );
+
+    this.client.on(
       Events.MessageCreate,
       async (message) => {
         if (message.author.bot) return;
