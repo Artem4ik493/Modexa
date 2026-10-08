@@ -1124,6 +1124,21 @@ export class TelegramAdapter
     );
 
     this.bot.on(
+      "edited_message",
+      async (ctx) => {
+        if (!ctx.message) return;
+
+        const event =
+          await this.createMessageEvent(ctx);
+
+        await this.emitEvent({
+          ...event,
+          type: "message.updated"
+        });
+      }
+    );
+
+    this.bot.on(
       "callback_query:data",
       async (ctx) => {
         const interactionId =
