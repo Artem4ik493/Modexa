@@ -56,5 +56,8 @@ export interface CommandDefinition {
 
   requiredCapabilities?: ExecutionCapability[];
 
+  /** Commands that are intentionally available only in direct messages. */
+  dmOnly?: boolean;
+
   handler: CommandHandler;
 }
