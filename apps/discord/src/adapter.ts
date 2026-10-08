@@ -134,7 +134,7 @@ export class DiscordAdapter
 
   async sendAction(
     action: AdapterAction
-  ): Promise<void> {
+  ): Promise<string | void> {
     switch (action.type) {
       case "message.send": {
         const pending =
