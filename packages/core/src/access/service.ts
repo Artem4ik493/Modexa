@@ -132,18 +132,15 @@ export class AccessControlService {
     userId: UserId,
     roleId: string
   ): void {
-    const index =
-      this.userSystemRoles.findIndex(
-        (assignment) =>
-          assignment.userId === userId &&
-          assignment.roleId === roleId
-      );
-
-    if (index === -1) {
-      return;
+    for (let index = this.userSystemRoles.length - 1; index >= 0; index--) {
+      const assignment = this.userSystemRoles[index]!;
+      if (assignment.userId === userId && assignment.roleId === roleId) {
+        this.userSystemRoles.splice(index, 1);
+      }
     }
 
-    this.userSystemRoles.splice(index, 1);
+    // Keep persistent assignments in sync when a role is revoked.
+    this.systemRoleStore?.revokeSystemRole?.(userId, roleId);
   }
 
   assignCommunityRole(
