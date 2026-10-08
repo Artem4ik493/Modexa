@@ -3,6 +3,7 @@ import type { IdentityService } from "../identity/service.js";
 import type { MembershipService } from "../memberships/service.js";
 import type { CommunityService } from "../communities/service.js";
 import type { AdapterAction } from "../adapters/actions.js";
+import type { MemberDirectory } from "../members/command.js";
 import type { ModerationService } from "./service.js";
 
 export function createModerationRestoreCommands(
@@ -10,13 +11,19 @@ export function createModerationRestoreCommands(
   memberships: MembershipService,
   communities: CommunityService,
   moderation: ModerationService,
-  executeAction: (action: AdapterAction) => Promise<void>
+  executeAction: (action: AdapterAction) => Promise<void>,
+  memberDirectory?: MemberDirectory
 ): CommandDefinition[] {
   return ["unmute", "unban"].map((name) => ({
     name, description: name === "unmute" ? "Снять мут с участника" : "Разбанить участника", requiredCapabilities: ["moderation"],
     handler: async (context) => {
       if (!context.community) return { content: "Команда доступна только в сообществе." };
-      const arg = context.args[0]?.replace(/^@/, "").toLowerCase();
+      const rawArg = context.args[0]?.trim();
+      const arg = rawArg
+        ?.replace(/^<@!?/, "")
+        .replace(/>$/, "")
+        .replace(/^@/, "")
+        .toLowerCase();
       if (!arg) return { content: "Использование: /" + name + " @user" };
       let target = identities.findUserByIdentity(context.platform, context.args[0]!) ??
         identities.findUserByUsername(arg, context.platform) ??
@@ -27,8 +34,50 @@ export function createModerationRestoreCommands(
             (i) => i.platform === context.platform && i.username?.toLowerCase() === arg
           ));
 
+      if (!target && memberDirectory) {
+        const native = /^\d+$/.test(arg)
+          ? await memberDirectory.getMember(context.community.id, arg)
+          : await memberDirectory.findMemberByUsername?.(context.community.id, arg);
+        if (native) {
+          target = identities.findUserByIdentity(
+            native.user.platform,
+            native.user.externalId
+          );
+          if (!target) {
+            target = identities.createUser({
+              displayName:
+                native.user.displayName ??
+                native.user.username ??
+                native.user.externalId
+            });
+            identities.attachIdentity({
+              userId: target.id,
+              platform: native.user.platform,
+              externalId: native.user.externalId,
+              username: native.user.username,
+              displayName: native.user.displayName,
+              avatarUrl: native.user.avatarUrl
+            });
+          }
+        }
+      }
+
       if (!target) return { content: "Участник не найден." };
-      const membership = memberships.findMembership(target.id, context.community.id);
+      let membership = memberships.findMembership(target.id, context.community.id);
+      if (!membership && memberDirectory) {
+        const identity = identities.getUserIdentities(target.id)
+          .find((item) => item.platform === context.platform);
+        const native = identity
+          ? await memberDirectory.getMember(context.community.id, identity.externalId)
+          : undefined;
+        if (native?.isMember !== false) {
+          membership = memberships.createMembership({
+            userId: target.id,
+            communityId: context.community.id,
+            now: native.joinedAt
+          });
+        }
+      }
       if (!membership || membership.status !== "active") return { content: "Участник не состоит в этом сообществе." };
       const actionType = name === "unmute" ? "mute" : "ban";
       const item = moderation.getCases(context.community.id).find((c) => c.action === actionType && c.status === "active" && c.targetUserId === target.id);
