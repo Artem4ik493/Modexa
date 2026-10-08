@@ -196,7 +196,7 @@ describe("Discord event handler", () => {
 
     expect(
       customIdTokens(actions[0])
-    ).toHaveLength(3);
+    ).toHaveLength(4);
   });
 
   it("edits the message when a button is pressed", async () => {
@@ -204,8 +204,8 @@ describe("Discord event handler", () => {
 
     await handler(messageEvent("/menu"));
 
-    const [accountToken] =
-      customIdTokens(actions[0]);
+    const accountToken =
+      customIdTokens(actions[0])[1];
 
     await handler(
       interactionEvent(accountToken)
@@ -248,13 +248,19 @@ describe("Discord event handler", () => {
 
     await handler(
       interactionEvent(
-        customIdTokens(actions[1])[1]
+        customIdTokens(actions[1])[0]
       )
     );
 
-    expect(actions[2]).toMatchObject({
+    await handler(
+      interactionEvent(
+        customIdTokens(actions[2]).slice(-2)[0]
+      )
+    );
+
+    expect(actions[3]).toMatchObject({
       type: "message.edit",
-      content: "Выберите действие:"
+      content: "Доступные команды:"
     });
   });
 
@@ -264,7 +270,7 @@ describe("Discord event handler", () => {
     await handler(messageEvent("/menu"));
 
     const closeToken =
-      customIdTokens(actions[0])[2];
+      customIdTokens(actions[0])[3];
 
     await handler(
       interactionEvent(closeToken)
