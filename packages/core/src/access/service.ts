@@ -22,6 +22,11 @@ export interface SystemRoleAssignmentStore {
   getUserSystemRoleIds?(
     userId: UserId
   ): string[];
+
+  revokeSystemRole?(
+    userId: UserId,
+    roleId: string
+  ): void;
 }
 
 export interface CommunityRoleStore {
