@@ -377,7 +377,12 @@ async function handleMemberJoined(
           communityId: community.id,
           now: member.createdAt
         });
-      } else if (membership.status === "left") {
+      } else if (
+        membership.status === "left" ||
+        membership.status === "banned"
+      ) {
+        // A member.joined event means the platform now considers this
+        // account a member (for example, after Modexa's kick flow).
         deps.membershipService.reactivate(
           membership.id,
           member.createdAt
@@ -533,7 +538,11 @@ function rememberMessageAuthor(
       communityId: executionContext.community.id,
       now: message.createdAt
     });
-  } else if (membership.status === "left") {
+  } else if (
+    membership.status === "left" ||
+    membership.status === "banned"
+  ) {
+    // The user has sent a real message, so they are present on-platform.
     deps.membershipService.reactivate(
       membership.id,
       message.createdAt
