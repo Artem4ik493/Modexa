@@ -1,3 +1,4 @@
+import type { Permission } from "./access/types.js";
 import type { Channel } from "./channels/types.js";
 import type { Community } from "./communities/types.js";
 import type {
@@ -56,6 +57,8 @@ export interface CommandDefinition {
 
   requiredCapabilities?: ExecutionCapability[];
 
+  /** Exact community permissions checked centrally by CommandService. */
+  requiredPermissions?: Permission[];
 
   handler: CommandHandler;
 }
