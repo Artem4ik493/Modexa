@@ -99,7 +99,7 @@ export function createRoleCommand(
       if (!target) return { content: `Участник ${targetArg} не найден.` };
 
       let membership = membershipService.findMembership(target.id, context.community.id);
-      if (!membership && memberDirectory) {
+      if ((!membership || membership.status === "left") && memberDirectory) {
         const nativeIdentity = identityService
           .getUserIdentities(target.id)
           .find((identity) => identity.platform === context.platform);
@@ -111,11 +111,13 @@ export function createRoleCommand(
           : undefined;
 
         if (native && native.isMember !== false) {
-          membership = membershipService.createMembership({
-            userId: target.id,
-            communityId: context.community.id,
-            now: native.joinedAt
-          });
+          membership = membership
+            ? membershipService.reactivate(membership.id)
+            : membershipService.createMembership({
+                userId: target.id,
+                communityId: context.community.id,
+                now: native.joinedAt
+              });
         }
       }
 
