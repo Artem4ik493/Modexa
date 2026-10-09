@@ -257,7 +257,6 @@ describe("Discord event handler", () => {
       content: "Выберите действие:"
     });
   });
-  });
 
   it("closes an interactive menu", async () => {
     const { actions, handler } = setup();
