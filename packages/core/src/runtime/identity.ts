@@ -82,6 +82,9 @@ export interface ResolvePlatformEntitiesInput {
   community?: PlatformCommunity;
 
   channel?: PlatformChannel;
+
+  /** Set only when the event proves current platform membership. */
+  reactivateMembership?: boolean;
 }
 
 export interface ResolvedPlatformEntities {
@@ -417,10 +420,23 @@ export class PlatformIdentityResolver {
     // stale "banned" membership records left by a kick flow that bans
     // and immediately unbans the user at the platform level.
     if (
-      existing.status === "left" ||
-      existing.status === "banned"
+      input.reactivateMembership === true &&
+      (existing.status === "left" || existing.status === "banned")
     ) {
-      return membershipService.reactivate(existing.id);
+      const previousStatus = existing.status;
+      const reactivated = membershipService.reactivate(existing.id);
+
+      this.logger?.info("membership.state.reconciled", {
+        correlationId: input.correlationId,
+        platform: input.platform,
+        userId: user.id,
+        communityId: community.id,
+        previousStatus,
+        status: reactivated.status,
+        evidence: "platform_activity"
+      });
+
+      return reactivated;
     }
 
     return existing;
