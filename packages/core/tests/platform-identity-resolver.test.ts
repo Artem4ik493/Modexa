@@ -242,7 +242,7 @@ describe("PlatformIdentityResolver", () => {
     ).toBe(true);
   });
 
-  it("syncs a platform owner to the Modexa ADMIN role", () => {
+  it("syncs a verified platform owner to the Modexa OWNER role", () => {
     const {
       resolver,
       accessControlService
@@ -271,7 +271,7 @@ describe("PlatformIdentityResolver", () => {
 
     expect(roles).toHaveLength(1);
     expect(roles[0].name).toBe(
-      COMMUNITY_ROLE_NAMES.ADMIN
+      COMMUNITY_ROLE_NAMES.OWNER
     );
   });
 
