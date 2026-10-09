@@ -40,7 +40,7 @@ export function createTelegramEventHandler(
             ? { imageUrl: response.imageUrl }
             : {}),
           ...(response.embed ? { embed: response.embed } : {}),
-          ...(response.format === "markdown"
+          ...(response.format === "markdown" || response.embed
             ? { parseMode: "Markdown" }
             : {})
         }
