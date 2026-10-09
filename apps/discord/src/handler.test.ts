@@ -258,7 +258,13 @@ describe("Discord event handler", () => {
       )
     );
 
-    expect(actions[3]).toMatchObject({
+    await handler(
+      interactionEvent(
+        customIdTokens(actions[3])[7]
+      )
+    );
+
+    expect(actions[4]).toMatchObject({
       type: "message.edit",
       content: "Выберите действие:"
     });
