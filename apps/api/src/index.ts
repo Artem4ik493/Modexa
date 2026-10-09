@@ -304,8 +304,8 @@ function isAutomationAction(value: unknown): boolean {
       const host = parsed.hostname.toLowerCase();
       return parsed.protocol === "https:" && !parsed.username && !parsed.password &&
         host !== "localhost" && !host.endsWith(".local") && !host.endsWith(".internal") &&
-        !/^(127\\.|10\\.|192\\.168\\.|169\\.254\\.)/.test(host) &&
-        !/^172\\.(1[6-9]|2[0-9]|3[01])\\./.test(host) && host !== "::1";
+        !/^(127\.|10\.|192\.168\.|169\.254\.)/.test(host) &&
+        !/^172\.(1[6-9]|2[0-9]|3[01])\./.test(host) && host !== "::1";
     } catch { return false; }
   }
   return false;
