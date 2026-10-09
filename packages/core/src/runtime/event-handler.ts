@@ -287,7 +287,7 @@ function buildExecutionContext(
     });
   }
 
-  return createPlatformExecutionContext(
+  const executionContext = createPlatformExecutionContext(
     deps.executionContextService,
     {
       platform:
@@ -303,6 +303,13 @@ function buildExecutionContext(
       resolved
     }
   );
+
+  const savedLocale = deps.database?.getUserSetting(executionContext.user.id, "locale");
+  if (savedLocale === "ru" || savedLocale === "en") {
+    executionContext.locale = savedLocale;
+  }
+
+  return executionContext;
 }
 
 async function handleMemberJoined(
