@@ -142,6 +142,12 @@ export function createModerationCommands(
         if (durationSeconds === undefined) {
           return { content: "Укажите длительность: 30s, 10m, 2h, 1d, 1w, 1mo, 1y или количество секунд." };
         }
+        // Telegram Bot API treats mute deadlines less than 30 seconds
+        // in the future as an indefinite restriction. Reject them rather
+        // than silently turning a short mute into a permanent one.
+        if (context.platform === "telegram" && durationSeconds < 30) {
+          return { content: "В Telegram минимальная длительность мута — 30 секунд. Муты короче могут стать бессрочными." };
+        }
       }
 
       const durationOffset = action === "mute" ? 2 : 1;
@@ -427,6 +433,63 @@ export function createModerationCommands(
       }
     }
   ];
+
+  managementCommands.push({
+    name: "unmute",
+    aliases: ["размут", "снятьмут"],
+    description: "Снять активный мут с участника",
+    requiredCapabilities: MODERATION_CAPABILITIES,
+    handler: async (context) => {
+      if (!context.community) {
+        return { content: "Команда доступна только в сообществе." };
+      }
+      const targetArg = context.args[0];
+      if (!targetArg) {
+        return { content: "Использование: /unmute @user" };
+      }
+      if (!executeAction) {
+        return { content: "Модерация платформы ещё не настроена." };
+      }
+      const target = await resolveModerationTarget(
+        context, targetArg, identityService, membershipService, memberDirectory
+      );
+      if (!target) return { content: "Участник не найден." };
+      const activeMute = moderationService.getCases(context.community.id).find(
+        (item) => item.action === "mute" &&
+          item.targetUserId === target.id &&
+          item.status === "active"
+      );
+      if (!activeMute) {
+        return { content: `У ${target.displayName} нет активного мута в Modexa.` };
+      }
+
+      // Lift the platform restriction first. Keep the case active if the
+      // platform call fails, so Modexa does not claim the mute was removed.
+      try {
+        await executeAction({
+          type: "member.unmute",
+          platform: activeMute.platform,
+          communityExternalId: activeMute.communityExternalId,
+          userExternalId: activeMute.userExternalId
+        });
+      } catch (error) {
+        return {
+          content: "❌ Не удалось снять мут: " +
+            (error instanceof Error ? error.message : "неизвестная ошибка")
+        };
+      }
+
+      try {
+        moderationService.revokeCase(context.user.id, activeMute.id);
+      } catch (error) {
+        return {
+          content: "Мут снят на платформе, но не удалось обновить запись Modexa: " +
+            (error instanceof Error ? error.message : "ошибка")
+        };
+      }
+      return { content: `✅ Мут с ${target.displayName} снят.` };
+    }
+  });
 
   return [...actionCommands, ...managementCommands];
 }
