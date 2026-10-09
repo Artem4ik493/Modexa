@@ -342,10 +342,10 @@ export class TelegramAdapter
       case "member.mute": {
         if (
           action.durationSeconds === undefined ||
-          action.durationSeconds <= 0
+          action.durationSeconds < 30
         ) {
           throw new Error(
-            "Telegram mute requires a positive duration"
+            "Telegram mute requires a duration of at least 30 seconds; shorter deadlines may create a permanent restriction"
           );
         }
 
