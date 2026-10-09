@@ -16,6 +16,7 @@ import {
   createRoleCommand,
   createModerationCommands,
   createModerationRestoreCommands,
+  AutoModService,
   createRuntimeServices
 } from "@modexa/core";
 
@@ -31,6 +32,10 @@ const database = new ModexaDatabase({
 });
 const backup = new BackupService(database);
 const runtimeServices = createRuntimeServices(undefined, database);
+const autoModService = new AutoModService();
+for (const rule of database.getRuntimeState<Array<Record<string, unknown>>>("api.automod_rules") ?? []) {
+  autoModService.upsertRule(rule as never);
+}
 for (const community of database.getCommunitiesSnapshot()) {
   const ranking = database.getRuntimeState<Record<string, unknown>>(`api.ranking.${community.id}`);
   if (ranking) runtimeServices.rankingService.setSettings(community.id, ranking as never);
@@ -985,6 +990,53 @@ const server = createServer((req, res) => {
       database.deleteBridgeLink(id);
       json(res, 200, { deleted: true, id });
       return;
+    }
+
+    const automodRulesMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/automod\/rules$/);
+    if (automodRulesMatch && ["GET", "POST"].includes(req.method ?? "")) {
+      const communityId = decodeURIComponent(automodRulesMatch[1]!);
+      if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) { json(res, 404, { error: "community_not_found" }); return; }
+      if (req.method === "GET") { json(res, 200, { items: autoModService.listRules(communityId) }); return; }
+      const body = await readJsonBody(req);
+      const types = new Set(["keyword", "link", "invite", "scam", "caps", "flood", "repeated_text", "emotes", "mentions", "zalgo"]);
+      const actions = new Set(["warn", "mute", "kick", "ban", "delete"]);
+      if (typeof body.type !== "string" || !types.has(body.type) || typeof body.enabled !== "boolean" ||
+          typeof body.action !== "string" || !actions.has(body.action) ||
+          (body.value !== undefined && (typeof body.value !== "string" || body.value.length > 500)) ||
+          (body.threshold !== undefined && (!Number.isFinite(body.threshold) || Number(body.threshold) < 0 || Number(body.threshold) > 1)) ||
+          (body.windowSeconds !== undefined && (!Number.isInteger(body.windowSeconds) || Number(body.windowSeconds) < 1 || Number(body.windowSeconds) > 86400)) ||
+          (body.whitelist !== undefined && (!Array.isArray(body.whitelist) || !body.whitelist.every((v) => typeof v === "string" && v.length <= 300)))) {
+        json(res, 400, { error: "invalid_automod_rule" }); return;
+      }
+      const all = database.getRuntimeState<Array<Record<string, unknown>>>("api.automod_rules") ?? [];
+      const item = {
+        id: typeof body.id === "string" && body.id.trim() ? body.id : `automod-${randomUUID()}`,
+        communityId,
+        type: body.type,
+        enabled: body.enabled,
+        ...(typeof body.value === "string" ? { value: body.value } : {}),
+        ...(typeof body.threshold === "number" ? { threshold: body.threshold } : {}),
+        ...(typeof body.windowSeconds === "number" ? { windowSeconds: body.windowSeconds } : {}),
+        ...(Array.isArray(body.whitelist) ? { whitelist: body.whitelist } : {}),
+        action: body.action
+      };
+      const existing = all.findIndex((rule) => rule.id === item.id);
+      if (existing >= 0) all[existing] = item; else all.push(item);
+      database.setRuntimeState("api.automod_rules", all);
+      autoModService.upsertRule(item as never);
+      json(res, existing >= 0 ? 200 : 201, { item }); return;
+    }
+
+    const automodRuleMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/automod\/rules\/([^/]+)$/);
+    if (automodRuleMatch && req.method === "DELETE") {
+      const communityId = decodeURIComponent(automodRuleMatch[1]!);
+      const ruleId = decodeURIComponent(automodRuleMatch[2]!);
+      const all = database.getRuntimeState<Array<Record<string, unknown>>>("api.automod_rules") ?? [];
+      const item = all.find((rule) => rule.id === ruleId && rule.communityId === communityId);
+      if (!item) { json(res, 404, { error: "automod_rule_not_found" }); return; }
+      database.setRuntimeState("api.automod_rules", all.filter((rule) => rule.id !== ruleId));
+      autoModService.removeRule(ruleId);
+      json(res, 200, { deleted: true, id: ruleId }); return;
     }
 
     const rankingSettingsMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/ranking$/);
