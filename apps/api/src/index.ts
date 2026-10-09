@@ -575,7 +575,7 @@ const server = createServer((req, res) => {
             "401": { description: "Unauthorized" },
             "404": { description: "Resource not found" }
           }
-        }]))]))
+        }] as const))] as const))
       });
       return;
     }
