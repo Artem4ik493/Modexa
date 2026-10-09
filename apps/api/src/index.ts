@@ -886,6 +886,51 @@ const server = createServer((req, res) => {
       json(res, 200, { updated: true, item: next }); return;
     }
 
+    const rankingLeaderboardMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/ranking\/leaderboard$/);
+    if (rankingLeaderboardMatch && req.method === "GET") {
+      const communityId = decodeURIComponent(rankingLeaderboardMatch[1]!);
+      if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) { json(res, 404, { error: "community_not_found" }); return; }
+      const limit = Math.min(100, Math.max(1, Number.parseInt(url.searchParams.get("limit") ?? "10", 10) || 10));
+      json(res, 200, { items: runtimeServices.rankingService.leaders(communityId, limit) }); return;
+    }
+
+    const rankingMemberMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/ranking\/members\/([^/]+)$/);
+    if (rankingMemberMatch && req.method === "GET") {
+      const communityId = decodeURIComponent(rankingMemberMatch[1]!);
+      const userId = decodeURIComponent(rankingMemberMatch[2]!);
+      const item = runtimeServices.rankingService.getMember(communityId, userId);
+      if (!item) { json(res, 404, { error: "ranking_member_not_found" }); return; }
+      json(res, 200, { item }); return;
+    }
+
+    const rankingCookiesMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/ranking\/cookies$/);
+    if (rankingCookiesMatch && req.method === "POST") {
+      const communityId = decodeURIComponent(rankingCookiesMatch[1]!);
+      const body = await readJsonBody(req);
+      const userId = typeof body.userId === "string" ? body.userId : "";
+      const amount = body.amount === undefined ? 1 : body.amount;
+      if (!userId || !database.getUser(userId) || !Number.isInteger(amount) || Math.abs(Number(amount)) > 10000) {
+        json(res, 400, { error: "invalid_cookie_adjustment" }); return;
+      }
+      json(res, 200, { item: runtimeServices.rankingService.addCookies(communityId, userId, Number(amount)) }); return;
+    }
+
+    const welcomePreviewMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/welcome\/preview$/);
+    if (welcomePreviewMatch && req.method === "POST") {
+      const communityId = decodeURIComponent(welcomePreviewMatch[1]!);
+      const settings = runtimeServices.welcomeService.getSettings(communityId);
+      const body = await readJsonBody(req);
+      const variables = {
+        member: typeof body.member === "string" ? body.member.slice(0, 100) : "Участник",
+        community: database.getCommunitiesSnapshot().find((item) => item.id === communityId)?.name ?? communityId,
+        username: typeof body.username === "string" ? body.username.slice(0, 100) : ""
+      };
+      json(res, 200, {
+        welcome: runtimeServices.welcomeService.render(settings.message, variables),
+        leave: runtimeServices.welcomeService.render(settings.leaveMessage, variables)
+      }); return;
+    }
+
     const welcomeSettingsMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/welcome$/);
     if (welcomeSettingsMatch && ["GET", "PUT", "PATCH"].includes(req.method ?? "")) {
       const communityId = decodeURIComponent(welcomeSettingsMatch[1]!);
@@ -1174,6 +1219,20 @@ const server = createServer((req, res) => {
         membershipCount: database.getMembershipsSnapshot(communityId).filter((item) => item.status === "active").length
       });
       return;
+    }
+
+    const membershipMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/members\/([^/]+)$/);
+    if (membershipMatch && req.method === "PATCH") {
+      const communityId = decodeURIComponent(membershipMatch[1]!);
+      const userId = decodeURIComponent(membershipMatch[2]!);
+      const body = await readJsonBody(req);
+      const status = body.status;
+      if (!["active", "left", "banned"].includes(String(status))) { json(res, 400, { error: "invalid_membership_status" }); return; }
+      const current = database.getMembershipsSnapshot(communityId).find((item) => item.userId === userId);
+      if (!current) { json(res, 404, { error: "membership_not_found" }); return; }
+      const updated = { ...current, status: status as "active" | "left" | "banned", updatedAt: new Date() };
+      database.upsertMembership(updated);
+      json(res, 200, { item: updated }); return;
     }
 
     const communityMembersMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/members$/);
