@@ -261,7 +261,7 @@ export class DiscordAdapter
           await channel.send(`⚠️ ${targetName} получил предупреждение. Причина: ${reason}`);
         }
 
-        // Keep notification best-effort: a member may block bot DMs.
+        // A member may block bot DMs; this does not invalidate the warning case.
         await target.send(
           `⚠️ Вы получили предупреждение на сервере **${guild.name}**. Причина: ${reason}`
         ).catch(() => undefined);
@@ -1248,7 +1248,7 @@ export class DiscordAdapter
 
         author: this.toPlatformUser(
           message.author,
-          undefined,
+          message.guild ? undefined : undefined,
           platformRole
         ),
 
