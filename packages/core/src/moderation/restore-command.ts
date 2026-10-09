@@ -15,7 +15,7 @@ export function createModerationRestoreCommands(
   memberDirectory?: MemberDirectory
 ): CommandDefinition[] {
   return ["unmute", "unban"].map((name) => ({
-    name, description: name === "unmute" ? "Снять мут с участника" : "Разбанить участника", requiredCapabilities: ["moderation"],
+    name, description: name === "unmute" ? "Снять мут с участника" : "Разбанить участника", requiredPermissions: [name === "unmute" ? "moderation.mute" : "moderation.ban"],
     handler: async (context) => {
       if (!context.community) return { content: "Команда доступна только в сообществе." };
       const rawArg = context.args[0]?.trim();
