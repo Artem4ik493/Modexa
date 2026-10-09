@@ -147,10 +147,10 @@ export function createRuntimeServices(
     new RankingService(database);
 
   const welcomeService =
-    new WelcomeService();
+    new WelcomeService(database);
 
   const customCommandService =
-    new CustomCommandService();
+    new CustomCommandService(database);
 
   const channelService =
     new ChannelService();
