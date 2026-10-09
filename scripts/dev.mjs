@@ -6,7 +6,7 @@ function envValue(name) {
   if (process.env[name]) return process.env[name];
   try {
     const line = readFileSync(".env", "utf8").split(/\r?\n/).find((item) => item.trim().startsWith(`${name}=`));
-    return line?.slice(line.indexOf("=") + 1).trim().replace(/^(['"])(.*)\\1$/, "$2");
+    return line?.slice(line.indexOf("=") + 1).trim().replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1");
   } catch {
     return undefined;
   }
