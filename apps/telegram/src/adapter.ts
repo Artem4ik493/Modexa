@@ -23,12 +23,16 @@ import {
   parseTelegramCallbackData
 } from "./interactions.js";
 
-function normalizeTelegramMarkdown(content: string): string {
-  return content
-    .replace(/^#{1,6}\\s+(.+)$/gm, "*$1*")
-    .replace(/\\*\\*(.+?)\\*\\*/g, "*$1*");
+function normalizeTelegramText(content: string): string {
+  // Telegram rejects strings containing unpaired UTF-16 surrogates.
+  return content.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "\uFFFD");
 }
 
+function normalizeTelegramMarkdown(content: string): string {
+  return normalizeTelegramText(content)
+    .replace(/^#{1,6}\s+(.+)$/gm, "*$1*")
+    .replace(/\*\*(.+?)\*\*/g, "*$1*");
+}
 function isMessageNotModified(
   error: unknown
 ): boolean {
@@ -141,7 +145,7 @@ export class TelegramAdapter
 
         const parseMode = this.getParseMode(action.metadata);
         const rawContent = this.getPanelContent(action.content, action.metadata);
-        const content = parseMode ? normalizeTelegramMarkdown(rawContent) : rawContent;
+        const content = parseMode ? normalizeTelegramMarkdown(rawContent) : normalizeTelegramText(rawContent);
 
         if (media?.url && media.type === "animation") {
           const sent = await this.bot.api.sendAnimation(
@@ -700,6 +704,11 @@ export class TelegramAdapter
       !("imageUrl" in telegram) ||
       typeof telegram.imageUrl !== "string"
     ) {
+      return undefined;
+    }
+
+    // Telegram cannot fetch a private file URL that includes this bot's token.
+    if (/^https?:\/\/api\.telegram\.org\/file\/bot/i.test(telegram.imageUrl)) {
       return undefined;
     }
 
