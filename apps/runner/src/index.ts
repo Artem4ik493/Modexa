@@ -619,6 +619,16 @@ process.on(
   }
 );
 
+process.on("message", (message: unknown) => {
+  if (
+    message &&
+    typeof message === "object" &&
+    (message as { type?: unknown }).type === "shutdown"
+  ) {
+    void shutdown();
+  }
+});
+
 // Adapters are started independently and concurrently.
 // registry.startAll() is not used on purpose: it starts
 // adapters one by one, so a start() that only returns when
