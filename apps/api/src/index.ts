@@ -1035,21 +1035,45 @@ const server = createServer((req, res) => {
 
     if (url.pathname === "/api/audit" && req.method === "GET") {
       const communityId = url.searchParams.get("communityId");
-      if (!communityId) {
-        json(res, 400, { error: "communityId is required" });
-        return;
+      if (!communityId) { json(res, 400, { error: "communityId_required" }); return; }
+      if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) {
+        json(res, 404, { error: "community_not_found" }); return;
       }
-      json(res, 200, { items: database.getAuditEntries(communityId, 200) });
+      const page = Math.max(1, Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
+      const limit = Math.min(100, Math.max(1, Number.parseInt(url.searchParams.get("limit") ?? "25", 10) || 25));
+      const items = database.getAuditEntries(communityId, 500);
+      json(res, 200, { items: items.slice((page - 1) * limit, page * limit), pagination: { page, limit, total: items.length, pages: Math.ceil(items.length / limit) } });
       return;
     }
 
     if (url.pathname === "/api/moderation" && req.method === "GET") {
       const communityId = url.searchParams.get("communityId");
-      if (!communityId) {
-        json(res, 400, { error: "communityId is required" });
-        return;
+      if (!communityId) { json(res, 400, { error: "communityId_required" }); return; }
+      if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) {
+        json(res, 404, { error: "community_not_found" }); return;
       }
-      json(res, 200, { items: database.getModerationCases(communityId) });
+      const page = Math.max(1, Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
+      const limit = Math.min(100, Math.max(1, Number.parseInt(url.searchParams.get("limit") ?? "25", 10) || 25));
+      const status = url.searchParams.get("status");
+      const action = url.searchParams.get("action");
+      const all = database.getModerationCases(communityId).filter((item) => {
+        return (!status || item.status === status) && (!action || item.action === action);
+      });
+      json(res, 200, { items: all.slice((page - 1) * limit, page * limit), pagination: { page, limit, total: all.length, pages: Math.ceil(all.length / limit) } });
+      return;
+    }
+
+    if (url.pathname === "/api/moderation/revoke" && req.method === "POST") {
+      const body = await readJsonBody(req);
+      const actorUserId = typeof body.actorUserId === "string" ? body.actorUserId : "";
+      const caseId = typeof body.caseId === "string" ? body.caseId : "";
+      if (!actorUserId || !caseId) { json(res, 400, { error: "actorUserId_and_caseId_required" }); return; }
+      try {
+        const item = runtimeServices.moderationService.revokeCase(actorUserId as never, caseId);
+        json(res, 200, { item });
+      } catch (error) {
+        json(res, 403, { error: error instanceof Error ? error.message : "moderation_revoke_failed" });
+      }
       return;
     }
 
