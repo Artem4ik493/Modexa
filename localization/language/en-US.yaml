@@ -9,7 +9,7 @@ command.forbidden: 'You do not have permission to use commands in this community
 command.permission_denied: 'You do not have permission to use this command.'
 command.disabled: 'This command has been disabled by a community administrator.'
 command.execution_failed: 'The command failed due to an internal error. Event ID: {correlationId}'
-command.not_found: 'Command not found. To view commands available for your role {role}, use /help.'
+command.not_found: 'Command not found. To view commands available to you, use /commands.'
 command.ping.pong: 'Pong!'
 command.menu.description: 'Show the main menu'
 menu.title: 'Choose an action:'
