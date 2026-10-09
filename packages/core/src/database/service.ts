@@ -1047,6 +1047,36 @@ export class ModexaDatabase {
     ).run(userId, key);
   }
 
+  getCommunitySetting(communityId: string, key: string): string | undefined {
+    const row = this.database.prepare(
+      "SELECT value FROM community_settings WHERE community_id = ? AND key = ?"
+    ).get(communityId, key) as { value: string } | undefined;
+    return row?.value;
+  }
+
+  getCommunitySettings(communityId: string): Record<string, string> {
+    const rows = this.database.prepare(
+      "SELECT key, value FROM community_settings WHERE community_id = ? ORDER BY key"
+    ).all(communityId) as Array<{ key: string; value: string }>;
+    return Object.fromEntries(rows.map((row) => [row.key, row.value]));
+  }
+
+  setCommunitySetting(communityId: string, key: string, value: string, now = new Date()): void {
+    this.database.prepare(
+      `INSERT INTO community_settings (community_id, key, value, updated_at)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(community_id, key) DO UPDATE SET
+         value = excluded.value,
+         updated_at = excluded.updated_at`
+    ).run(communityId, key, value, now.toISOString());
+  }
+
+  deleteCommunitySetting(communityId: string, key: string): void {
+    this.database.prepare(
+      "DELETE FROM community_settings WHERE community_id = ? AND key = ?"
+    ).run(communityId, key);
+  }
+
   getSystemSetting(
     key: string
   ): string | undefined {
