@@ -839,21 +839,40 @@ const server = createServer((req, res) => {
       return;
     }
 
-    if (url.pathname.startsWith("/api/automations/") && req.method === "POST") {
-      const id = decodeURIComponent(url.pathname.slice("/api/automations/".length));
-      const body = await readJsonBody(req);
-
-      if (typeof body.enabled !== "boolean") {
-        json(res, 400, { error: "enabled must be boolean" });
+    const automationMatch = url.pathname.match(/^\/api\/automations\/([^/]+)$/);
+    if (automationMatch && ["POST", "PUT", "PATCH", "DELETE"].includes(req.method ?? "")) {
+      const id = decodeURIComponent(automationMatch[1]!);
+      if (req.method === "DELETE") {
+        try {
+          runtimeServices.automationService.delete(id);
+          json(res, 200, { deleted: true, id });
+        } catch {
+          json(res, 404, { error: "automation_not_found" });
+        }
         return;
       }
 
+      const body = await readJsonBody(req);
       try {
-        json(res, 200, runtimeServices.automationService.setEnabled(id, body.enabled));
+        if (req.method === "POST") {
+          if (typeof body.enabled !== "boolean") {
+            json(res, 400, { error: "enabled_must_be_boolean" });
+            return;
+          }
+          json(res, 200, runtimeServices.automationService.setEnabled(id, body.enabled));
+          return;
+        }
+        if (body.name !== undefined && (typeof body.name !== "string" || !body.name.trim())) {
+          json(res, 400, { error: "name_must_be_non_empty_string" });
+          return;
+        }
+        json(res, 200, runtimeServices.automationService.update(id, {
+          ...(typeof body.name === "string" ? { name: body.name } : {}),
+          ...(body.trigger && typeof body.trigger === "object" ? { trigger: body.trigger as never } : {}),
+          ...(body.action && typeof body.action === "object" ? { action: body.action as never } : {})
+        }));
       } catch (error) {
-        json(res, 404, {
-          error: error instanceof Error ? error.message : "automation_not_found"
-        });
+        json(res, 404, { error: error instanceof Error ? error.message : "automation_update_failed" });
       }
       return;
     }
