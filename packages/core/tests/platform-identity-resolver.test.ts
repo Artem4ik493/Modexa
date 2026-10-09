@@ -414,7 +414,7 @@ describe("PlatformIdentityResolver", () => {
     };
 
     const first = resolver.resolve(input);
-    const second = resolver.resolve(input);
+    const second = resolver.resolve({ ...input, reactivateMembership: true });
 
     expect(second.community).toBe(
       first.community
@@ -477,7 +477,7 @@ describe("PlatformIdentityResolver", () => {
       first.membership!.id
     );
 
-    const second = resolver.resolve(input);
+    const second = resolver.resolve({ ...input, reactivateMembership: true });
 
     expect(second.membership?.status).toBe(
       "active"
@@ -503,7 +503,7 @@ describe("PlatformIdentityResolver", () => {
 
     // Resolving a real message from this user proves they can currently
     // participate on the platform, so the cached membership must recover.
-    const second = resolver.resolve(input);
+    const second = resolver.resolve({ ...input, reactivateMembership: true });
 
     expect(second.membership?.status).toBe(
       "active"
