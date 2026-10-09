@@ -93,6 +93,46 @@ describe("ModerationService", () => {
     ).toThrow("Moderation duration must be greater than zero");
   });
 
+
+  it("expires persisted timed mutes and saves the cleanup", () => {
+    const seededService = new ModerationService(createAccess());
+    const seeded = seededService.createCase({
+      action: "mute",
+      actorUserId: "user-mod",
+      targetUserId: "user-target",
+      communityId: "community-1",
+      platform: "telegram",
+      communityExternalId: "-100123",
+      userExternalId: "123",
+      durationSeconds: 10,
+      now: new Date("2020-01-01T00:00:00.000Z")
+    }).case;
+
+    let persisted = seeded;
+    const store = {
+      upsertModerationCase(item: typeof seeded) {
+        persisted = { ...item };
+      },
+      getModerationCase(caseId: string) {
+        return caseId === persisted.id ? persisted : undefined;
+      },
+      getModerationCases(communityId: string) {
+        return persisted.communityId === communityId ? [persisted] : [];
+      },
+      getAllModerationCases() {
+        return [persisted];
+      }
+    };
+
+    const restored = new ModerationService(createAccess(), store);
+    const cases = restored.getCases("community-1");
+
+    expect(cases[0]?.status).toBe("revoked");
+    expect(cases[0]?.revokedAt?.toISOString()).toBe("2020-01-01T00:00:10.000Z");
+    expect(persisted.status).toBe("revoked");
+    expect(persisted.revokedAt?.toISOString()).toBe("2020-01-01T00:00:10.000Z");
+  });
+
   it("can revoke a moderation case", () => {
     const service = new ModerationService(createAccess());
 
