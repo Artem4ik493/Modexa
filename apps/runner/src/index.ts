@@ -4,6 +4,7 @@ import {
   createRuntimeServices,
   ModexaDatabase,
   InteractionActionStore,
+  type AdapterAction,
   type PlatformAdapter
 } from "@modexa/core";
 
@@ -402,6 +403,55 @@ for (const adapter of adapters) {
 const failed =
   new Set<string>();
 
+type QueuedApiAction = {
+  id: string;
+  communityId: string;
+  source: string;
+  action: AdapterAction;
+  status: "pending" | "processing" | "succeeded" | "failed";
+  createdAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+  error?: string;
+};
+
+let processingApiActions = false;
+
+function updateQueuedAction(id: string, patch: Partial<QueuedApiAction>): void {
+  const queue = database.getRuntimeState<QueuedApiAction[]>("api.action_queue") ?? [];
+  const updated = queue.map((item) => item.id === id ? { ...item, ...patch } : item);
+  database.setRuntimeState("api.action_queue", updated);
+}
+
+async function processPendingApiActions(): Promise<void> {
+  if (processingApiActions || stopping) return;
+  processingApiActions = true;
+  try {
+    const queue = database.getRuntimeState<QueuedApiAction[]>("api.action_queue") ?? [];
+    for (const item of queue.filter((entry) => entry.status === "pending").slice(0, 20)) {
+      updateQueuedAction(item.id, { status: "processing", startedAt: new Date().toISOString() });
+      try {
+        const adapter = adapters.find((candidate) => candidate.platform === item.action.platform);
+        if (!adapter) throw new Error(`No adapter for platform ${item.action.platform}`);
+        await adapter.sendAction(item.action);
+        updateQueuedAction(item.id, { status: "succeeded", finishedAt: new Date().toISOString(), error: undefined });
+        logger.info("api.action.succeeded", { actionId: item.id, source: item.source, platform: item.action.platform });
+      } catch (error) {
+        const message = error instanceof Error ? error.message.slice(0, 500) : "adapter_action_failed";
+        updateQueuedAction(item.id, { status: "failed", finishedAt: new Date().toISOString(), error: message });
+        logger.error("api.action.failed", { actionId: item.id, source: item.source, platform: item.action.platform }, error);
+      }
+    }
+  } finally {
+    processingApiActions = false;
+  }
+}
+
+const apiActionWorker = setInterval(() => {
+  void processPendingApiActions();
+}, 1000);
+apiActionWorker.unref();
+
 console.log("");
 console.log("================================");
 console.log("            MODEXA");
@@ -436,6 +486,7 @@ async function shutdown(): Promise<void> {
   }
 
   stopping = true;
+  clearInterval(apiActionWorker);
 
   console.log("");
   console.log(
