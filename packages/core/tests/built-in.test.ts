@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ModexaDatabase } from "../src/index.js";
 import {
   CommandRegistry,
   CommunityService,
@@ -302,5 +303,49 @@ describe("built-in commands", () => {
     expect(result?.content).toContain("/ping");
     expect(result?.content).toContain("Общие функции");
     expect(result?.content).not.toContain("/commands —");
+  });
+  it("saves and displays the selected personal language", async () => {
+    const registry = new CommandRegistry();
+    const database = new ModexaDatabase({ path: ":memory:" });
+    const now = new Date();
+    database.createUser({
+      id: "mx_user",
+      displayName: "Test User",
+      createdAt: now,
+      updatedAt: now
+    });
+
+    createBuiltinCommands(
+      registry,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      database
+    );
+
+    const result = await registry.execute("settings", {
+      platform: "telegram",
+      user: { id: "mx_user", platform: "telegram", displayName: "Test User" },
+      args: ["language", "en"],
+      rawText: "/settings language en",
+      execution: {
+        type: "dm",
+        platform: "telegram",
+        correlationId: "settings-language-test",
+        user: {
+          id: "mx_user",
+          displayName: "Test User",
+          createdAt: now,
+          updatedAt: now
+        },
+        capabilities: ["commands", "account.manage"]
+      }
+    });
+
+    expect(database.getUserSetting("mx_user", "locale")).toBe("en");
+    expect(result?.content).toContain("Personal account settings");
+    expect(result?.content).toContain("Selected language: English");
+    database.close();
   });
 });
