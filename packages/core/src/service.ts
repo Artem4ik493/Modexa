@@ -151,7 +151,11 @@ export class CommandService {
       return {
         handled: true,
         response: {
-          content: "⛔ Эта команда отключена администратором сообщества."
+          content: translate(
+            "command.disabled",
+            undefined,
+            execution.locale
+          )
         }
       };
     }
