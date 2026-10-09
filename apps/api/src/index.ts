@@ -812,6 +812,111 @@ const server = createServer((req, res) => {
       return;
     }
 
+    const rankingSettingsMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/ranking$/);
+    if (rankingSettingsMatch && ["GET", "PUT", "PATCH"].includes(req.method ?? "")) {
+      const communityId = decodeURIComponent(rankingSettingsMatch[1]!);
+      if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) { json(res, 404, { error: "community_not_found" }); return; }
+      const key = `api.ranking.${communityId}`;
+      const defaults = { enabled: false, textXp: 10, voiceXpPerMinute: 5, cooldownSeconds: 60, ignoredRoleIds: [] as string[], ignoredChannelIds: [] as string[], rewards: [] as Array<{level:number;roleId:string}> };
+      const current = { ...defaults, ...(database.getRuntimeState<typeof defaults>(key) ?? {}) };
+      if (req.method === "GET") { json(res, 200, { item: current }); return; }
+      const body = await readJsonBody(req);
+      const next = { ...current, ...body };
+      if (typeof next.enabled !== "boolean" || !Number.isFinite(next.textXp) || Number(next.textXp) < 0 ||
+          !Number.isFinite(next.voiceXpPerMinute) || Number(next.voiceXpPerMinute) < 0 ||
+          !Number.isInteger(next.cooldownSeconds) || Number(next.cooldownSeconds) < 0 ||
+          !Array.isArray(next.ignoredRoleIds) || !next.ignoredRoleIds.every((v) => typeof v === "string") ||
+          !Array.isArray(next.ignoredChannelIds) || !next.ignoredChannelIds.every((v) => typeof v === "string") ||
+          !Array.isArray(next.rewards) || !next.rewards.every((v) => v && Number.isInteger(v.level) && v.level >= 0 && typeof v.roleId === "string")) {
+        json(res, 400, { error: "invalid_ranking_settings" }); return;
+      }
+      database.setRuntimeState(key, next);
+      json(res, 200, { updated: true, item: next }); return;
+    }
+
+    const welcomeSettingsMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/welcome$/);
+    if (welcomeSettingsMatch && ["GET", "PUT", "PATCH"].includes(req.method ?? "")) {
+      const communityId = decodeURIComponent(welcomeSettingsMatch[1]!);
+      if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) { json(res, 404, { error: "community_not_found" }); return; }
+      const key = `api.welcome.${communityId}`;
+      const defaults = { enabled: false, message: "Добро пожаловать, {{ member }}!", leaveEnabled: false, leaveMessage: "{{ member }} покинул сервер.", startingRoleIds: [] as string[], restoreRolesOnRejoin: true, restoreNicknameOnRejoin: true, channelId: undefined as string | undefined };
+      const current = { ...defaults, ...(database.getRuntimeState<typeof defaults>(key) ?? {}) };
+      if (req.method === "GET") { json(res, 200, { item: current }); return; }
+      const body = await readJsonBody(req);
+      const next = { ...current, ...body };
+      if (typeof next.enabled !== "boolean" || typeof next.leaveEnabled !== "boolean" ||
+          typeof next.message !== "string" || next.message.length > 4000 ||
+          typeof next.leaveMessage !== "string" || next.leaveMessage.length > 4000 ||
+          typeof next.restoreRolesOnRejoin !== "boolean" || typeof next.restoreNicknameOnRejoin !== "boolean" ||
+          !Array.isArray(next.startingRoleIds) || !next.startingRoleIds.every((v) => typeof v === "string") ||
+          (next.channelId !== undefined && typeof next.channelId !== "string")) {
+        json(res, 400, { error: "invalid_welcome_settings" }); return;
+      }
+      database.setRuntimeState(key, next);
+      json(res, 200, { updated: true, item: next }); return;
+    }
+
+    if (url.pathname === "/api/custom-commands" && ["GET", "POST"].includes(req.method ?? "")) {
+      const communityId = url.searchParams.get("communityId");
+      if (req.method === "GET") {
+        if (!communityId) { json(res, 400, { error: "communityId_required" }); return; }
+        const all = database.getRuntimeState<Array<Record<string, unknown>>>("api.custom_commands") ?? [];
+        json(res, 200, { items: all.filter((item) => item.communityId === communityId) }); return;
+      }
+      const body = await readJsonBody(req);
+      const targetCommunityId = typeof body.communityId === "string" ? body.communityId : "";
+      const name = typeof body.name === "string" ? body.name.trim().replace(/^\//, "") : "";
+      if (!targetCommunityId || !database.getCommunitiesSnapshot().some((item) => item.id === targetCommunityId) ||
+          !/^[a-zA-Z0-9_-]{1,32}$/.test(name) || !Array.isArray(body.actions) || body.actions.length < 1 || body.actions.length > 20) {
+        json(res, 400, { error: "invalid_custom_command" }); return;
+      }
+      const aliases = body.aliases === undefined ? [] : body.aliases;
+      const access = body.access === undefined ? { roleIds: [], channelIds: [], cooldownSeconds: 0 } : body.access;
+      const validAction = (action: any) => action && typeof action === "object" && (
+        (action.type === "message" && typeof action.content === "string" && action.content.length <= 4000) ||
+        (action.type === "alias" && typeof action.command === "string") ||
+        ((action.type === "role.add" || action.type === "role.remove") && typeof action.roleId === "string")
+      );
+      if (!Array.isArray(aliases) || !aliases.every((v) => typeof v === "string" && /^[a-zA-Z0-9_-]{1,32}$/.test(v)) ||
+          !access || typeof access !== "object" || !Array.isArray(access.roleIds) || !Array.isArray(access.channelIds) ||
+          !Number.isInteger(access.cooldownSeconds) || access.cooldownSeconds < 0 ||
+          !access.roleIds.every((v: unknown) => typeof v === "string") || !access.channelIds.every((v: unknown) => typeof v === "string") ||
+          !body.actions.every(validAction)) {
+        json(res, 400, { error: "invalid_custom_command_definition" }); return;
+      }
+      const all = database.getRuntimeState<Array<Record<string, unknown>>>("api.custom_commands") ?? [];
+      if (all.some((item) => item.communityId === targetCommunityId && String(item.name).toLowerCase() === name.toLowerCase())) {
+        json(res, 409, { error: "custom_command_name_exists" }); return;
+      }
+      const item = { id: `custom-${randomUUID()}`, communityId: targetCommunityId, name, description: typeof body.description === "string" ? body.description.slice(0, 300) : undefined, group: typeof body.group === "string" ? body.group.slice(0, 80) : undefined, enabled: body.enabled !== false, aliases, access, actions: body.actions, updatedAt: new Date().toISOString(), updatedBy: typeof body.updatedBy === "string" ? body.updatedBy : undefined };
+      database.setRuntimeState("api.custom_commands", [...all, item]);
+      json(res, 201, { item }); return;
+    }
+
+    const customCommandMatch = url.pathname.match(/^\/api\/custom-commands\/([^/]+)$/);
+    if (customCommandMatch && ["PUT", "PATCH", "DELETE"].includes(req.method ?? "")) {
+      const id = decodeURIComponent(customCommandMatch[1]!);
+      const all = database.getRuntimeState<Array<Record<string, any>>>("api.custom_commands") ?? [];
+      const index = all.findIndex((item) => item.id === id);
+      if (index < 0) { json(res, 404, { error: "custom_command_not_found" }); return; }
+      if (req.method === "DELETE") {
+        database.setRuntimeState("api.custom_commands", all.filter((item) => item.id !== id));
+        json(res, 200, { deleted: true, id }); return;
+      }
+      const body = await readJsonBody(req);
+      const current = all[index]!;
+      const next = { ...current, ...body, id: current.id, communityId: current.communityId, updatedAt: new Date().toISOString() };
+      if (typeof next.name !== "string" || !/^[a-zA-Z0-9_-]{1,32}$/.test(next.name.replace(/^\//, "")) ||
+          typeof next.enabled !== "boolean" || !Array.isArray(next.aliases) || !Array.isArray(next.actions) ||
+          next.actions.length < 1 || next.actions.length > 20) {
+        json(res, 400, { error: "invalid_custom_command_update" }); return;
+      }
+      next.name = next.name.replace(/^\//, "");
+      all[index] = next;
+      database.setRuntimeState("api.custom_commands", all);
+      json(res, 200, { item: next }); return;
+    }
+
     if (url.pathname === "/api/commands" && req.method === "GET") {
       const communityId = url.searchParams.get("communityId");
       if (!communityId) {
@@ -850,14 +955,86 @@ const server = createServer((req, res) => {
     }
 
     const communityRolesMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/roles$/);
-    if (communityRolesMatch && req.method === "GET") {
+    if (communityRolesMatch && ["GET", "POST"].includes(req.method ?? "")) {
       const communityId = decodeURIComponent(communityRolesMatch[1]!);
       if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) {
-        json(res, 404, { error: "community_not_found" });
-        return;
+        json(res, 404, { error: "community_not_found" }); return;
       }
-      json(res, 200, { items: database.getCommunityRoles(communityId) });
+      if (req.method === "GET") {
+        json(res, 200, { items: database.getCommunityRoles(communityId) }); return;
+      }
+      const body = await readJsonBody(req);
+      const name = typeof body.name === "string" ? body.name.trim() : "";
+      const permissions = body.permissions;
+      const allowedPermissions = new Set([
+        "community.view", "community.manage", "member.view", "member.manage",
+        "moderation.view", "moderation.warn", "moderation.mute", "moderation.kick",
+        "moderation.ban", "moderation.clear", "commands.use", "commands.manage",
+        "bridge.view", "bridge.manage"
+      ]);
+      if (!name || name.length > 80 || !Array.isArray(permissions) ||
+          permissions.some((permission) => typeof permission !== "string" || !allowedPermissions.has(permission))) {
+        json(res, 400, { error: "invalid_community_role" }); return;
+      }
+      const id = typeof body.id === "string" && body.id.trim() ? body.id : `role-${randomUUID()}`;
+      if (database.getCommunityRoles(communityId).some((role) => role.name.toLowerCase() === name.toLowerCase() && role.id !== id)) {
+        json(res, 409, { error: "role_name_already_exists" }); return;
+      }
+      const role = { id, communityId, name, permissions: [...new Set(permissions as string[])] as never[] };
+      database.upsertCommunityRole(role);
+      json(res, 201, { item: role });
       return;
+    }
+
+    const communityRoleMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/roles\/([^/]+)$/);
+    if (communityRoleMatch && ["PUT", "PATCH", "DELETE"].includes(req.method ?? "")) {
+      const communityId = decodeURIComponent(communityRoleMatch[1]!);
+      const roleId = decodeURIComponent(communityRoleMatch[2]!);
+      const roles = database.getCommunityRoles(communityId);
+      const current = roles.find((role) => role.id === roleId);
+      if (!current) { json(res, 404, { error: "role_not_found" }); return; }
+      if (req.method === "DELETE") {
+        database.deleteCommunityRole(roleId);
+        json(res, 200, { deleted: true, id: roleId }); return;
+      }
+      const body = await readJsonBody(req);
+      const name = body.name === undefined ? current.name : typeof body.name === "string" ? body.name.trim() : "";
+      const permissions = body.permissions === undefined ? current.permissions : body.permissions;
+      const allowedPermissions = new Set([
+        "community.view", "community.manage", "member.view", "member.manage",
+        "moderation.view", "moderation.warn", "moderation.mute", "moderation.kick",
+        "moderation.ban", "moderation.clear", "commands.use", "commands.manage",
+        "bridge.view", "bridge.manage"
+      ]);
+      if (!name || name.length > 80 || !Array.isArray(permissions) ||
+          permissions.some((permission) => typeof permission !== "string" || !allowedPermissions.has(permission))) {
+        json(res, 400, { error: "invalid_community_role" }); return;
+      }
+      if (roles.some((role) => role.name.toLowerCase() === name.toLowerCase() && role.id !== roleId)) {
+        json(res, 409, { error: "role_name_already_exists" }); return;
+      }
+      const updated = { ...current, name, permissions: [...new Set(permissions as string[])] as never[] };
+      database.upsertCommunityRole(updated);
+      json(res, 200, { item: updated }); return;
+    }
+
+    const communityMemberRolesMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/members\/([^/]+)\/roles$/);
+    if (communityMemberRolesMatch && ["GET", "POST", "DELETE"].includes(req.method ?? "")) {
+      const communityId = decodeURIComponent(communityMemberRolesMatch[1]!);
+      const userId = decodeURIComponent(communityMemberRolesMatch[2]!);
+      const community = database.getCommunitiesSnapshot().find((item) => item.id === communityId);
+      if (!community) { json(res, 404, { error: "community_not_found" }); return; }
+      if (!database.getUser(userId)) { json(res, 404, { error: "user_not_found" }); return; }
+      const roles = database.getCommunityRoles(communityId);
+      if (req.method === "GET") {
+        json(res, 200, { items: database.getUserCommunityRoles(userId, communityId) }); return;
+      }
+      const body = await readJsonBody(req);
+      const roleId = typeof body.roleId === "string" ? body.roleId : "";
+      if (!roles.some((role) => role.id === roleId)) { json(res, 400, { error: "role_not_in_community" }); return; }
+      if (req.method === "POST") database.assignCommunityRole(userId, roleId);
+      else database.revokeCommunityRole(userId, roleId);
+      json(res, 200, { updated: true, items: database.getUserCommunityRoles(userId, communityId) }); return;
     }
 
     const communitySettingsMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/settings$/);
