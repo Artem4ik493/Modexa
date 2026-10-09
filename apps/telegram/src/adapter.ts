@@ -928,6 +928,11 @@ export class TelegramAdapter
           displayName:
             author.first_name,
 
+          locale:
+            "language_code" in author && typeof author.language_code === "string"
+              ? author.language_code
+              : undefined,
+
           avatarUrl,
 
           platformRole
@@ -1223,6 +1228,7 @@ export class TelegramAdapter
               externalId: String(user.id),
               username: user.username,
               displayName: user.first_name,
+              locale: user.language_code,
               avatarUrl: await this.resolveAvatarUrl(user.id),
               platformRole
             },
