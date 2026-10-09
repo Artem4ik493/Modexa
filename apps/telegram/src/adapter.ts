@@ -804,7 +804,7 @@ export class TelegramAdapter
     ctx: Context
   ): Promise<AdapterMessageCreatedEvent> {
     const message =
-      ctx.message;
+      ctx.message ?? ctx.editedMessage;
 
     if (!message) {
       throw new Error(
@@ -1230,7 +1230,7 @@ export class TelegramAdapter
     this.bot.on(
       "edited_message",
       async (ctx) => {
-        if (!ctx.message) return;
+        if (!ctx.editedMessage) return;
 
         const event = await this.createMessageEvent(ctx);
 
