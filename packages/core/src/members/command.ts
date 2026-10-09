@@ -94,15 +94,17 @@ function ensureLocalMember(
       communityId
     );
 
-  if (
-    details.isMember !== false &&
-    !membership
-  ) {
-    membershipService.createMembership({
-      userId: user.id,
-      communityId,
-      now: details.joinedAt
-    });
+  if (details.isMember !== false) {
+    if (!membership) {
+      membershipService.createMembership({
+        userId: user.id,
+        communityId,
+        now: details.joinedAt
+      });
+    } else if (membership.status === "left") {
+      // The platform lookup confirms the user is present again.
+      membershipService.reactivate(membership.id);
+    }
   }
 
   if (
