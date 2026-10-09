@@ -236,6 +236,8 @@ interface BuildContextInput {
   community?: PlatformCommunity;
 
   channel?: PlatformChannel;
+
+  reactivateMembership?: boolean;
 }
 
 function buildExecutionContext(
@@ -253,7 +255,9 @@ function buildExecutionContext(
       community:
         input.community,
       channel:
-        input.channel
+        input.channel,
+      reactivateMembership:
+        input.reactivateMembership
     });
 
   if (
@@ -317,7 +321,8 @@ async function handleMemberJoined(
         correlationId:
           deps.platform + "-member-join-" + member.externalId,
         author: member.user,
-        community: member.community
+        community: member.community,
+        reactivateMembership: true
       }
     );
 
@@ -750,7 +755,8 @@ async function handleMessage(
         community:
           message.community,
         channel:
-          message.channel
+          message.channel,
+        reactivateMembership: true
       }
     );
 
@@ -871,7 +877,8 @@ async function handleCommandInvocation(
         community:
           invocation.community,
         channel:
-          invocation.channel
+          invocation.channel,
+        reactivateMembership: true
       }
     );
 
@@ -1081,7 +1088,8 @@ async function handleInteraction(
         community:
           interaction.community,
         channel:
-          interaction.channel
+          interaction.channel,
+        reactivateMembership: true
       }
     );
 
