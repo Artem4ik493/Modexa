@@ -260,7 +260,7 @@ describe("Telegram event handler", () => {
 
     await handler(
       interactionEvent(
-        callbackTokens(actions[3])[7]
+        callbackTokens(actions[3])[0]
       )
     );
 
