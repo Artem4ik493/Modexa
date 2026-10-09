@@ -1,25 +1,31 @@
+version: "3.8"
+
 services:
   modexa:
-    build: .
-    restart: unless-stopped
-    env_file:
-      - .env
-    volumes:
-      - ./data:/app/data
-    healthcheck:
-      test: ["CMD", "node", "-e", "process.exit(0)"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  api:
+    container_name: modexa
     build:
       context: .
       dockerfile: Dockerfile.api
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      MODEXA_DATABASE_PATH: /app/data/modexa.sqlite
+    ports:
+      - "127.0.0.1:3000:3000"
     volumes:
       - ./data:/app/data
-    ports:
-      - "3000:3000"
+      - ./.env:/app/.env:ro
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
