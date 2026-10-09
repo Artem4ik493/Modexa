@@ -295,23 +295,62 @@ export function createModerationCommands(
     {
       name: "remwarn",
       aliases: ["remwarning", "снятьпред"],
-      description: "Снять предупреждение по Case ID",
+      description: "Снять предупреждение по Case ID или участнику",
       requiredCapabilities: MODERATION_CAPABILITIES,
       handler: async (context) => {
-        const caseId = context.args[0];
-        if (!caseId || !context.community) return { content: "Использование: /remwarn <case_id>" };
-        const item = moderationService.getCase(caseId);
-        if (!item || item.communityId !== context.community.id || item.action !== "warn" || item.status !== "active") {
-          return { content: "Активное предупреждение с таким Case ID не найдено." };
+        const targetArg = context.args[0]?.trim();
+        if (!targetArg || !context.community) {
+          return { content: "Использование: /remwarn <case_id|@user>" };
         }
+
+        const item = moderationService.getCase(targetArg);
+        if (
+          item &&
+          item.communityId === context.community.id &&
+          item.action === "warn" &&
+          item.status === "active"
+        ) {
+          try {
+            moderationService.revokeCase(context.user.id, item.id);
+          } catch (error) {
+            return {
+              content: \`❌ Не удалось снять предупреждение: \${error instanceof Error ? error.message : "ошибка"}\`
+            };
+          }
+          return { content: \`✅ Предупреждение \${item.id} снято.\` };
+        }
+
+        const target = await resolveModerationTarget(
+          context,
+          targetArg,
+          identityService,
+          membershipService,
+          memberDirectory
+        );
+        if (!target) {
+          return { content: "Активное предупреждение с таким Case ID не найдено, участник не найден." };
+        }
+
+        const warning = moderationService.getCases(context.community.id)
+          .filter((entry) =>
+            entry.action === "warn" &&
+            entry.status === "active" &&
+            entry.targetUserId === target.id
+          )
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+
+        if (!warning) {
+          return { content: \`У \${target.displayName} нет активных предупреждений.\` };
+        }
+
         try {
-          moderationService.revokeCase(context.user.id, caseId);
+          moderationService.revokeCase(context.user.id, warning.id);
         } catch (error) {
           return {
-            content: `❌ Не удалось снять предупреждение: ${error instanceof Error ? error.message : "ошибка"}`
+            content: \`❌ Не удалось снять предупреждение: \${error instanceof Error ? error.message : "ошибка"}\`
           };
         }
-        return { content: `✅ Предупреждение ${caseId} снято.` };
+        return { content: \`✅ Предупреждение \${warning.id} участника \${target.displayName} снято.\` };
       }
     },
     {
