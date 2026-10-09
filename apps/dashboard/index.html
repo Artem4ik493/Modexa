@@ -27,6 +27,167 @@ main{width:100%;max-width:1500px;margin:auto;padding:28px 30px}.top{display:flex
 .form{display:grid;gap:10px}.input,.textarea,.select2{width:100%;border:1px solid var(--line);background:#0b1120;color:#fff;border-radius:10px;padding:10px 11px;outline:none}.textarea{min-height:90px;resize:vertical}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .toast{position:fixed;right:18px;bottom:18px;z-index:150;padding:12px 15px;border:1px solid #31415f;background:#11182a;border-radius:12px;box-shadow:var(--shadow);display:none;font-size:12px}.toast.show{display:block}.login{position:fixed;inset:0;z-index:100;background:#070912ee;backdrop-filter:blur(18px);display:grid;place-items:center}.login.hidden{display:none}.login-card{width:min(430px,calc(100% - 32px));padding:28px;border:1px solid var(--line);border-radius:22px;background:#0d1220;box-shadow:0 35px 100px #0009}.login-card h1{margin:0 0 8px}.login-card p{color:var(--muted);line-height:1.5;font-size:13px}.login-error{min-height:18px;color:#ff9aaa;font-size:12px;margin-top:10px}
 @media(max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}.grid3{grid-template-columns:1fr 1fr}}@media(max-width:780px){.app{display:block}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}nav{grid-template-columns:repeat(3,1fr)}.aside-bottom{display:none}main{padding:20px}.top{display:block}.top-actions{margin-top:14px;flex-wrap:wrap}.command-grid{grid-template-columns:1fr}}@media(max-width:560px){nav{grid-template-columns:repeat(2,1fr)}.grid,.grid3,.form-grid{grid-template-columns:1fr}.title{font-size:25px}.select{min-width:180px;width:100%}}
+
+/* Modexa dashboard refresh — JuniperBot-inspired information hierarchy */
+:root{
+  --bg:#080b14;--panel:#0e1422;--panel2:#121a2c;--line:#222d45;
+  --text:#f5f7ff;--muted:#8b97b1;--accent:#8b6cff;--accent2:#557cff;
+  --ok:#39d99a;--warn:#ffc36b;--danger:#ff667f;--shadow:0 16px 48px #0003;
+  --radius:16px;
+}
+body{
+  min-height:100vh;
+  background:
+    radial-gradient(900px 500px at 22% -12%,#5b50c51b,transparent 68%),
+    radial-gradient(700px 460px at 100% 18%,#3678ff12,transparent 70%),
+    var(--bg);
+  letter-spacing:-.01em;
+}
+.app{grid-template-columns:258px minmax(0,1fr)}
+aside{
+  z-index:30;padding:22px 13px 18px;
+  background:rgba(9,13,23,.94);border-right:1px solid #202a40;
+  box-shadow:12px 0 50px #00010;
+}
+.brand{padding:3px 10px 23px;gap:12px}
+.brand b{font-size:18px;letter-spacing:-.035em}
+.brand small{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:#7f8ca8}
+.logo{border:1px solid #ffffff0d;background:#11172a;border-radius:13px}
+.profile{margin:0 4px 18px;padding:13px;border-radius:14px;background:linear-gradient(145deg,#171d32,#101626);border-color:#2a3550}
+.profile-name{font-size:13px;margin-top:5px;overflow-wrap:anywhere}
+nav{display:grid;grid-template-columns:1fr;gap:4px}
+.nav-label{
+  padding:14px 10px 5px;color:#66728d;font-size:9px;font-weight:800;
+  letter-spacing:.14em;text-transform:uppercase
+}
+.nav{
+  position:relative;display:flex;align-items:center;gap:10px;
+  min-height:40px;padding:9px 11px;border:1px solid transparent;
+  border-radius:10px;color:#9aa6c0;font-size:12px;font-weight:600;
+  transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease;
+}
+.nav .icon{width:20px;min-width:20px;text-align:center;font-size:15px;color:#7583a1;transition:color .16s ease}
+.nav:hover{background:#141b2c;border-color:#202b43;color:#f3f5ff;transform:translateX(2px)}
+.nav:hover .icon{color:#c0b4ff}
+.nav.active{
+  color:#fff;border-color:#44366f;
+  background:linear-gradient(100deg,#35275eaa,#1b2340b8);
+  box-shadow:inset 2px 0 0 #a58aff,0 5px 20px #0001;
+}
+.nav.active .icon{color:#b8a5ff}
+.aside-bottom{font-size:10px;line-height:1.8;color:#65728e;border-color:#202a40}
+main{max-width:1600px;padding:0 32px 40px}
+.top{
+  position:sticky;top:0;z-index:20;
+  margin:0 -32px 25px;padding:23px 32px 19px;
+  background:linear-gradient(180deg,rgba(8,11,20,.97),rgba(8,11,20,.86));
+  border-bottom:1px solid #1b2438;backdrop-filter:blur(20px);
+}
+.eyebrow{font-size:10px;font-weight:800;color:#8d9ab7;letter-spacing:.17em}
+.title{font-size:28px;letter-spacing:-.055em;margin:7px 0 4px}
+.subtitle{font-size:12px;line-height:1.6;color:#8793ad}
+.top-actions{gap:9px}
+.select{min-height:40px;min-width:235px;background:#11182a;border-color:#28344f;font-size:12px}
+.btn{
+  min-height:36px;padding:9px 13px;border-color:#29354f;background:#111827;
+  border-radius:10px;font-size:11px;font-weight:700;transition:transform .15s ease,border-color .15s ease,background .15s ease,box-shadow .15s ease
+}
+.btn:hover{border-color:#51437f;background:#191f35;transform:translateY(-1px)}
+.btn.primary{background:linear-gradient(120deg,#7957e9,#4f75ef);box-shadow:0 7px 20px #654be32b}
+.btn.primary:hover{box-shadow:0 9px 24px #654be345;filter:brightness(1.07)}
+.btn.danger{background:#28141d;border-color:#613040}
+.page{animation:page-in .2s ease both}
+@keyframes page-in{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.grid,.grid3,.two{gap:15px}
+.card{
+  position:relative;min-width:0;padding:19px;border-radius:16px;
+  background:linear-gradient(155deg,rgba(18,26,44,.97),rgba(12,17,30,.98));
+  border-color:#222e47;box-shadow:0 12px 36px #00015;
+  transition:border-color .18s ease,transform .18s ease,box-shadow .18s ease;
+}
+.card:hover{border-color:#303e5e;box-shadow:0 17px 42px #00020}
+.metric{overflow:hidden;min-height:136px}
+.metric:after{
+  content:"";position:absolute;right:-30px;top:-48px;width:120px;height:120px;
+  border-radius:50%;background:radial-gradient(circle,#8b6cff18,transparent 68%);pointer-events:none
+}
+.metric .label{font-size:10px;letter-spacing:.1em;font-weight:800;color:#8c9ab6}
+.metric .value{font-size:32px;letter-spacing:-.055em;margin:13px 0 4px}
+.metric .hint{font-size:10px;color:#7885a1}
+.section{margin-bottom:17px}
+.section h2{font-size:13px;font-weight:800;letter-spacing:-.015em}
+.muted{font-size:11px;color:#8b97b1}
+.pill{padding:5px 9px;font-size:9px;font-weight:800;letter-spacing:.025em;background:#171f34;border-color:#2a3753;color:#b1bdd6}
+.row{gap:13px;padding:13px 0;border-color:#202a40}
+.row:hover .name{color:#c9beff}
+.name{font-size:12px;transition:color .15s ease}
+.meta{font-size:10px;line-height:1.55;color:#7e8ba8;overflow-wrap:anywhere}
+.avatar{border:1px solid #2b3652;background:linear-gradient(145deg,#202b48,#151d30);border-radius:12px}
+.setting{padding:14px 0;border-color:#202a40;font-size:11px}
+.switch{flex-shrink:0}
+.table-wrap{border:1px solid #202a40;border-radius:12px}
+.table{font-size:11px}
+.table th,.table td{padding:12px 13px;border-bottom-color:#202a40}
+.table th{background:#101728;color:#7482a0;font-size:9px;letter-spacing:.1em}
+.table tbody tr:hover{background:#ffffff04}
+.input,.textarea,.select2{
+  border-color:#29354f;background:#0a1020;border-radius:10px;font-size:12px;
+  transition:border-color .15s ease,box-shadow .15s ease
+}
+.input:focus,.textarea:focus,.select2:focus,.select:focus{
+  border-color:#7965d7;box-shadow:0 0 0 3px #8066ef1b
+}
+.form{gap:12px}
+.form-grid{gap:12px}
+.command{border-color:#242f48;background:#0d1424;border-radius:12px;transition:border-color .15s ease,background .15s ease}
+.command:hover{border-color:#3b4670;background:#121a2d}
+.command-name{font-size:12px}
+.command-desc{font-size:10px;line-height:1.5}
+.empty{font-size:11px;line-height:1.7}
+.toast{border-color:#354362;background:#111a2c;font-size:11px}
+.login{background:#070a13eF}
+.login-card{border-color:#29334d;background:linear-gradient(145deg,#11182a,#0c1120);border-radius:20px}
+.login-card h1{font-size:24px;letter-spacing:-.05em}
+.login-card p{font-size:12px}
+@media(max-width:1100px){
+  .app{grid-template-columns:220px minmax(0,1fr)}
+  aside{padding-inline:10px}
+  main{padding-inline:22px}
+  .top{margin-inline:-22px;padding-inline:22px}
+}
+@media(max-width:780px){
+  .app{display:block}
+  aside{position:relative;height:auto;padding:14px;border-right:0;border-bottom:1px solid var(--line)}
+  .brand{padding:2px 7px 14px}
+  .profile{margin-bottom:12px}
+  nav{display:flex;gap:6px;overflow-x:auto;padding:3px 1px 7px;scrollbar-width:thin}
+  .nav-label{display:none}
+  .nav{flex:0 0 auto;min-height:36px;padding:8px 11px;white-space:nowrap}
+  .nav:hover{transform:none}
+  .aside-bottom{display:none}
+  main{padding:0 16px 28px}
+  .top{position:relative;margin:0 -16px 18px;padding:19px 16px 16px}
+  .top-actions{margin-top:13px;flex-wrap:wrap}
+  .select{min-width:0;flex:1}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .two{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+  .grid,.grid3,.form-grid{grid-template-columns:1fr}
+  .title{font-size:25px}
+  .metric{min-height:118px}
+  .metric .value{font-size:28px}
+  .card{padding:15px}
+  .top-actions{align-items:stretch}
+  .top-actions .btn{min-width:40px}
+  .table{min-width:620px}
+  .section{align-items:flex-start}
+  .login-card{padding:23px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+
 </style>
 </head>
 <body>
@@ -37,19 +198,23 @@ main{width:100%;max-width:1500px;margin:auto;padding:28px 30px}.top{display:flex
   <div class="brand"><div class="logo"><img src="/assets/logo.png" alt="Modexa"></div><div><b>Modexa</b><small>Community OS</small></div></div>
   <div class="profile" id="profile" style="display:none"><div class="profile-sub">Авторизован</div><div class="profile-name" id="profileName">—</div><button class="btn" style="width:100%;margin-top:9px" onclick="logout()">Выйти</button></div>
   <nav>
+    <div class="nav-label">Главное</div>
     <button class="nav active" data-page="overview"><span class="icon">◈</span>Обзор</button>
-    <button class="nav" data-page="servers"><span class="icon">▦</span>Сервера</button>
-    <button class="nav" data-page="commands"><span class="icon">⌘</span>Команды</button>
+    <button class="nav" data-page="servers"><span class="icon">▦</span>Сообщества</button>
+    <div class="nav-label">Управление</div>
     <button class="nav" data-page="members"><span class="icon">♙</span>Участники</button>
     <button class="nav" data-page="roles"><span class="icon">♜</span>Роли и права</button>
+    <button class="nav" data-page="commands"><span class="icon">⌘</span>Команды</button>
+    <button class="nav" data-page="custom"><span class="icon">⌘</span>Свои команды</button>
     <button class="nav" data-page="ranking"><span class="icon">↗</span>Рейтинг</button>
     <button class="nav" data-page="welcome"><span class="icon">✦</span>Приветствия</button>
-    <button class="nav" data-page="custom"><span class="icon">⌘</span>Свои команды</button>
-    <button class="nav" data-page="automod"><span class="icon">⛨</span>AutoMod</button>
+    <div class="nav-label">Безопасность и связь</div>
     <button class="nav" data-page="moderation"><span class="icon">◆</span>Модерация</button>
+    <button class="nav" data-page="automod"><span class="icon">⛨</span>AutoMod</button>
     <button class="nav" data-page="automations"><span class="icon">↯</span>Автоматизации</button>
     <button class="nav" data-page="bridge"><span class="icon">↔</span>Bridge</button>
-    <button class="nav" data-page="audit"><span class="icon">≡</span>Audit</button>
+    <button class="nav" data-page="audit"><span class="icon">≡</span>Журнал событий</button>
+    <div class="nav-label">Система</div>
     <button class="nav" data-page="system"><span class="icon">⚙</span>Система</button>
     <button class="nav" data-page="runtime"><span class="icon">●</span>Bot Runtime</button>
   </nav>
