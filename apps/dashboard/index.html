@@ -40,6 +40,12 @@ main{width:100%;max-width:1500px;margin:auto;padding:28px 30px}.top{display:flex
     <button class="nav active" data-page="overview"><span class="icon">◈</span>Обзор</button>
     <button class="nav" data-page="servers"><span class="icon">▦</span>Сервера</button>
     <button class="nav" data-page="commands"><span class="icon">⌘</span>Команды</button>
+    <button class="nav" data-page="members"><span class="icon">♙</span>Участники</button>
+    <button class="nav" data-page="roles"><span class="icon">♜</span>Роли и права</button>
+    <button class="nav" data-page="ranking"><span class="icon">↗</span>Рейтинг</button>
+    <button class="nav" data-page="welcome"><span class="icon">✦</span>Приветствия</button>
+    <button class="nav" data-page="custom"><span class="icon">⌘</span>Свои команды</button>
+    <button class="nav" data-page="automod"><span class="icon">⛨</span>AutoMod</button>
     <button class="nav" data-page="moderation"><span class="icon">◆</span>Модерация</button>
     <button class="nav" data-page="automations"><span class="icon">↯</span>Автоматизации</button>
     <button class="nav" data-page="bridge"><span class="icon">↔</span>Bridge</button>
@@ -76,6 +82,75 @@ main{width:100%;max-width:1500px;margin:auto;padding:28px 30px}.top{display:flex
 
 <section class="page" id="commands">
   <div class="card"><div class="section"><div><h2>Управление командами</h2><div class="meta">Переключатели изменяют реальные настройки выбранного сообщества.</div></div><span class="pill" id="commandCount">—</span></div><div id="commandList" class="command-grid"></div></div>
+</section>
+
+<section class="page" id="members">
+  <div class="card">
+    <div class="section"><div><h2>Участники сообщества</h2><div class="meta">Участники, статусы и привязанные identity из Core.</div></div><button class="btn" onclick="loadMembers()">↻</button></div>
+    <div class="top-actions" style="margin:10px 0"><input id="memberSearch" class="input" style="max-width:360px" placeholder="Поиск по имени или ID" onkeydown="if(event.key==='Enter')loadMembers()"><select id="memberStatus" class="select2" style="max-width:180px" onchange="loadMembers()"><option value="">Все статусы</option><option value="active">Активные</option><option value="left">Покинули</option><option value="banned">Заблокированы</option></select></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Пользователь</th><th>Статус</th><th>Identity</th><th>С даты</th></tr></thead><tbody id="membersTable"><tr><td colspan="4" class="empty">Выберите сообщество.</td></tr></tbody></table></div>
+    <div class="section" style="margin-top:12px"><span class="muted" id="membersPageLabel">Страница 1</span><div class="top-actions"><button class="btn" onclick="changeMembersPage(-1)">←</button><button class="btn" onclick="changeMembersPage(1)">→</button></div></div>
+  </div>
+</section>
+
+<section class="page" id="roles">
+  <div class="two">
+    <div class="card"><div class="section"><h2>Роли сообщества</h2><button class="btn" onclick="loadRoles()">↻</button></div><div id="roleList"></div></div>
+    <div class="card"><div class="section"><h2>Создать роль</h2><span class="pill">Permissions</span></div>
+      <div class="form"><input id="roleName" class="input" maxlength="80" placeholder="Название роли">
+      <label class="meta">Разрешения</label><div class="form-grid" id="rolePermissions">
+        <label><input type="checkbox" value="community.view" checked> Просмотр сообщества</label><label><input type="checkbox" value="community.manage"> Управление сообществом</label>
+        <label><input type="checkbox" value="member.view"> Просмотр участников</label><label><input type="checkbox" value="member.manage"> Управление участниками</label>
+        <label><input type="checkbox" value="moderation.view"> Просмотр модерации</label><label><input type="checkbox" value="moderation.warn"> Предупреждения</label>
+        <label><input type="checkbox" value="moderation.mute"> Мут</label><label><input type="checkbox" value="moderation.kick"> Кик</label>
+        <label><input type="checkbox" value="moderation.ban"> Бан</label><label><input type="checkbox" value="moderation.clear"> Очистка</label>
+        <label><input type="checkbox" value="commands.use"> Использование команд</label><label><input type="checkbox" value="commands.manage"> Управление командами</label>
+        <label><input type="checkbox" value="bridge.view"> Просмотр Bridge</label><label><input type="checkbox" value="bridge.manage"> Управление Bridge</label>
+      </div><button class="btn primary" onclick="createRole()">Создать роль</button></div>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="ranking">
+  <div class="two">
+    <div class="card"><div class="section"><h2>Настройки рейтинга</h2><span class="pill">Ranking</span></div>
+      <div class="form"><label class="setting"><span>Рейтинг включён</span><input id="rankingEnabled" type="checkbox"></label>
+      <div class="form-grid"><label class="meta">XP за сообщение<input id="rankingTextXp" class="input" type="number" min="0" value="10"></label><label class="meta">XP за минуту голосового канала<input id="rankingVoiceXp" class="input" type="number" min="0" value="5"></label></div>
+      <label class="meta">Cooldown (секунды)<input id="rankingCooldown" class="input" type="number" min="0" value="60"></label>
+      <button class="btn primary" onclick="saveRanking()">Сохранить настройки</button></div>
+    </div>
+    <div class="card"><div class="section"><h2>Топ участников</h2><button class="btn" onclick="loadRanking()">↻</button></div><div id="rankingLeaders"></div></div>
+  </div>
+</section>
+
+<section class="page" id="welcome">
+  <div class="two">
+    <div class="card"><div class="section"><h2>Приветствие и уход</h2><span class="pill">Welcome</span></div>
+      <div class="form"><label class="setting"><span>Приветствия включены</span><input id="welcomeEnabled" type="checkbox"></label><label class="meta">Текст приветствия<textarea id="welcomeMessage" class="textarea">Добро пожаловать, {{ member }}!</textarea></label>
+      <label class="setting"><span>Сообщение об уходе</span><input id="welcomeLeaveEnabled" type="checkbox"></label><label class="meta">Текст при уходе<textarea id="welcomeLeaveMessage" class="textarea">{{ member }} покинул сервер.</textarea></label>
+      <label class="meta">ID канала (необязательно)<input id="welcomeChannel" class="input" placeholder="ID канала"></label><button class="btn primary" onclick="saveWelcome()">Сохранить</button><button class="btn" onclick="previewWelcome()">Предпросмотр</button></div>
+    </div>
+    <div class="card"><div class="section"><h2>Предпросмотр</h2><span class="pill">Template</span></div><div id="welcomePreview" class="empty">Нажмите «Предпросмотр», чтобы проверить шаблоны.</div><div class="meta">Переменные: {{ member }}, {{ username }}, {{ community }}</div></div>
+  </div>
+</section>
+
+<section class="page" id="custom">
+  <div class="two">
+    <div class="card"><div class="section"><h2>Пользовательские команды</h2><button class="btn" onclick="loadCustomCommands()">↻</button></div><div id="customCommandList"></div></div>
+    <div class="card"><div class="section"><h2>Создать команду</h2><span class="pill">Core</span></div>
+      <div class="form"><input id="customName" class="input" maxlength="32" placeholder="Название без /"><input id="customDescription" class="input" maxlength="300" placeholder="Описание (необязательно)"><textarea id="customContent" class="textarea" maxlength="4000" placeholder="Текст ответа команды"></textarea><button class="btn primary" onclick="createCustomCommand()">Создать команду</button><div class="meta">Пока поддерживается базовое действие «отправить сообщение». Название: латиница, цифры, _ и -.</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="automod">
+  <div class="two">
+    <div class="card"><div class="section"><h2>Правила AutoMod</h2><button class="btn" onclick="loadAutoMod()">↻</button></div><div id="autoModList"></div></div>
+    <div class="card"><div class="section"><h2>Новое правило</h2><span class="pill">AutoMod</span></div>
+      <div class="form"><select id="autoModType" class="select2"><option value="keyword">Ключевые слова</option><option value="link">Ссылки</option><option value="invite">Приглашения</option><option value="scam">Скам</option><option value="caps">Капс</option><option value="flood">Флуд</option><option value="repeated_text">Повтор текста</option><option value="emotes">Эмодзи</option><option value="mentions">Упоминания</option><option value="zalgo">Zalgo</option></select>
+      <input id="autoModValue" class="input" placeholder="Слово / шаблон (если нужно)"><select id="autoModAction" class="select2"><option value="delete">Удалить сообщение</option><option value="warn">Предупредить</option><option value="mute">Мут</option><option value="kick">Кик</option><option value="ban">Бан</option></select><button class="btn primary" onclick="createAutoModRule()">Добавить правило</button><div class="meta">Правила сохраняются в Core. Исполнение на входящих сообщениях ещё требует подключения обработчиков адаптеров.</div></div>
+    </div>
+  </div>
 </section>
 
 <section class="page" id="moderation">
@@ -126,8 +201,8 @@ main{width:100%;max-width:1500px;margin:auto;padding:28px 30px}.top{display:flex
 
 <script>
 const API='';
-const titles={overview:['Обзор','Состояние Modexa и выбранного сообщества.'],servers:['Сервера','Подключение и режимы сообществ.'],commands:['Команды','Настройка доступности зарегистрированных команд.'],moderation:['Модерация','Реальные moderation cases из SQLite.'],automations:['Автоматизации','Триггеры и действия AutomationService.'],bridge:['Bridge','Подключённые Telegram ↔ Discord каналы.'],audit:['Audit','История действий сообщества.'],system:['Система','Глобальные настройки и диагностика.'],runtime:['Bot Runtime','Управление реальным процессом Runner.']};
-let authKey=localStorage.getItem('modexa_api_key')||'',discordUser=null,communities=[],selectedCommunity=localStorage.getItem('modexa_community')||'',maintenance=false;
+const titles={overview:['Обзор','Состояние Modexa и выбранного сообщества.'],servers:['Сервера','Подключение и режимы сообществ.'],commands:['Команды','Настройка доступности зарегистрированных команд.'],members:['Участники','Участники и внешние identity выбранного сообщества.'],roles:['Роли и права','Роли сообщества и назначенные permissions.'],ranking:['Рейтинг','XP-настройки и таблица лидеров.'],welcome:['Приветствия','Сообщения при входе и выходе участников.'],custom:['Свои команды','Команды, созданные для выбранного сообщества.'],automod:['AutoMod','Правила автоматической модерации.'],moderation:['Модерация','Реальные moderation cases из SQLite.'],automations:['Автоматизации','Триггеры и действия AutomationService.'],bridge:['Bridge','Подключённые Telegram ↔ Discord каналы.'],audit:['Audit','История действий сообщества.'],system:['Система','Глобальные настройки и диагностика.'],runtime:['Bot Runtime','Управление реальным процессом Runner.']};
+let authKey=localStorage.getItem('modexa_api_key')||'',discordUser=null,communities=[],selectedCommunity=localStorage.getItem('modexa_community')||'',maintenance=false,membersPage=1;
 
 function esc(v){return String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function toast(msg){const e=document.getElementById('toast');e.textContent=msg;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2600);}
@@ -136,6 +211,7 @@ function showLogin(msg=''){document.getElementById('login').classList.remove('hi
 async function request(path,options={}){const r=await fetch(API+path,{...options,headers:{...authHeaders(),...(options.headers||{})},credentials:'same-origin'});if(r.status===401){showLogin('Сессия истекла или API-ключ недействителен.');throw new Error('unauthorized')}if(!r.ok)throw new Error(await r.text());return r.status===204?null:r.json();}
 async function get(path){return request(path)}
 async function post(path,body){return request(path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})}
+async function send(path,method,body){return request(path,{method,headers:{'content-type':'application/json'},body:JSON.stringify(body)})}
 
 async function discordLogin(){try{const c=await fetch('/api/config').then(r=>r.json());if(!c.oauth?.discord){showLogin('Discord OAuth не настроен. Проверьте DISCORD_CLIENT_ID и DISCORD_CLIENT_SECRET.');return}location.href='/auth/discord'}catch{showLogin('API недоступен.');}}
 async function login(){const key=document.getElementById('apiKey').value.trim();if(!key)return;try{await fetch('/api/auth',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({key})}).then(async r=>{if(!r.ok)throw new Error('bad');return r.json()});authKey=key;localStorage.setItem('modexa_api_key',key);document.getElementById('login').classList.add('hidden');await loadAll()}catch{showLogin('Неверный API-ключ.')}} 
@@ -160,10 +236,10 @@ async function initAuth(){
 }
 async function logout(){try{await fetch('/api/auth/discord',{method:'DELETE'});await fetch('/api/auth',{method:'DELETE'})}catch{}authKey='';localStorage.removeItem('modexa_api_key');location.reload()}
 
-function showPage(id){document.querySelectorAll('.page').forEach(e=>e.classList.toggle('active',e.id===id));document.querySelectorAll('.nav').forEach(e=>e.classList.toggle('active',e.dataset.page===id));document.getElementById('pageTitle').textContent=titles[id][0];document.getElementById('pageSubtitle').textContent=titles[id][1];if(id==='commands')loadCommands();if(id==='moderation')loadModeration();if(id==='automations')loadAutomations();if(id==='bridge')loadBridge();if(id==='audit')loadAudit();if(id==='system')loadSystem();if(id==='runtime')loadRuntime()}
+function showPage(id){document.querySelectorAll('.page').forEach(e=>e.classList.toggle('active',e.id===id));document.querySelectorAll('.nav').forEach(e=>e.classList.toggle('active',e.dataset.page===id));document.getElementById('pageTitle').textContent=titles[id][0];document.getElementById('pageSubtitle').textContent=titles[id][1];if(id==='commands')loadCommands();if(id==='members')loadMembers();if(id==='roles')loadRoles();if(id==='ranking')loadRanking();if(id==='welcome')loadWelcome();if(id==='custom')loadCustomCommands();if(id==='automod')loadAutoMod();if(id==='moderation')loadModeration();if(id==='automations')loadAutomations();if(id==='bridge')loadBridge();if(id==='audit')loadAudit();if(id==='system')loadSystem();if(id==='runtime')loadRuntime()}
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
 
-function changeCommunity(id){selectedCommunity=id;localStorage.setItem('modexa_community',id);renderSelected();loadCommands();loadModeration();loadAudit();loadAutomations();}
+function changeCommunity(id){selectedCommunity=id;localStorage.setItem('modexa_community',id);membersPage=1;renderSelected();loadCommands();loadMembers();loadRoles();loadRanking();loadWelcome();loadCustomCommands();loadAutoMod();loadModeration();loadAudit();loadAutomations();}
 
 function renderCommunitySelect(){const s=document.getElementById('communitySelect');s.innerHTML='<option value="">Выберите сервер…</option>'+communities.map(c=>'<option value="'+esc(c.communityId||c.id)+'">'+esc(c.name)+'</option>').join('');if(selectedCommunity&&communities.some(c=>(c.communityId||c.id)===selectedCommunity))s.value=selectedCommunity;else if(communities[0]){selectedCommunity=communities[0].communityId||communities[0].id;s.value=selectedCommunity;localStorage.setItem('modexa_community',selectedCommunity)}}
 function renderServers(){
@@ -217,6 +293,77 @@ async function loadRuntime(){try{const d=await get('/api/runtime');document.getE
 async function runtimeAction(action){try{const d=await post('/api/runtime',{action});await loadRuntime();toast('Runner: '+d.state)}catch(e){toast(e.message)}}
 async function inviteGuild(guildId){try{const d=await get('/api/auth/discord/invite?guildId='+encodeURIComponent(guildId));window.open(d.url,'_blank','noopener');toast('Приглашение бота открыто')}catch(e){toast(e.message)}}
 async function inviteBot(){try{const d=await get('/api/auth/discord/invite'+(selectedCommunity?'?communityId='+encodeURIComponent(selectedCommunity):''));window.open(d.url,'_blank','noopener');document.getElementById('inviteStatus').textContent='Приглашение открыто.'}catch(e){toast(e.message)}}
+
+
+async function loadMembers(){
+  if(!selectedCommunity){document.getElementById('membersTable').innerHTML='<tr><td colspan="4" class="empty">Выберите сообщество.</td></tr>';return}
+  try{
+    const q=document.getElementById('memberSearch').value.trim(),status=document.getElementById('memberStatus').value;
+    const params=new URLSearchParams({page:String(membersPage),limit:'25'});if(q)params.set('q',q);if(status)params.set('status',status);
+    const d=await get('/api/communities/'+encodeURIComponent(selectedCommunity)+'/members?'+params);
+    document.getElementById('membersTable').innerHTML=d.items.map(m=>'<tr><td><b>'+esc(m.user?.displayName||m.userId)+'</b><div class="meta">'+esc(m.userId)+'</div></td><td>'+esc(m.status)+'</td><td>'+esc((m.identities||[]).map(i=>i.platform+': '+i.externalId).join(', ')||'—')+'</td><td>'+esc(m.joinedAt?new Date(m.joinedAt).toLocaleDateString('ru-RU'):'—')+'</td></tr>').join('')||'<tr><td colspan="4" class="empty">Участники не найдены.</td></tr>';
+    document.getElementById('membersPageLabel').textContent='Страница '+membersPage+' · всего '+(d.total??d.items.length);
+  }catch(e){document.getElementById('membersTable').innerHTML='<tr><td colspan="4" class="empty">'+esc(e.message)+'</td></tr>'}
+}
+function changeMembersPage(delta){membersPage=Math.max(1,membersPage+delta);loadMembers()}
+async function loadRoles(){
+  if(!selectedCommunity){document.getElementById('roleList').innerHTML='<div class="empty">Выберите сообщество.</div>';return}
+  try{const d=await get('/api/communities/'+encodeURIComponent(selectedCommunity)+'/roles');document.getElementById('roleList').innerHTML=d.items.map(r=>'<div class="row"><div class="grow"><div class="name">'+esc(r.name)+'</div><div class="meta">'+esc(r.id)+' · '+esc((r.permissions||[]).join(', ')||'без permissions')+'</div></div><button class="btn danger" onclick="deleteRole(\''+esc(r.id)+'\')">Удалить</button></div>').join('')||'<div class="empty">Ролей пока нет.</div>'}catch(e){toast(e.message)}
+}
+async function createRole(){
+  if(!selectedCommunity)return toast('Выберите сообщество');
+  const name=document.getElementById('roleName').value.trim(),permissions=[...document.querySelectorAll('#rolePermissions input:checked')].map(e=>e.value);
+  if(!name)return toast('Введите название роли');
+  try{await post('/api/communities/'+encodeURIComponent(selectedCommunity)+'/roles',{name,permissions});document.getElementById('roleName').value='';toast('Роль создана');loadRoles()}catch(e){toast(e.message)}
+}
+async function deleteRole(id){if(!confirm('Удалить роль?'))return;try{await send('/api/communities/'+encodeURIComponent(selectedCommunity)+'/roles/'+encodeURIComponent(id),'DELETE');toast('Роль удалена');loadRoles()}catch(e){toast(e.message)}}
+async function loadRanking(){
+  if(!selectedCommunity){document.getElementById('rankingLeaders').innerHTML='<div class="empty">Выберите сообщество.</div>';return}
+  try{
+    const [settings,leaders]=await Promise.all([get('/api/communities/'+encodeURIComponent(selectedCommunity)+'/ranking'),get('/api/communities/'+encodeURIComponent(selectedCommunity)+'/ranking/leaderboard?limit=10')]);
+    const x=settings.item||{};document.getElementById('rankingEnabled').checked=!!x.enabled;document.getElementById('rankingTextXp').value=x.textXp??10;document.getElementById('rankingVoiceXp').value=x.voiceXpPerMinute??5;document.getElementById('rankingCooldown').value=x.cooldownSeconds??60;
+    document.getElementById('rankingLeaders').innerHTML=leaders.items.map((m,i)=>'<div class="row"><div class="avatar">'+(i+1)+'</div><div class="grow"><div class="name">'+esc(m.displayName||m.userId||m.id)+'</div><div class="meta">Уровень '+esc(m.level??0)+' · '+esc(m.xp??m.experience??0)+' XP</div></div><span class="pill">'+esc(m.cookies??0)+' 🍪</span></div>').join('')||'<div class="empty">Данных рейтинга пока нет.</div>';
+  }catch(e){toast(e.message)}
+}
+async function saveRanking(){
+  if(!selectedCommunity)return toast('Выберите сообщество');
+  const body={enabled:document.getElementById('rankingEnabled').checked,textXp:Number(document.getElementById('rankingTextXp').value),voiceXpPerMinute:Number(document.getElementById('rankingVoiceXp').value),cooldownSeconds:Number(document.getElementById('rankingCooldown').value)};
+  try{await send('/api/communities/'+encodeURIComponent(selectedCommunity)+'/ranking','PUT',body);toast('Настройки рейтинга сохранены');loadRanking()}catch(e){toast(e.message)}
+}
+async function loadWelcome(){
+  if(!selectedCommunity)return;
+  try{const d=await get('/api/communities/'+encodeURIComponent(selectedCommunity)+'/welcome'),x=d.item||{};document.getElementById('welcomeEnabled').checked=!!x.enabled;document.getElementById('welcomeMessage').value=x.message||'';document.getElementById('welcomeLeaveEnabled').checked=!!x.leaveEnabled;document.getElementById('welcomeLeaveMessage').value=x.leaveMessage||'';document.getElementById('welcomeChannel').value=x.channelId||''}catch(e){toast(e.message)}
+}
+async function saveWelcome(){
+  if(!selectedCommunity)return toast('Выберите сообщество');
+  const body={enabled:document.getElementById('welcomeEnabled').checked,message:document.getElementById('welcomeMessage').value,leaveEnabled:document.getElementById('welcomeLeaveEnabled').checked,leaveMessage:document.getElementById('welcomeLeaveMessage').value,channelId:document.getElementById('welcomeChannel').value.trim()||undefined};
+  try{await send('/api/communities/'+encodeURIComponent(selectedCommunity)+'/welcome','PUT',body);toast('Настройки приветствия сохранены')}catch(e){toast(e.message)}
+}
+async function previewWelcome(){
+  if(!selectedCommunity)return toast('Выберите сообщество');
+  try{const d=await post('/api/communities/'+encodeURIComponent(selectedCommunity)+'/welcome/preview',{member:'Пример участника',username:'example'});document.getElementById('welcomePreview').innerHTML='<div class="setting"><span>Вход</span><b>'+esc(d.welcome)+'</b></div><div class="setting"><span>Выход</span><b>'+esc(d.leave)+'</b></div>'}catch(e){toast(e.message)}
+}
+async function loadCustomCommands(){
+  if(!selectedCommunity){document.getElementById('customCommandList').innerHTML='<div class="empty">Выберите сообщество.</div>';return}
+  try{const d=await get('/api/custom-commands?communityId='+encodeURIComponent(selectedCommunity));document.getElementById('customCommandList').innerHTML=d.items.map(c=>'<div class="row"><div class="grow"><div class="name">/'+esc(c.name)+'</div><div class="meta">'+esc(c.description||'Без описания')+' · '+(c.enabled?'включена':'выключена')+'</div></div><button class="btn danger" onclick="deleteCustomCommand(\''+esc(c.id)+'\')">Удалить</button></div>').join('')||'<div class="empty">Пользовательских команд нет.</div>'}catch(e){toast(e.message)}
+}
+async function createCustomCommand(){
+  if(!selectedCommunity)return toast('Выберите сообщество');
+  const name=document.getElementById('customName').value.trim().replace(/^\//,''),content=document.getElementById('customContent').value.trim(),description=document.getElementById('customDescription').value.trim();
+  if(!name||!content)return toast('Укажите название и текст ответа');
+  try{await post('/api/custom-commands',{communityId:selectedCommunity,name,description,actions:[{type:'message',content}],aliases:[],enabled:true});document.getElementById('customName').value='';document.getElementById('customDescription').value='';document.getElementById('customContent').value='';toast('Команда создана');loadCustomCommands()}catch(e){toast(e.message)}
+}
+async function deleteCustomCommand(id){if(!confirm('Удалить пользовательскую команду?'))return;try{await send('/api/custom-commands/'+encodeURIComponent(id),'DELETE');toast('Команда удалена');loadCustomCommands()}catch(e){toast(e.message)}}
+async function loadAutoMod(){
+  if(!selectedCommunity){document.getElementById('autoModList').innerHTML='<div class="empty">Выберите сообщество.</div>';return}
+  try{const d=await get('/api/communities/'+encodeURIComponent(selectedCommunity)+'/automod/rules');document.getElementById('autoModList').innerHTML=d.items.map(r=>'<div class="row"><div class="grow"><div class="name">'+esc(r.type)+' · '+esc(r.action)+'</div><div class="meta">'+esc(r.value||'без значения')+' · '+(r.enabled?'включено':'выключено')+'</div></div><button class="btn danger" onclick="deleteAutoModRule(\''+esc(r.id)+'\')">Удалить</button></div>').join('')||'<div class="empty">Правил пока нет.</div>'}catch(e){toast(e.message)}
+}
+async function createAutoModRule(){
+  if(!selectedCommunity)return toast('Выберите сообщество');
+  const type=document.getElementById('autoModType').value,value=document.getElementById('autoModValue').value.trim(),action=document.getElementById('autoModAction').value;
+  try{await post('/api/communities/'+encodeURIComponent(selectedCommunity)+'/automod/rules',{type,value,action,enabled:true});document.getElementById('autoModValue').value='';toast('Правило добавлено');loadAutoMod()}catch(e){toast(e.message)}
+}
+async function deleteAutoModRule(id){if(!confirm('Удалить правило AutoMod?'))return;try{await send('/api/communities/'+encodeURIComponent(selectedCommunity)+'/automod/rules/'+encodeURIComponent(id),'DELETE');toast('Правило удалено');loadAutoMod()}catch(e){toast(e.message)}}
 
 async function loadAll(){try{const [h,o,c,r,s]=await Promise.all([get('/health'),get('/api/overview'),get('/api/config'),get('/api/runtime'),get('/api/system')]);document.getElementById('apiDot').textContent='● online';document.getElementById('healthText').textContent=h.status;document.getElementById('mCommunities').textContent=o.communities;document.getElementById('mActive').textContent=o.activeCommunities;document.getElementById('mCases').textContent=o.moderationCases;document.getElementById('mRunner').textContent=r.state==='running'?'ON':'OFF';document.getElementById('runnerText').textContent=r.state;document.getElementById('maintenanceText').textContent=s.maintenanceMode?'ON':'OFF';document.getElementById('oauthText').textContent=c.oauth?.discord?'OK':'OFF';document.getElementById('systemPill').textContent=r.state==='running'?'Online':'Degraded';maintenance=s.maintenanceMode;document.getElementById('maintenanceSwitch').classList.toggle('on',maintenance);let g;try{g=await get('/api/auth/discord/guilds');communities=g.items||[]}catch{const local=await get('/api/communities');communities=local.items||[]}renderCommunitySelect();renderServers();await renderSelected();await loadRuntime();}catch(e){document.getElementById('apiDot').textContent='● offline';showLogin(e.message)}}
 
