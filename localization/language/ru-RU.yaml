@@ -163,6 +163,8 @@ system.maintenance.toggle: 'Переключить режим обслужива
 command.member.description: 'Показать информацию об участнике'
 member.community_only: 'Команду /member можно использовать только в сообществе.'
 member.not_found: 'Участник {username} не найден.'
+member.community_profile_hidden: '🔒 Информация о профилях скрыта настройками этого сообщества.'
+members.community_profiles_hidden: '🔒 Просмотр профилей участников отключён настройками этого сообщества.'
 member.private_profile: '🔒 Пользователь включил приватный режим профиля Modexa.'
 members.private_list: '🔒 Список участников скрыт настройками этого сообщества.'
 member.title: '👤 Информация об участнике'
