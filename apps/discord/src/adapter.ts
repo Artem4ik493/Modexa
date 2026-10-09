@@ -269,8 +269,15 @@ export class DiscordAdapter
       }
       case "member.mute": {
         const guild = await this.client.guilds.fetch(action.communityExternalId);
+        const me = guild.members.me ?? await guild.members.fetchMe();
+        if (!me.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
+          throw new Error("Discord bot is missing the Moderate Members permission");
+        }
         const member = await guild.members.fetch(action.userExternalId);
-        if (!action.durationSeconds || action.durationSeconds <= 0) {
+        if (member.id === guild.ownerId || member.roles.highest.comparePositionTo(me.roles.highest) >= 0) {
+          throw new Error("Discord bot cannot timeout this member because of role hierarchy");
+        }
+        if (!Number.isFinite(action.durationSeconds) || !action.durationSeconds || action.durationSeconds <= 0) {
           throw new Error("Discord mute duration must be positive");
         }
         await member.timeout(
@@ -282,35 +289,53 @@ export class DiscordAdapter
 
       case "member.kick": {
         const guild = await this.client.guilds.fetch(action.communityExternalId);
+        const me = guild.members.me ?? await guild.members.fetchMe();
+        if (!me.permissions.has(PermissionsBitField.Flags.KickMembers)) {
+          throw new Error("Discord bot is missing the Kick Members permission");
+        }
         const member = await guild.members.fetch(action.userExternalId);
+        if (member.id === guild.ownerId || member.roles.highest.comparePositionTo(me.roles.highest) >= 0) {
+          throw new Error("Discord bot cannot kick this member because of role hierarchy");
+        }
         await member.kick(action.reason);
         return;
       }
 
       case "member.unmute": {
         const guild = await this.client.guilds.fetch(action.communityExternalId);
+        const me = guild.members.me ?? await guild.members.fetchMe();
+        if (!me.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
+          throw new Error("Discord bot is missing the Moderate Members permission");
+        }
         const member = await guild.members.fetch(action.userExternalId);
+        if (member.id === guild.ownerId || member.roles.highest.comparePositionTo(me.roles.highest) >= 0) {
+          throw new Error("Discord bot cannot modify this member because of role hierarchy");
+        }
         await member.timeout(null);
         return;
       }
 
-      case "member.unban":
-        await this.client.guilds
-          .fetch(action.communityExternalId)
-          .then((guild) => guild.bans.remove(action.userExternalId));
+      case "member.unban": {
+        const guild = await this.client.guilds.fetch(action.communityExternalId);
+        const me = guild.members.me ?? await guild.members.fetchMe();
+        if (!me.permissions.has(PermissionsBitField.Flags.BanMembers)) {
+          throw new Error("Discord bot is missing the Ban Members permission");
+        }
+        await guild.bans.remove(action.userExternalId, action.reason);
         return;
+      }
 
       case "member.ban": {
-        const guild =
-          await this.client.guilds.fetch(
-            action.communityExternalId
-          );
-
-        await guild.members.ban(
-          action.userExternalId,
-          { reason: action.reason }
-        );
-
+        const guild = await this.client.guilds.fetch(action.communityExternalId);
+        const me = guild.members.me ?? await guild.members.fetchMe();
+        if (!me.permissions.has(PermissionsBitField.Flags.BanMembers)) {
+          throw new Error("Discord bot is missing the Ban Members permission");
+        }
+        const member = await guild.members.fetch(action.userExternalId);
+        if (member.id === guild.ownerId || member.roles.highest.comparePositionTo(me.roles.highest) >= 0) {
+          throw new Error("Discord bot cannot ban this member because of role hierarchy");
+        }
+        await guild.members.ban(action.userExternalId, { reason: action.reason });
         return;
       }
     }
