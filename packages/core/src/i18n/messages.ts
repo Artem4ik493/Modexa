@@ -16,6 +16,8 @@ const MESSAGE_KEYS = [
   "command.forbidden",
   "command.dm_only",
   "command.permission_denied",
+  "command.disabled",
+  "command.execution_failed",
   "command.not_found",
   "command.ping.pong",
   "command.menu.description",
