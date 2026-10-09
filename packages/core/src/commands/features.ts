@@ -224,6 +224,7 @@ export function createPublicFeatureCommands(
       name: "server",
       aliases: ["community"],
       description: "Информация о сообществе",
+      requiredPermissions: ["community.view"],
       handler: async (context) => {
         if (!context.community) {
           return panel("Сообщество", "Эта команда работает только в сообществе.", 0xffb454);
@@ -253,6 +254,7 @@ export function createPublicFeatureCommands(
       name: "user",
       aliases: ["profile", "юзер"],
       description: "Информация об участнике",
+      requiredPermissions: ["member.view"],
       handler: async (context) => {
         const user = await resolveTarget(
           context,
@@ -341,6 +343,7 @@ export function createPublicFeatureCommands(
       name: "stats",
       aliases: ["stat"],
       description: "Статистика использования",
+      requiredPermissions: ["community.view"],
       handler: async (context) => {
         if (!context.community) {
           return panel("Статистика", "Команда доступна внутри сообщества.", 0xffb454);
