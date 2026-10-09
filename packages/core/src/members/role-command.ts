@@ -98,7 +98,7 @@ export function createRoleCommand(
 
       const membership = membershipService.findMembership(target.id, context.community.id);
       if (!membership || membership.status !== "active") {
-        return { content: "Участник не состоит в этом сообществе или его участие неактивно." };
+        return { content: translate("command.role.inactive_member", undefined, context.execution.locale) };
       }
 
       const roles = accessControlService.getUserCommunityRoles(target.id, context.community.id);
