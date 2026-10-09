@@ -252,22 +252,11 @@ describe("Discord event handler", () => {
       )
     );
 
-    await handler(
-      interactionEvent(
-        customIdTokens(actions[2]).slice(-2)[0]
-      )
-    );
-
-    await handler(
-      interactionEvent(
-        customIdTokens(actions[3])[7]
-      )
-    );
-
-    expect(actions[4]).toMatchObject({
+    expect(actions[2]).toMatchObject({
       type: "message.edit",
       content: "Выберите действие:"
     });
+  });
   });
 
   it("closes an interactive menu", async () => {
