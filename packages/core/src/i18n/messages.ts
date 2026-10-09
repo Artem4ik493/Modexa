@@ -122,6 +122,7 @@ const MESSAGE_KEYS = [
   "settings.personal.language",
   "settings.personal.language.ru",
   "settings.personal.language.en",
+  "settings.personal.language.auto",
   "settings.personal.language.ru_selected",
   "settings.personal.language.en_selected",
   "command.help.description",
