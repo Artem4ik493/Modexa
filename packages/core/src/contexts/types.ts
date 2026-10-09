@@ -1,3 +1,4 @@
+import type { Permission } from "../access/types.js";
 import type { Channel } from "../channels/types.js";
 import type { Community } from "../communities/types.js";
 import type { Locale } from "../i18n/locale.js";
@@ -18,7 +19,16 @@ export type ExecutionCapability =
   | "member.view"
   | "member.manage"
   | "moderation"
+  | "moderation.view"
+  | "moderation.warn"
+  | "moderation.mute"
+  | "moderation.kick"
+  | "moderation.ban"
+  | "moderation.clear"
   | "bridge"
+  | "bridge.view"
+  | "bridge.manage"
+  | "commands.manage"
   | "automations"
   | "billing"
   | "system.manage";
@@ -43,6 +53,9 @@ export interface ExecutionContext {
   locale?: Locale;
 
   capabilities: ExecutionCapability[];
+
+  /** Exact community permissions resolved from active membership and roles. */
+  permissions?: Permission[];
 }
 
 export interface CreateExecutionContextInput {
