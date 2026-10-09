@@ -244,7 +244,7 @@ export function createMemberCommand(
   return {
     name: "member",
     descriptionKey: "command.member.description",
-    requiredCapabilities: ["member.view"],
+    requiredPermissions: ["member.view"],
     handler: async (context): Promise<CommandResponse> => {
       const t = createTranslator(context.execution.locale);
 
@@ -465,7 +465,7 @@ export function createMembersCommand(
   return {
     name: "members",
     descriptionKey: "command.members.description",
-    requiredCapabilities: ["member.view"],
+    requiredPermissions: ["member.view"],
     handler: async (context): Promise<CommandResponse> => {
       const t = createTranslator(context.execution.locale);
 
