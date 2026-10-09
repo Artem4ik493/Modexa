@@ -969,7 +969,7 @@ export function createBuiltinCommands(
           context.execution?.locale
         );
         const available = registry
-          .listAvailable(context.execution.capabilities)
+          .listAvailable(context.execution.capabilities, context.execution.permissions ?? [])
           .filter((command) => command.name !== "menu");
 
         const groupFor = (name: string): string => {
