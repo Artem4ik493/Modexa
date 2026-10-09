@@ -24,10 +24,41 @@ export interface RankingSettings {
   rewards: RankingReward[];
 }
 
+export interface RankingStateStore {
+  getRuntimeState<T>(key: string): T | undefined;
+  setRuntimeState(key: string, value: unknown, now?: Date): void;
+}
+
+type StoredRankingState = {
+  members: Array<Omit<RankingMember, "updatedAt"> & { updatedAt: string }>;
+  settings: Array<[string, RankingSettings]>;
+  lastTextXp: Array<[string, number]>;
+};
+
 export class RankingService {
   private readonly members = new Map<string, RankingMember>();
   private readonly settings = new Map<string, RankingSettings>();
   private readonly lastTextXp = new Map<string, number>();
+
+  constructor(private readonly store?: RankingStateStore) {
+    const state = store?.getRuntimeState<StoredRankingState>("ranking");
+    for (const item of state?.members ?? []) {
+      const member = { ...item, updatedAt: new Date(item.updatedAt) };
+      this.members.set(member.communityId + ":" + member.userId, member);
+    }
+    for (const [communityId, settings] of state?.settings ?? []) {
+      this.settings.set(communityId, { ...settings, ignoredRoleIds: [...settings.ignoredRoleIds], ignoredChannelIds: [...settings.ignoredChannelIds], rewards: [...settings.rewards] });
+    }
+    for (const [key, timestamp] of state?.lastTextXp ?? []) this.lastTextXp.set(key, timestamp);
+  }
+
+  private persist(now = new Date()): void {
+    this.store?.setRuntimeState("ranking", {
+      members: [...this.members.values()].map((item) => ({ ...item, updatedAt: item.updatedAt.toISOString() })),
+      settings: [...this.settings.entries()],
+      lastTextXp: [...this.lastTextXp.entries()]
+    } satisfies StoredRankingState, now);
+  }
 
   getSettings(communityId: string): RankingSettings {
     return this.settings.get(communityId) ?? {
@@ -42,7 +73,8 @@ export class RankingService {
   }
 
   setSettings(communityId: string, settings: RankingSettings): void {
-    this.settings.set(communityId, { ...settings, rewards: [...settings.rewards] });
+    this.settings.set(communityId, { ...settings, ignoredRoleIds: [...settings.ignoredRoleIds], ignoredChannelIds: [...settings.ignoredChannelIds], rewards: [...settings.rewards] });
+    this.persist();
   }
 
   awardMessageXp(input: {
@@ -81,6 +113,7 @@ export class RankingService {
     current.level = this.levelForExperience(current.experience);
     current.updatedAt = now;
     this.members.set(key, current);
+    this.persist(now);
     return { ...current };
   }
 
@@ -103,6 +136,7 @@ export class RankingService {
     current.level = this.levelForExperience(current.experience);
     current.updatedAt = now;
     this.members.set(key, current);
+    this.persist(now);
     return { ...current };
   }
 
@@ -114,6 +148,7 @@ export class RankingService {
     current.cookies = Math.max(0, current.cookies + amount);
     current.updatedAt = now;
     this.members.set(key, current);
+    this.persist(now);
     return { ...current };
   }
 
@@ -131,6 +166,7 @@ export class RankingService {
 
   resetMember(communityId: string, userId: string): void {
     this.members.delete(communityId + ":" + userId);
+    this.persist();
   }
 
   private levelForExperience(experience: number): number {
