@@ -80,6 +80,11 @@ export class BridgeService {
       this.links.set(link.id, link);
     }
 
+    const persistedRelayedMessages = database?.getRuntimeState<Record<string, string>>("bridge.relayed_messages");
+    for (const [key, messageId] of Object.entries(persistedRelayedMessages ?? {})) {
+      this.relayedMessages.set(key, messageId);
+    }
+
     this.nextLinkId = this.getNextNumericId(
       [...this.links.keys()],
       "bridge-link-"
