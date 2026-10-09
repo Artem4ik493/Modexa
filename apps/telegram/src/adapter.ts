@@ -328,17 +328,12 @@ export class TelegramAdapter
           ? `Причина: ${reason}`
           : "Причина не указана.";
 
-        // A warning is recorded by Core. Notify the community so the
-        // moderation action is visible even when the target has not
-        // started a private conversation with the bot.
         await this.bot.api.sendMessage(
           Number(action.communityExternalId),
           `⚠️ Пользователь ${targetDisplayName} получил предупреждение.\\n${details}`
         );
-
         return;
       }
-
       case "member.mute": {
         if (
           action.durationSeconds === undefined ||
