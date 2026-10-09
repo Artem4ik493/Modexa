@@ -743,6 +743,48 @@ const server = createServer((req, res) => {
       return;
     }
 
+    const communityDetailMatch = url.pathname.match(/^\/api\/communities\/([^/]+)$/);
+    if (communityDetailMatch && req.method === "GET") {
+      const communityId = decodeURIComponent(communityDetailMatch[1]);
+      const community = database.getCommunitiesSnapshot().find((item) => item.id === communityId);
+      if (!community) { json(res, 404, { error: "community_not_found" }); return; }
+      json(res, 200, {
+        item: community,
+        identities: database.getCommunityIdentitiesSnapshot(communityId),
+        membershipCount: database.getMembershipsSnapshot(communityId).filter((item) => item.status === "active").length
+      });
+      return;
+    }
+
+    const communityMembersMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/members$/);
+    if (communityMembersMatch && req.method === "GET") {
+      const communityId = decodeURIComponent(communityMembersMatch[1]);
+      const community = database.getCommunitiesSnapshot().find((item) => item.id === communityId);
+      if (!community) { json(res, 404, { error: "community_not_found" }); return; }
+
+      const page = Math.max(1, Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
+      const limit = Math.min(100, Math.max(1, Number.parseInt(url.searchParams.get("limit") ?? "25", 10) || 25));
+      const status = url.searchParams.get("status");
+      const query = (url.searchParams.get("q") ?? "").trim().toLocaleLowerCase();
+      const memberships = database.getMembershipsSnapshot(communityId)
+        .filter((item) => !status || item.status === status)
+        .map((membership) => {
+          const user = database.getUser(membership.userId);
+          const identities = database.getUserIdentities(membership.userId);
+          return { ...membership, user: user ? { id: user.id, displayName: user.displayName, createdAt: user.createdAt } : null, identities };
+        })
+        .filter((item) => !query || [item.user?.displayName, ...item.identities.map((identity) => identity.username), ...item.identities.map((identity) => identity.externalId)]
+          .some((value) => typeof value === "string" && value.toLocaleLowerCase().includes(query)))
+        .sort((a, b) => a.user?.displayName?.localeCompare(b.user?.displayName ?? "") ?? 0);
+
+      const total = memberships.length;
+      json(res, 200, {
+        items: memberships.slice((page - 1) * limit, page * limit),
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) }
+      });
+      return;
+    }
+
     if (url.pathname === "/api/system" && req.method === "GET") {
       json(res, 200, {
         maintenanceMode: database.getSystemSetting("maintenance_mode") === "true"
