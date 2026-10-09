@@ -157,18 +157,30 @@ export class CommandService {
     }
 
 
+    const missingCapabilities =
+      (command?.requiredCapabilities ?? []).filter(
+        (capability) => !execution.capabilities.includes(capability)
+      );
+    const missingPermissions =
+      (command?.requiredPermissions ?? []).filter(
+        (permission) => !(execution.permissions ?? []).includes(permission)
+      );
+
     if (
       command &&
-      !(command.requiredCapabilities ?? []).every(
-        (capability) =>
-          execution.capabilities.includes(capability)
-      )
+      (missingCapabilities.length > 0 || missingPermissions.length > 0)
     ) {
       this.logger?.debug(
         "command.capability_forbidden",
         {
           ...diagnostics,
-          command: parsed.name
+          command: parsed.name,
+          userId: execution.user.id,
+          communityId: execution.community?.id,
+          missingCapabilities,
+          missingPermissions,
+          grantedCapabilities: execution.capabilities,
+          grantedPermissions: execution.permissions ?? []
         }
       );
 
@@ -209,11 +221,35 @@ export class CommandService {
           input
       };
 
-    const response =
-      await this.registry.execute(
+    let response: CommandResponse | null;
+    try {
+      response = await this.registry.execute(
         parsed.name,
         commandContext
       );
+    } catch (error) {
+      this.logger?.error(
+        "command.execution_failed",
+        {
+          ...diagnostics,
+          command: parsed.name,
+          userId: execution.user.id,
+          communityId: execution.community?.id
+        },
+        error
+      );
+
+      return {
+        handled: true,
+        response: {
+          content: translate(
+            "command.execution_failed",
+            { correlationId: execution.correlationId },
+            execution.locale
+          )
+        }
+      };
+    }
 
     if (!response) {
       this.logger?.debug(
@@ -245,10 +281,13 @@ export class CommandService {
       "command.executed",
       {
         ...diagnostics,
-        command:
-          parsed.name,
-        contextType:
-          execution.type
+        command: parsed.name,
+        contextType: execution.type,
+        userId: execution.user.id,
+        communityId: execution.community?.id,
+        responseHasContent: Boolean(response.content),
+        responseHasButtons: Boolean(response.buttons?.length),
+        responseHasMenus: Boolean(response.menus?.length)
       }
     );
 
