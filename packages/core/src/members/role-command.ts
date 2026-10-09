@@ -33,7 +33,8 @@ export function createRoleCommand(
         identityService.findUserByUsername(
           normalizedTarget,
           context.platform
-        );
+        ) ??
+        identityService.getUser(normalizedTarget);
 
       // Telegram cannot search arbitrary group members by username via
       // Bot API, so fall back to users already known in this community.
