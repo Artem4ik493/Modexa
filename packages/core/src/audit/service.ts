@@ -43,6 +43,7 @@ export interface AuditEntry {
 export interface AuditStore {
   appendAudit(entry: AuditEntry): void;
   getAuditEntries(communityId: string, limit?: number): AuditEntry[];
+  getCommunitySetting?(communityId: string, key: string): string | undefined;
 }
 
 export class AuditService {
@@ -54,7 +55,9 @@ export class AuditService {
       id: `audit_${randomUUID()}`,
       createdAt: new Date()
     };
-    this.store?.appendAudit(entry);
+    if (this.store?.getCommunitySetting?.(entry.communityId, "moderation.logging_enabled") !== "false") {
+      this.store?.appendAudit(entry);
+    }
     return entry;
   }
 
