@@ -460,10 +460,11 @@ export class TelegramAdapter
               user.id
             ),
           platformRole:
-            member.status === "creator" ||
-            member.status === "administrator"
-              ? "admin"
-              : "member"
+            member.status === "creator"
+              ? "owner"
+              : member.status === "administrator"
+                ? "admin"
+                : "member"
         },
         roles:
           member.status === "creator" ||
@@ -522,9 +523,11 @@ export class TelegramAdapter
             displayName: user.first_name,
             avatarUrl: await this.resolveAvatarUrl(user.id),
             platformRole:
-              status === "creator" || status === "administrator"
-                ? "admin"
-                : "member"
+              status === "creator"
+                ? "owner"
+                : status === "administrator"
+                  ? "admin"
+                  : "member"
           },
           roles:
             status === "creator" || status === "administrator"
@@ -772,9 +775,9 @@ export class TelegramAdapter
 
       switch (member.status) {
         case "creator":
+          return "owner";
         case "administrator":
           return "admin";
-
         default:
           return "member";
       }
@@ -1197,13 +1200,14 @@ export class TelegramAdapter
           member.status === "member" ||
           member.status === "administrator" ||
           member.status === "creator" ||
-          member.status === "restricted";
+          (member.status === "restricted" && member.is_member);
 
         const platformRole =
-          member.status === "creator" ||
-          member.status === "administrator"
-            ? "admin" as const
-            : "member" as const;
+          member.status === "creator"
+            ? "owner" as const
+            : member.status === "administrator"
+              ? "admin" as const
+              : "member" as const;
 
         const eventType =
           member.status === "kicked"
