@@ -120,7 +120,8 @@ describe("buildDiscordSlashCommands", () => {
       "menu",
       "ping",
       "settings",
-      "system"
+      "system",
+      "user"
     ]);
   });
 
