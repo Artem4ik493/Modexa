@@ -244,7 +244,8 @@ export function createTelegramAdapter(
         options.membershipService,
         accessControlService,
         memberDirectoryProxy,
-        logger
+        logger,
+        options.database
       )
     );
 
@@ -253,7 +254,8 @@ export function createTelegramAdapter(
         options.identityService,
         options.membershipService,
         accessControlService,
-        memberDirectoryProxy
+        memberDirectoryProxy,
+        options.database
       )
     );
   }
