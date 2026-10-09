@@ -203,9 +203,17 @@ describe("buildDiscordSlashCommands", () => {
     expect(member?.options).toEqual([
       {
         name: "user",
-        description: "Member to inspect",
+        description: "Участник",
         type: 6,
-        required: false
+        required: false,
+        nameLocalizations: {
+          "en-US": "user",
+          ru: "user"
+        },
+        descriptionLocalizations: {
+          "en-US": "Member to target",
+          ru: "Участник"
+        }
       }
     ]);
   });
