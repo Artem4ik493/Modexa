@@ -161,12 +161,42 @@ export class CommandService {
     }
 
 
+    const commandContext:
+      CommandContext = {
+        ...context,
+
+        platform:
+          execution.platform,
+
+        user:
+          execution.user,
+
+        community:
+          execution.community,
+
+        channel:
+          execution.channel,
+
+        execution,
+
+        args:
+          parsed.args,
+
+        rawText:
+          input
+      };
+
+    const configuredPermissions = command?.requiredPermissions;
+    const requiredPermissions = typeof configuredPermissions === "function"
+      ? configuredPermissions(commandContext)
+      : configuredPermissions ?? [];
+
     const missingCapabilities =
       (command?.requiredCapabilities ?? []).filter(
         (capability) => !execution.capabilities.includes(capability)
       );
     const missingPermissions =
-      (command?.requiredPermissions ?? []).filter(
+      requiredPermissions.filter(
         (permission) => !(execution.permissions ?? []).includes(permission)
       );
 
@@ -199,31 +229,6 @@ export class CommandService {
         }
       };
     }
-
-    const commandContext:
-      CommandContext = {
-        ...context,
-
-        platform:
-          execution.platform,
-
-        user:
-          execution.user,
-
-        community:
-          execution.community,
-
-        channel:
-          execution.channel,
-
-        execution,
-
-        args:
-          parsed.args,
-
-        rawText:
-          input
-      };
 
     let response: CommandResponse | null;
     try {
