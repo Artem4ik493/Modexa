@@ -70,6 +70,24 @@ describe("ModexaDatabase", () => {
     );
   });
 
+  it("persists settings independently for each community", () => {
+    const directory = mkdtempSync(join(tmpdir(), "modexa-community-settings-"));
+    const database = new ModexaDatabase({ path: join(directory, "modexa.sqlite") });
+    const now = new Date();
+
+    database.upsertCommunity({ id: "community-a", name: "A", createdAt: now, updatedAt: now });
+    database.upsertCommunity({ id: "community-b", name: "B", createdAt: now, updatedAt: now });
+    database.setCommunitySetting("community-a", "members.list_visible", "false");
+    database.setCommunitySetting("community-b", "members.list_visible", "true");
+
+    expect(database.getCommunitySetting("community-a", "members.list_visible")).toBe("false");
+    expect(database.getCommunitySetting("community-b", "members.list_visible")).toBe("true");
+    expect(database.getCommunitySettings("community-a")).toEqual({ "members.list_visible": "false" });
+
+    database.close();
+    rmSync(directory, { recursive: true, force: true });
+  });
+
   it("persists account settings and merges them when identities are linked", () => {
     const directory = mkdtempSync(join(tmpdir(), "modexa-user-settings-"));
     const database = new ModexaDatabase({ path: join(directory, "modexa.sqlite") });
