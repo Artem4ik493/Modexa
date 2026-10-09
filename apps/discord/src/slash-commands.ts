@@ -10,7 +10,7 @@ const DISCORD_LOCALE_CODES: Record<Locale, string> = {
   en: "en-US"
 };
 
-const NAME_PATTERN = /^[-_\\p{L}\\p{N}]{1,32}$/u;
+const NAME_PATTERN = /^[-_\p{L}\p{N}]{1,32}$/u;
 const MAX_DESCRIPTION_LENGTH = 100;
 const MAX_COMMANDS = 100;
 
