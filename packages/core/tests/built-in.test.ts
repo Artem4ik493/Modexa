@@ -198,7 +198,7 @@ describe("built-in commands", () => {
 
     const content = result?.content ?? "";
     expect(content).toContain("Путеводитель по Modexa");
-    expect(content).toContain("базе знаний Modexa");
+    expect(content).toContain("базу знаний Modexa");
     expect(content).not.toContain("/ping —");
     expect(result?.buttons?.some((button) => button.action.type === "command" && button.action.command === "/commands")).toBe(true);
   });
