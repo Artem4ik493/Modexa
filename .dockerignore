@@ -1,5 +1,9 @@
 node_modules
 .git
 .env
+.env.*
+!.env.example
 data
 **/dist
+.modexa-*
+scripts.zip
