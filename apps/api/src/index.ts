@@ -40,6 +40,13 @@ for (const community of database.getCommunitiesSnapshot()) {
 for (const command of database.getRuntimeState<Array<Record<string, unknown>>>("api.custom_commands") ?? []) {
   runtimeServices.customCommandService.upsert(command as never);
 }
+function enqueueAdapterAction(action: unknown, communityId: string, source: string): { id: string } {
+  const queue = database.getRuntimeState<Array<Record<string, unknown>>>("api.action_queue") ?? [];
+  const item = { id: `action-${randomUUID()}`, communityId, source, action, status: "pending", createdAt: new Date().toISOString() };
+  database.setRuntimeState("api.action_queue", [...queue, item].slice(-1000));
+  return { id: item.id };
+}
+
 const accessControlService = runtimeServices.accessControlService;
 
 if (!accessControlService) {
@@ -1522,7 +1529,8 @@ const server = createServer((req, res) => {
           ...(typeof body.durationSeconds === "number" ? { durationSeconds: body.durationSeconds } : {}),
           ...(typeof body.reason === "string" ? { reason: body.reason.slice(0, 1000) } : {})
         });
-        json(res, 201, { item: result.case, adapterAction: result.adapterAction, execution: "action_created_not_dispatched" });
+        const queued = enqueueAdapterAction(result.adapterAction, communityId, `moderation:${result.case.id}`);
+        json(res, 201, { item: result.case, adapterAction: result.adapterAction, execution: { status: "queued", actionId: queued.id } });
       } catch (error) {
         json(res, 403, { error: error instanceof Error ? error.message : "moderation_create_failed" });
       }
@@ -1553,11 +1561,30 @@ const server = createServer((req, res) => {
       if (!actorUserId || !caseId) { json(res, 400, { error: "actorUserId_and_caseId_required" }); return; }
       try {
         const item = runtimeServices.moderationService.revokeCase(actorUserId as never, caseId);
-        json(res, 200, { item });
+        let queuedAction: { id: string } | undefined;
+        if (item.action === "mute" || item.action === "ban") {
+          queuedAction = enqueueAdapterAction({
+            type: item.action === "mute" ? "member.unmute" : "member.unban",
+            platform: item.platform,
+            communityExternalId: item.communityExternalId,
+            userExternalId: item.userExternalId,
+            metadata: { moderationCaseId: item.id }
+          }, item.communityId, `moderation-revoke:${item.id}`);
+        }
+        json(res, 200, { item, ...(queuedAction ? { execution: { status: "queued", actionId: queuedAction.id } } : {}) });
       } catch (error) {
         json(res, 403, { error: error instanceof Error ? error.message : "moderation_revoke_failed" });
       }
       return;
+    }
+
+    if (url.pathname === "/api/actions" && req.method === "GET") {
+      const communityId = url.searchParams.get("communityId");
+      const status = url.searchParams.get("status");
+      const limit = Math.min(200, Math.max(1, Number.parseInt(url.searchParams.get("limit") ?? "50", 10) || 50));
+      const queue = database.getRuntimeState<Array<Record<string, unknown>>>("api.action_queue") ?? [];
+      const items = queue.filter((item) => (!communityId || item.communityId === communityId) && (!status || item.status === status)).slice(-limit).reverse();
+      json(res, 200, { items, limit }); return;
     }
 
     if (url.pathname === "/api/backup" && req.method === "GET") {
