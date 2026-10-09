@@ -484,7 +484,7 @@ const server = createServer((req, res) => {
         servers: [{ url: dashboardUrl }],
         security: [{ bearerAuth: [] }],
         components: { securitySchemes: { bearerAuth: { type: "http", scheme: "bearer" } } },
-        paths: Object.fromEntries([
+        paths: Object.fromEntries(([
           ["/health", ["get"]],
           ["/api/config", ["get"]],
           ["/api/auth", ["post", "delete"]],
@@ -532,7 +532,7 @@ const server = createServer((req, res) => {
           ["/api/actions/{id}", ["get"]],
           ["/api/backup", ["get"]],
           ["/api/system", ["get", "post"]]
-        ].map(([path, methods]) => [path, Object.fromEntries(methods.map((method) => [method, {
+        ] as Array<[string, string[]]>).map(([path, methods]) => [path, Object.fromEntries(methods.map((method) => [method, {
           summary: `${String(method).toUpperCase()} ${path}`,
           responses: {
             "200": { description: "Success" },
