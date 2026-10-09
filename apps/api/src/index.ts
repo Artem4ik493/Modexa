@@ -16,7 +16,6 @@ import {
   createRoleCommand,
   createModerationCommands,
   createModerationRestoreCommands,
-  AutoModService,
   createRuntimeServices
 } from "@modexa/core";
 
@@ -32,10 +31,6 @@ const database = new ModexaDatabase({
 });
 const backup = new BackupService(database);
 const runtimeServices = createRuntimeServices(undefined, database);
-const autoModService = new AutoModService();
-for (const rule of database.getRuntimeState<Array<Record<string, unknown>>>("api.automod_rules") ?? []) {
-  autoModService.upsertRule(rule as never);
-}
 for (const community of database.getCommunitiesSnapshot()) {
   const ranking = database.getRuntimeState<Record<string, unknown>>(`api.ranking.${community.id}`);
   if (ranking) runtimeServices.rankingService.setSettings(community.id, ranking as never);
@@ -1035,7 +1030,7 @@ const server = createServer((req, res) => {
     if (automodRulesMatch && ["GET", "POST"].includes(req.method ?? "")) {
       const communityId = decodeURIComponent(automodRulesMatch[1]!);
       if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) { json(res, 404, { error: "community_not_found" }); return; }
-      if (req.method === "GET") { json(res, 200, { items: autoModService.listRules(communityId) }); return; }
+      if (req.method === "GET") { json(res, 200, { items: runtimeServices.autoModService.listRules(communityId) }); return; }
       const body = await readJsonBody(req);
       const types = new Set(["keyword", "link", "invite", "scam", "caps", "flood", "repeated_text", "emotes", "mentions", "zalgo"]);
       const actions = new Set(["warn", "mute", "kick", "ban", "delete"]);
@@ -1062,7 +1057,7 @@ const server = createServer((req, res) => {
       const existing = all.findIndex((rule) => rule.id === item.id);
       if (existing >= 0) all[existing] = item; else all.push(item);
       database.setRuntimeState("api.automod_rules", all);
-      autoModService.upsertRule(item as never);
+      runtimeServices.autoModService.upsertRule(item as never);
       json(res, existing >= 0 ? 200 : 201, { item }); return;
     }
 
@@ -1074,7 +1069,7 @@ const server = createServer((req, res) => {
       const item = all.find((rule) => rule.id === ruleId && rule.communityId === communityId);
       if (!item) { json(res, 404, { error: "automod_rule_not_found" }); return; }
       database.setRuntimeState("api.automod_rules", all.filter((rule) => rule.id !== ruleId));
-      autoModService.removeRule(ruleId);
+      runtimeServices.autoModService.removeRule(ruleId);
       json(res, 200, { deleted: true, id: ruleId }); return;
     }
 
