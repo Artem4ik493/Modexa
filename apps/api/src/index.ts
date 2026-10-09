@@ -764,16 +764,25 @@ const server = createServer((req, res) => {
             const canManageGuild = (permissions & 0x20n) === 0x20n;
             return guild.owner || isAdministrator || canManageGuild;
           })
-          .map((guild) => ({
-            id: guild.id,
-            name: guild.name,
-            icon: guild.icon,
-            owner: guild.owner,
-            botInstalled: botGuildIds.has(guild.id),
-            communityId: communities.find(
-              (item) => item.platform === "discord" && item.externalId === guild.id
-            )?.communityId
-          }))
+          .map((guild) => {
+            const permissions = BigInt(guild.permissions);
+            const canManageGuild = guild.owner ||
+              (permissions & 0x8n) === 0x8n ||
+              (permissions & 0x20n) === 0x20n;
+            const botInstalled = botGuildIds.has(guild.id);
+            return {
+              id: guild.id,
+              name: guild.name,
+              icon: guild.icon,
+              owner: guild.owner,
+              botInstalled,
+              canManageBot: botInstalled && canManageGuild,
+              canInviteBot: !botInstalled && canManageGuild,
+              communityId: communities.find(
+                (item) => item.platform === "discord" && item.externalId === guild.id
+              )?.communityId
+            };
+          })
       });
       return;
     }
