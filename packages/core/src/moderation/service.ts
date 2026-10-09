@@ -36,6 +36,32 @@ export class ModerationService {
     for (const item of store?.getAllModerationCases() ?? []) {
       this.cases.set(item.id, item);
     }
+
+    // Reconcile persisted timed mutes on startup. Platform timeouts expire
+    // independently, so the Modexa case must not remain "active" forever.
+    this.expireTimedMutes(new Date());
+  }
+
+  private expireTimedMutes(now: Date): void {
+    for (const item of this.cases.values()) {
+      if (
+        item.action !== "mute" ||
+        item.status !== "active" ||
+        item.durationSeconds === undefined
+      ) {
+        continue;
+      }
+
+      const expiresAt =
+        new Date(item.createdAt.getTime() + item.durationSeconds * 1000);
+
+      if (expiresAt.getTime() <= now.getTime()) {
+        item.status = "revoked";
+        item.revokedAt = expiresAt;
+        this.cases.set(item.id, item);
+        this.store?.upsertModerationCase(item);
+      }
+    }
   }
 
   createCase(input: CreateModerationCaseInput): ModerationResult {
@@ -85,10 +111,12 @@ export class ModerationService {
   }
 
   getCase(caseId: string): ModerationCase | undefined {
+    this.expireTimedMutes(new Date());
     return this.cases.get(caseId) ?? this.store?.getModerationCase(caseId);
   }
 
   getCases(communityId: CommunityId): ModerationCase[] {
+    this.expireTimedMutes(new Date());
     return [...this.cases.values()]
       .filter((item) => item.communityId === communityId)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
