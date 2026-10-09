@@ -782,6 +782,49 @@ const server = createServer((req, res) => {
       return;
     }
 
+    const communityRolesMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/roles$/);
+    if (communityRolesMatch && req.method === "GET") {
+      const communityId = decodeURIComponent(communityRolesMatch[1]!);
+      if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) {
+        json(res, 404, { error: "community_not_found" });
+        return;
+      }
+      json(res, 200, { items: database.getCommunityRoles(communityId) });
+      return;
+    }
+
+    const communitySettingsMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/settings$/);
+    if (communitySettingsMatch && ["GET", "PATCH"].includes(req.method ?? "")) {
+      const communityId = decodeURIComponent(communitySettingsMatch[1]!);
+      if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) {
+        json(res, 404, { error: "community_not_found" });
+        return;
+      }
+      if (req.method === "GET") {
+        json(res, 200, { items: database.getCommunitySettings(communityId) });
+        return;
+      }
+      const body = await readJsonBody(req);
+      const allowedKeys = new Set([
+        "access.member_profile_visible",
+        "members.list_visible",
+        "moderation.logging_enabled",
+        "automations.enabled"
+      ]);
+      const entries = Object.entries(body);
+      if (!entries.length || entries.some(([key, value]) =>
+        !allowedKeys.has(key) || !["true", "false"].includes(String(value))
+      )) {
+        json(res, 400, { error: "settings_must_contain_supported_boolean_keys" });
+        return;
+      }
+      for (const [key, value] of entries) {
+        database.setCommunitySetting(communityId, key, String(value));
+      }
+      json(res, 200, { updated: true, items: database.getCommunitySettings(communityId) });
+      return;
+    }
+
     const communityDetailMatch = url.pathname.match(/^\/api\/communities\/([^/]+)$/);
     if (communityDetailMatch && req.method === "GET") {
       const communityId = decodeURIComponent(communityDetailMatch[1]);
