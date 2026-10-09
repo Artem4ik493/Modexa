@@ -144,7 +144,7 @@ export function createRuntimeServices(
     new AuditService(database);
 
   const rankingService =
-    new RankingService();
+    new RankingService(database);
 
   const welcomeService =
     new WelcomeService();
