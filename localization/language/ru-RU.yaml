@@ -9,7 +9,7 @@ command.forbidden: 'У вас недостаточно прав для испо�
 command.permission_denied: 'У вас нет прав для использования этой команды.'
 command.disabled: 'Эта команда отключена администратором сообщества.'
 command.execution_failed: 'Не удалось выполнить команду из-за внутренней ошибки. Код события: {correlationId}'
-command.not_found: 'Команда не найдена. Для просмотра доступных команд для вашей роли {role} используйте /help.'
+command.not_found: 'Команда не найдена. Для просмотра доступных вам команд используйте /commands.'
 command.ping.pong: 'Понг!'
 command.menu.description: 'Показать главное меню'
 menu.title: 'Выберите действие:'
