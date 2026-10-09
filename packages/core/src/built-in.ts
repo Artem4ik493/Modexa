@@ -404,10 +404,13 @@ function handleSettings(
 
   if (context.execution.type === "dm") {
     const requestedLocale = context.args[1]?.toLowerCase();
-    if (context.args[0]?.toLowerCase() === "language" &&
-        (requestedLocale === "ru" || requestedLocale === "en")) {
-      database?.setUserSetting(context.execution.user.id, "locale", requestedLocale);
-      context.execution.locale = requestedLocale;
+    if (context.args[0]?.toLowerCase() === "language") {
+      if (requestedLocale === "ru" || requestedLocale === "en") {
+        database?.setUserSetting(context.execution.user.id, "locale", requestedLocale);
+        context.execution.locale = requestedLocale;
+      } else if (requestedLocale === "auto") {
+        database?.deleteUserSetting(context.execution.user.id, "locale");
+      }
     }
 
     const locale = database?.getUserSetting(context.execution.user.id, "locale");
@@ -434,6 +437,11 @@ function handleSettings(
           id: "settings-language-en",
           label: personalTranslator("settings.personal.language.en"),
           action: { type: "command", command: "/settings", args: ["language", "en"] }
+        },
+        {
+          id: "settings-language-auto",
+          label: personalTranslator("settings.personal.language.auto"),
+          action: { type: "command", command: "/settings", args: ["language", "auto"] }
         },
         createBackButton(personalTranslator),
         createCloseButton(personalTranslator)
