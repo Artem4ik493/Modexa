@@ -151,14 +151,14 @@ export class ExecutionContextService {
   canModerate(
     context: ExecutionContext
   ): boolean {
-    return (
-      context.type ===
-        "community" &&
-      this.hasCapability(
-        context,
-        "moderation"
-      )
-    );
+    return context.type === "community" &&
+      (context.permissions ?? []).some((permission) =>
+        permission === "moderation.warn" ||
+        permission === "moderation.mute" ||
+        permission === "moderation.kick" ||
+        permission === "moderation.ban" ||
+        permission === "moderation.clear"
+      );
   }
 
   canManageCommunity(
