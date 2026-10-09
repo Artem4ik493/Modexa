@@ -142,7 +142,14 @@ export class IdentityService {
   }
 
   getUser(userId: UserId): User | undefined {
-    return this.users.get(userId);
+    const cached = this.users.get(userId);
+    if (cached) return cached;
+
+    const persisted = this.database?.getUser(userId);
+    if (!persisted) return undefined;
+
+    this.users.set(persisted.id, persisted);
+    return persisted;
   }
 
   attachIdentity(
