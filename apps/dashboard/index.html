@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Modexa — Control Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
 <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
 <link rel="apple-touch-icon" href="/assets/logo.png">
 <style>
@@ -188,9 +192,104 @@ main{max-width:1600px;padding:0 32px 40px}
   *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
 }
 
+
+/* Main-site visual system: keep dashboard behavior, match modexa.artem4ik493.ru */
+:root{
+  color-scheme:dark;
+  --bg:#08070d;--panel:#100e18;--panel2:#151220;
+  --line:rgba(231,220,255,.11);--text:#f7f3ff;--muted:#a49bb6;
+  --accent:#a78bfa;--accent2:#e879f9;--ok:#8df5ce;--warn:#ffd08b;--danger:#fb7185;
+  --shadow:0 22px 70px #0005;--sans:Manrope,system-ui,sans-serif;--mono:"DM Mono",monospace;
+  font-family:var(--sans)
+}
+html{scroll-behavior:smooth}
+body{
+  min-height:100vh;font-family:var(--sans);line-height:1.6;letter-spacing:-.015em;
+  background:radial-gradient(ellipse at 12% 8%,#8b5cf625,transparent 32%),radial-gradient(ellipse at 88% 25%,#d946ef12,transparent 28%),radial-gradient(ellipse at 48% 85%,#6366f10d,transparent 34%),var(--bg);
+}
+body:before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(#fff1 1px,transparent 1px),linear-gradient(90deg,#fff1 1px,transparent 1px);background-size:52px 52px;opacity:.11;mask-image:linear-gradient(#000,transparent 78%);animation:mx-grid-drift 34s linear infinite}
+@keyframes mx-grid-drift{to{background-position:52px 52px}}
+button,input,select,textarea{font-family:var(--sans)}
+.app{grid-template-columns:258px minmax(0,1fr)}
+aside{
+  z-index:30;padding:22px 13px 18px;background:rgba(12,10,18,.91);
+  border-right:1px solid var(--line);backdrop-filter:blur(22px);box-shadow:12px 0 50px #0002
+}
+.brand{padding:3px 10px 23px;gap:12px}
+.brand b{font-size:19px;letter-spacing:-.045em;font-weight:800}
+.brand small{font:9px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:#8b819e}
+.logo{width:40px;height:40px;border:1px solid #c4b5fd22;border-radius:13px;background:#a78bfa08;box-shadow:0 0 24px #a78bfa0b}
+.profile{margin:0 4px 18px;padding:13px;border-radius:14px;background:linear-gradient(145deg,#191522,#100e18);border-color:var(--line)}
+.profile-name{font-size:12px;overflow-wrap:anywhere}.profile-sub{font:10px var(--mono);color:#8b819e}
+nav{display:grid;grid-template-columns:1fr;gap:4px}
+.nav-label{padding:14px 10px 5px;color:#756b86;font:9px var(--mono);letter-spacing:.14em;text-transform:uppercase}
+.nav{position:relative;display:flex;align-items:center;gap:10px;min-height:40px;padding:9px 11px;border:1px solid transparent;border-radius:10px;color:#a49bb6;font-size:11px;font-weight:700;transition:background .2s,border-color .2s,color .2s,transform .2s}
+.nav .icon{width:20px;min-width:20px;text-align:center;font-size:15px;color:#887e9a;transition:color .2s}
+.nav:hover{background:#a78bfa0c;border-color:#bba4ff20;color:#fff;transform:translateX(2px)}
+.nav:hover .icon{color:#d2c3ff}
+.nav.active{color:#fff;border-color:#bba4ff35;background:linear-gradient(100deg,#a78bfa1b,#e879f90a);box-shadow:inset 2px 0 0 #bba4ff,0 5px 20px #0002}
+.nav.active .icon{color:#c4b5fd}
+.aside-bottom{font:9px/1.9 var(--mono);color:#746a85;border-color:var(--line)}
+main{max-width:1650px;padding:0 32px 42px}
+.top{position:sticky;top:0;z-index:20;margin:0 -32px 25px;padding:23px 32px 19px;background:linear-gradient(180deg,rgba(8,7,13,.97),rgba(8,7,13,.86));border-bottom:1px solid var(--line);backdrop-filter:blur(22px)}
+.eyebrow{font:10px var(--mono);color:#bba4ff;letter-spacing:.15em}
+.title{font-size:clamp(25px,3vw,32px);font-weight:800;letter-spacing:-.065em;margin:7px 0 4px}
+.subtitle{font-size:12px;color:var(--muted);line-height:1.7}
+.top-actions{gap:9px}
+.select{min-height:41px;min-width:235px;background:#100e18;color:var(--text);border-color:var(--line);border-radius:11px;font-size:11px}
+.btn{min-height:38px;padding:9px 14px;border:1px solid var(--line);background:#ffffff06;border-radius:11px;font-size:11px;font-weight:800;transition:transform .25s cubic-bezier(.2,.8,.2,1),border-color .25s,background .25s,box-shadow .25s}
+.btn:hover{border-color:#bba4ff55;background:#a78bfa12;transform:translateY(-2px)}
+.btn.primary{background:linear-gradient(120deg,#d4c6ff,#a78bfa);color:#160d24;border-color:transparent;box-shadow:0 9px 32px #a78bfa20}
+.btn.primary:hover{box-shadow:0 12px 42px #a78bfa45;filter:brightness(1.04)}
+.btn.danger{background:#28131d;border-color:#633044;color:#ff9aaa}
+.page{animation:mx-page-in .28s cubic-bezier(.2,.8,.2,1) both}
+@keyframes mx-page-in{from{opacity:.35;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.grid,.grid3,.two{gap:15px}
+.card{position:relative;min-width:0;padding:19px;border-radius:17px;background:linear-gradient(145deg,rgba(21,18,32,.96),rgba(13,11,20,.97));border-color:var(--line);box-shadow:0 15px 42px #0002;transition:transform .28s cubic-bezier(.2,.8,.2,1),border-color .28s,box-shadow .28s}
+.card:hover{border-color:#bba4ff38;box-shadow:0 22px 60px #0004,0 0 28px #a78bfa08}
+.metric{overflow:hidden;min-height:136px}
+.metric:after{content:"";position:absolute;right:-32px;top:-48px;width:130px;height:130px;border-radius:50%;background:radial-gradient(circle,#a78bfa20,transparent 68%);pointer-events:none}
+.metric .label{font:10px var(--mono);letter-spacing:.09em;color:#a49bb6}
+.metric .value{font-size:32px;font-weight:800;letter-spacing:-.06em;margin:13px 0 4px}
+.metric .hint{font:10px var(--mono);color:#827891}
+.section{margin-bottom:17px}
+.section h2{font-size:13px;font-weight:800;letter-spacing:-.02em}
+.muted{font-size:11px;color:var(--muted)}
+.pill{padding:5px 9px;font:9px var(--mono);background:#a78bfa0d;border-color:#bba4ff2c;color:#cbbaff}
+.row{gap:13px;padding:13px 0;border-color:var(--line)}
+.name{font-size:12px;transition:color .2s}
+.row:hover .name{color:#d2c3ff}
+.meta{font:10px/1.6 var(--mono);color:#8b819e;overflow-wrap:anywhere}
+.avatar{border:1px solid #bba4ff22;background:linear-gradient(145deg,#201a30,#14111d);border-radius:12px}
+.setting{padding:14px 0;border-color:var(--line);font-size:11px}
+.switch{flex-shrink:0;background:#342b43}.switch.on{background:linear-gradient(120deg,#a78bfa,#e879f9)}
+.table-wrap{border:1px solid var(--line);border-radius:13px}
+.table{font-size:11px}.table th,.table td{border-color:var(--line);padding:12px}
+.table th{font:9px var(--mono);letter-spacing:.1em;color:#8b819e}
+.table tbody tr{transition:background .15s}.table tbody tr:hover{background:#a78bfa08}
+.empty{padding:32px 18px;color:#8b819e;font-size:11px}
+.command{border-color:var(--line);background:#100e18;border-radius:14px;transition:border-color .2s,transform .2s}
+.command:hover{border-color:#bba4ff40;transform:translateY(-2px)}
+.command-name{font-size:12px}.command-desc{font-size:11px;color:var(--muted)}
+.command-cat{font:9px var(--mono);color:#bba4ff;letter-spacing:.12em}
+.input,.textarea,.select2{border-color:var(--line);background:#0c0a12;border-radius:11px;font-size:11px;transition:border-color .2s,box-shadow .2s}
+.input:focus,.textarea:focus,.select2:focus,.select:focus{border-color:#bba4ff75;box-shadow:0 0 0 3px #a78bfa12}
+.toast{border-color:#bba4ff35;background:#151220;border-radius:13px;font-family:var(--sans)}
+.login{background:#08070df2;backdrop-filter:blur(24px)}
+.login-card{border-color:#bba4ff35;border-radius:24px;background:linear-gradient(145deg,#171321,#0d0b14);box-shadow:0 35px 100px #0009}
+.login-card h1{font-size:29px;letter-spacing:-.06em;font-weight:800}
+.login-card p{color:var(--muted)}
+.login-error{font-size:11px}
+#mxProgress{position:fixed;z-index:200;top:0;left:0;width:100%;height:3px;transform:scaleX(0);transform-origin:left;background:linear-gradient(90deg,#a78bfa,#e879f9,#8df5ce);box-shadow:0 0 16px #a78bfa88;pointer-events:none}
+@media(max-width:1100px){main{padding-left:24px;padding-right:24px}.top{margin-left:-24px;margin-right:-24px;padding-left:24px;padding-right:24px}}
+@media(max-width:780px){aside{padding:14px 12px}nav{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.nav{justify-content:flex-start;padding:9px 8px;font-size:10px}.nav-label{grid-column:1/-1;padding-top:10px}main{padding:0 16px 30px}.top{position:relative;margin:0 -16px 20px;padding:20px 16px 17px}.top-actions{margin-top:14px}.profile{margin-bottom:10px}.aside-bottom{display:none}}
+@media(max-width:560px){nav{grid-template-columns:repeat(2,minmax(0,1fr))}.grid,.grid3,.form-grid{grid-template-columns:1fr}.title{font-size:25px}.select{min-width:0;width:100%}.card{padding:16px}.metric{min-height:120px}.top-actions .btn{flex:1}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+
 </style>
 </head>
 <body>
+<div id="mxProgress" aria-hidden="true"></div>
 <div class="login" id="login"><div class="login-card"><div class="logo"><img src="/assets/logo.png" alt="Modexa"></div><h1>Modexa Control Center</h1><p>Управляйте подключёнными сообществами, командами, модерацией, автоматизациями и Runner из одной панели.</p><a class="btn primary" style="width:100%;margin-top:8px;display:block;text-align:center;text-decoration:none" href="/auth/discord">Войти через Discord</a><div style="display:flex;align-items:center;gap:10px;margin:17px 0;color:var(--muted);font-size:11px"><span style="height:1px;background:var(--line);flex:1"></span>или<span style="height:1px;background:var(--line);flex:1"></span></div><input id="apiKey" class="input" type="password" placeholder="MODEXA_API_KEY"><button class="btn" style="width:100%;margin-top:8px" onclick="login()">Войти по API-ключу</button><div class="login-error" id="loginError"></div></div></div>
 <div class="toast" id="toast"></div>
 <div class="app">
@@ -532,6 +631,9 @@ async function deleteAutoModRule(id){if(!confirm('Удалить правило 
 
 async function loadAll(){try{const [h,o,c,r,s]=await Promise.all([get('/health'),get('/api/overview'),get('/api/config'),get('/api/runtime'),get('/api/system')]);document.getElementById('apiDot').textContent='● online';document.getElementById('healthText').textContent=h.status;document.getElementById('mCommunities').textContent=o.communities;document.getElementById('mActive').textContent=o.activeCommunities;document.getElementById('mCases').textContent=o.moderationCases;document.getElementById('mRunner').textContent=r.state==='running'?'ON':'OFF';document.getElementById('runnerText').textContent=r.state;document.getElementById('maintenanceText').textContent=s.maintenanceMode?'ON':'OFF';document.getElementById('oauthText').textContent=c.oauth?.discord?'OK':'OFF';document.getElementById('systemPill').textContent=r.state==='running'?'Online':'Degraded';maintenance=s.maintenanceMode;document.getElementById('maintenanceSwitch').classList.toggle('on',maintenance);let g;try{g=await get('/api/auth/discord/guilds');communities=g.items||[]}catch{const local=await get('/api/communities');communities=local.items||[]}renderCommunitySelect();renderServers();await renderSelected();await loadRuntime();}catch(e){document.getElementById('apiDot').textContent='● offline';showLogin(e.message)}}
 
+const mxProgress=document.getElementById('mxProgress');
+function mxUpdateProgress(){const root=document.documentElement,max=root.scrollHeight-root.clientHeight;mxProgress.style.transform='scaleX('+(max>0?root.scrollTop/max:0)+')'}
+window.addEventListener('scroll',mxUpdateProgress,{passive:true});window.addEventListener('resize',mxUpdateProgress);mxUpdateProgress();
 initAuth().then(ok=>{if(ok)loadAll()});setInterval(()=>{if(authKey||discordUser)loadAll()},30000);
 </script>
 </body>
