@@ -189,19 +189,7 @@ export class ExecutionContextService {
 
   hasCommunityPermission(
     context: ExecutionContext,
-    permission:
-      | "community.view"
-      | "community.manage"
-      | "member.view"
-      | "member.manage"
-      | "moderation.warn"
-      | "moderation.mute"
-      | "moderation.kick"
-      | "moderation.ban"
-      | "moderation.clear"
-      | "bridge.view"
-      | "bridge.manage"
-      | "commands.use"
+    permission: Permission
   ): boolean {
     if (
       context.type !==
