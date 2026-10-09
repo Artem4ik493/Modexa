@@ -663,7 +663,13 @@ export class TelegramAdapter
         if (!field || typeof field !== "object") continue;
         const item = field as Record<string, unknown>;
         if (typeof item.name === "string" && typeof item.value === "string") {
-          parts.push("*" + item.name + "*: " + item.value);
+          // Profile values can contain Telegram Markdown control characters
+          // (for example, usernames with underscores or asterisks).
+          const escapeMarkdown = (value: string) =>
+            value.replace(/([_*\`\[\]])/g, "\\$1");
+          const name = escapeMarkdown(item.name);
+          const value = escapeMarkdown(item.value);
+          parts.push("*" + name + "*: " + value);
         }
       }
     }
