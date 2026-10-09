@@ -25,13 +25,11 @@ describe("listCommandDescriptors", () => {
         descriptor.name === "help"
     );
 
-    expect(help?.aliases).toEqual([
-      "commands"
-    ]);
+    expect(help?.aliases).toEqual([]);
 
     expect(help?.descriptions).toEqual({
-      ru: "Показать список команд",
-      en: "Show available commands"
+      ru: "Открыть базу знаний Modexa",
+      en: "Open the Modexa knowledge base"
     });
 
     expect(
@@ -44,7 +42,8 @@ describe("listCommandDescriptors", () => {
       "account",
       "system",
       "settings",
-      "help"
+      "help",
+      "commands"
     ]);
   });
 
