@@ -1569,6 +1569,28 @@ export class DiscordAdapter
     );
 
     this.client.on(
+      Events.GuildBanRemove,
+      async (ban) => {
+        if (ban.user.bot) return;
+
+        await this.emitEvent({
+          type: "member.unbanned",
+          member: {
+            externalId: ban.user.id,
+            platform: "discord",
+            user: this.toPlatformUser(ban.user),
+            community: {
+              platform: "discord",
+              externalId: ban.guild.id,
+              name: ban.guild.name
+            },
+            createdAt: new Date()
+          }
+        });
+      }
+    );
+
+    this.client.on(
       Events.MessageCreate,
       async (message) => {
         if (message.author.bot) return;
