@@ -23,6 +23,12 @@ import {
   parseTelegramCallbackData
 } from "./interactions.js";
 
+function normalizeTelegramMarkdown(content: string): string {
+  return content
+    .replace(/^#{1,6}\\s+(.+)$/gm, "*$1*")
+    .replace(/\\*\\*(.+?)\\*\\*/g, "*$1*");
+}
+
 function isMessageNotModified(
   error: unknown
 ): boolean {
@@ -134,7 +140,8 @@ export class TelegramAdapter
             : undefined;
 
         const parseMode = this.getParseMode(action.metadata);
-        const content = this.getPanelContent(action.content, action.metadata);
+        const rawContent = this.getPanelContent(action.content, action.metadata);
+        const content = parseMode ? normalizeTelegramMarkdown(rawContent) : rawContent;
 
         if (media?.url && media.type === "animation") {
           const sent = await this.bot.api.sendAnimation(
@@ -240,11 +247,12 @@ export class TelegramAdapter
             action.metadata
           );
 
-        const content =
+        const rawContent =
           this.getPanelContent(
             action.content,
             action.metadata
           );
+        const content = parseMode ? normalizeTelegramMarkdown(rawContent) : rawContent;
 
         try {
           const imageUrl = this.getImageUrl(action.metadata);
