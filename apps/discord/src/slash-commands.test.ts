@@ -170,7 +170,18 @@ describe("buildDiscordSlashCommands", () => {
   });
 
   it("adds localized options to moderation commands", () => {
-    const commands = buildDiscordSlashCommands(fullDescriptors());
+    const descriptors = [
+      ...fullDescriptors(),
+      {
+        name: "mute",
+        aliases: [],
+        descriptions: {
+          ru: "Выдать мут участнику",
+          en: "Mute a member"
+        }
+      }
+    ];
+    const commands = buildDiscordSlashCommands(descriptors);
     const mute = commands.find((command) => command.name === "mute");
     expect(mute?.options?.map((item) => [item.name, item.type, item.required])).toEqual([
       ["user", 6, true],
@@ -199,24 +210,14 @@ describe("buildDiscordSlashCommands", () => {
     ]);
   });
 
-  it("gives an alias the description of its command", () => {
-    const commands =
-      buildDiscordSlashCommands(
-        builtinDescriptors()
-      );
+  it("keeps /commands separate from the /help knowledge base", () => {
+    const commands = buildDiscordSlashCommands(builtinDescriptors());
+    const help = commands.find((command) => command.name === "help");
+    const catalog = commands.find((command) => command.name === "commands");
 
-    const help = commands.find(
-      (command) => command.name === "help"
-    );
-
-    const alias = commands.find(
-      (command) =>
-        command.name === "commands"
-    );
-
-    expect(alias?.description).toBe(
-      help?.description
-    );
+    expect(help?.description).toBe("Открыть базу знаний Modexa");
+    expect(catalog?.description).toBe("Открыть каталог доступных команд");
+    expect(catalog?.description).not.toBe(help?.description);
   });
 
   it("truncates descriptions to 100 characters", () => {
