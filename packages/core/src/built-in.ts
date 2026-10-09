@@ -964,43 +964,144 @@ export function createBuiltinCommands(
       descriptionKey: "command.help.description",
       handler: (context) => {
         const t = createTranslator(context.execution.locale);
+        const available = registry
+          .listAvailable(context.execution.capabilities, context.execution.permissions ?? [])
+          .filter((command) => command.name !== "commands");
+        const categoryDefinitions = [
+          { id: "information", label: t("help.category.information"), icon: "📋", names: ["help", "ping", "account", "link", "system"] },
+          { id: "members", label: t("help.category.members"), icon: "👥", names: ["member", "members", "user", "profile", "role"] },
+          { id: "moderation", label: t("help.category.moderation"), icon: "🛡️", names: ["warn", "warns", "remwarn", "resetwarns", "mute", "unmute", "mutes", "kick", "ban", "unban", "case", "modhistory", "clear"] },
+          { id: "community", label: t("help.category.community"), icon: "🌐", names: ["settings", "bridge-test", "bridgetest"] },
+          { id: "account", label: t("help.category.account"), icon: "🔗", names: ["link", "link-account", "linkaccount", "account"] },
+          { id: "utilities", label: t("help.category.utilities"), icon: "🧰", names: ["commands", "menu"] }
+        ];
         const section = context.args[0]?.toLowerCase() ?? "home";
-        const pages: Record<string, { title: string; body: string; buttons: InteractionButton[] }> = {
-          home: {
-            title: t("help.title"),
-            body: t("help.intro"),
-            buttons: [
-              { id: "help-start", label: t("help.topic.start"), action: { type: "command", command: "/help", args: ["start"] } },
-              { id: "help-account", label: t("help.topic.account"), action: { type: "command", command: "/help", args: ["account"] } },
-              { id: "help-community", label: t("help.topic.community"), action: { type: "command", command: "/help", args: ["community"] } },
-              { id: "help-moderation", label: t("help.topic.moderation"), action: { type: "command", command: "/help", args: ["moderation"] } },
-              { id: "help-bridge", label: t("help.topic.bridge"), action: { type: "command", command: "/help", args: ["bridge"] } },
-              { id: "help-settings", label: t("help.topic.settings"), action: { type: "command", command: "/help", args: ["settings"] } },
-              { id: "help-commands", label: t("help.open_wiki"), action: { type: "command", command: "/commands" } },
-              { id: "help-menu", label: t("menu.title"), action: { type: "command", command: "/menu" } }
-            ]
-          },
-          start: { title: t("help.topic.start"), body: t("help.page.start"), buttons: [] },
-          account: { title: t("help.topic.account"), body: t("help.page.account"), buttons: [] },
-          community: { title: t("help.topic.community"), body: t("help.page.community"), buttons: [] },
-          moderation: { title: t("help.topic.moderation"), body: t("help.page.moderation"), buttons: [] },
-          bridge: { title: t("help.topic.bridge"), body: t("help.page.bridge"), buttons: [] },
-          settings: { title: t("help.topic.settings"), body: t("help.page.settings"), buttons: [] }
+        const commandName = context.args[1]?.toLowerCase();
+        const pageArg = Number.parseInt(context.args[2] ?? "1", 10);
+        const pageSize = 5;
+        const commandDetails: Record<string, { usage: string; examples: string[]; notes?: string }> = {
+          help: { usage: "/help [категория или команда]", examples: ["/help", "/help moderation", "/help member"] },
+          commands: { usage: "/commands", examples: ["/commands"] },
+          ping: { usage: "/ping", examples: ["/ping"] },
+          menu: { usage: "/menu", examples: ["/menu"] },
+          account: { usage: "/account", examples: ["/account"], notes: t("help.dm_note") },
+          link: { usage: "/link [код]", examples: ["/link", "/link 123456"], notes: t("help.dm_note") },
+          settings: { usage: "/settings [раздел]", examples: ["/settings", "/settings general", "/settings bridges"] },
+          member: { usage: "/member [участник]", examples: ["/member", "/member @username"] },
+          members: { usage: "/members [страница]", examples: ["/members", "/members 2"] },
+          role: { usage: "/role <участник> [роль]", examples: ["/role @username", "/role @username MEMBER"] },
+          "bridge-test": { usage: "/bridge-test", examples: ["/bridge-test"] },
+          bridgetest: { usage: "/bridgetest", examples: ["/bridgetest"] },
+          system: { usage: "/system [settings|maintenance]", examples: ["/system", "/system settings", "/system maintenance on"] },
+          clear: { usage: "/clear <количество>", examples: ["/clear 10"] },
+          mute: { usage: "/mute <участник> <срок> [причина]", examples: ["/mute @username 10m Спам", "/mute @username 2h"] },
+          warn: { usage: "/warn <участник> [причина]", examples: ["/warn @username Флуд"] },
+          kick: { usage: "/kick <участник> [причина]", examples: ["/kick @username Нарушение правил"] },
+          ban: { usage: "/ban <участник> [причина]", examples: ["/ban @username Спам"] }
         };
-        const page = pages[section] ?? pages.home!;
-        const buttons: InteractionButton[] = [...page.buttons];
-        if (section !== "home") {
+        const commandLabel = (name: string) => `/${name}`;
+        const commandDescription = (name: string) => {
+          const command = available.find((item) => item.name === name);
+          return command?.descriptionKey ? t(command.descriptionKey) : command?.description ?? t("help.no_description");
+        };
+        const categoryCommands = (id: string) => {
+          const category = categoryDefinitions.find((item) => item.id === id);
+          if (!category) return [];
+          const names = new Set(category.names);
+          return available.filter((command) => names.has(command.name));
+        };
+        const backToHome: InteractionButton = {
+          id: "help-home",
+          label: t("help.all_categories"),
+          action: { type: "command", command: "/help" }
+        };
+        const buttons: InteractionButton[] = [];
+        let content = "";
+        if (section === "category") {
+          const categoryId = commandName ?? "";
+          const category = categoryDefinitions.find((item) => item.id === categoryId);
+          if (!category) {
+            return { content: t("help.category_missing"), buttons: [backToHome, createCloseButton(t)] };
+          }
+          const commands = categoryCommands(categoryId);
+          const totalPages = Math.max(1, Math.ceil(commands.length / pageSize));
+          const page = Number.isFinite(pageArg) ? Math.min(Math.max(pageArg, 1), totalPages) : 1;
+          const pageCommands = commands.slice((page - 1) * pageSize, page * pageSize);
+          content = `## ${t("help.category_heading", { category: category.label })} ${category.icon}\n\n${t("help.intro")}`;
+          buttons.push(backToHome);
+          for (const command of pageCommands) {
+            buttons.push({
+              id: `help-command-${command.name}`,
+              label: `/${command.name}`,
+              action: { type: "command", command: "/help", args: ["command", command.name] }
+            });
+          }
+          if (totalPages > 1) {
+            buttons.push({
+              id: "help-first",
+              label: "⏮",
+              action: { type: "command", command: "/help", args: ["category", categoryId, "1"] },
+              disabled: page === 1
+            });
+            buttons.push({
+              id: "help-prev",
+              label: "◀",
+              action: { type: "command", command: "/help", args: ["category", categoryId, String(Math.max(1, page - 1))] },
+              disabled: page === 1
+            });
+            buttons.push({
+              id: "help-next",
+              label: "▶",
+              action: { type: "command", command: "/help", args: ["category", categoryId, String(Math.min(totalPages, page + 1))] },
+              disabled: page === totalPages
+            });
+            buttons.push({
+              id: "help-last",
+              label: "⏭",
+              action: { type: "command", command: "/help", args: ["category", categoryId, String(totalPages)] },
+              disabled: page === totalPages
+            });
+          }
+          content += `\n\n${pageCommands.map((command) => `**/${command.name}**\n${command.descriptionKey ? t(command.descriptionKey) : command.description ?? t("help.no_description")}`).join("\n\n")}\n\n${t("help.page", { page: String(page), total: String(totalPages), count: String(commands.length) })}`;
+        } else if (section === "command") {
+          const name = commandName ?? "";
+          const command = available.find((item) => item.name === name || item.aliases?.includes(name));
+          if (!command) {
+            return { content: t("help.command_missing"), buttons: [backToHome, createCloseButton(t)] };
+          }
+          const detail = commandDetails[command.name] ?? commandDetails[name];
+          const category = categoryDefinitions.find((item) => item.names.includes(command.name));
+          const description = command.descriptionKey ? t(command.descriptionKey) : command.description ?? t("help.no_description");
+          const usage = detail?.usage ?? `/${command.name} [аргументы]`;
+          const examples = detail?.examples ?? [`/${command.name}`];
+          content = `## ${t("help.command_title", { command: commandLabel(command.name) })\n\n**${description}**\n\n${t("help.command_description")}\n\n### ${t("help.usage")}\n\n\`\`\`${usage}\`\`\`\n\n### ${t("help.examples")}\n\n${examples.map((example, index) => `**${t("help.example", { number: String(index + 1) })}**\n\`\`\`${example}\`\`\``).join("\n\n")}${detail?.notes ? `\n\n${detail.notes}` : ""}`;
+          buttons.push(backToHome);
+          if (category) {
+            buttons.push({
+              id: "help-category",
+              label: category.label,
+              action: { type: "command", command: "/help", args: ["category", category.id] }
+            });
+          }
+        } else {
+          content = `# ${t("help.title")}\n\n${t("help.intro")}\n\n${t("help.select_category")}`;
+          for (const category of categoryDefinitions) {
+            const count = categoryCommands(category.id).length;
+            if (count === 0) continue;
+            buttons.push({
+              id: `help-category-${category.id}`,
+              label: `${category.icon} ${category.label} · ${count}`,
+              action: { type: "command", command: "/help", args: ["category", category.id] }
+            });
+          }
           buttons.push({
-            id: "help-home",
-            label: t("help.home"),
-            action: { type: "command", command: "/help" }
+            id: "help-open-commands",
+            label: t("help.open_commands"),
+            action: { type: "command", command: "/commands" }
           });
         }
         buttons.push(createCloseButton(t));
-        return {
-          content: `📚 ${page.title}\n\n${page.body}`,
-          buttons
-        };
+        return { content, format: "markdown", buttons };
       }
     },
     {
