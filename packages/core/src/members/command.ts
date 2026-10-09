@@ -149,7 +149,11 @@ function renderMemberDetails(
   database?: ModexaDatabase
 ): CommandResponse {
   const t = createTranslator(context.execution.locale);
-  if (database?.getUserSetting(user.id, "profile.visible") === "false") {
+  if (
+    database?.getUserSetting(user.id, "profile.visible") === "false" ||
+    (database?.getCommunitySetting(context.community!.id, "access.member_profile_visible") === "false" &&
+      !context.execution.capabilities.includes("community.manage"))
+  ) {
     return { content: t("member.private_profile") };
   }
 
@@ -544,7 +548,9 @@ export function createMembersCommand(
           .filter(
             (membership) =>
               membership.status !== "left" &&
-              database?.getUserSetting(membership.userId, "profile.visible") !== "false"
+              database?.getUserSetting(membership.userId, "profile.visible") !== "false" &&
+              (database?.getCommunitySetting(context.community!.id, "access.member_profile_visible") !== "false" ||
+                context.execution.capabilities.includes("community.manage"))
           )
           .map((membership) => {
             const user =
