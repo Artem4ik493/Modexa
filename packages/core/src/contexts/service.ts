@@ -30,19 +30,6 @@ const DM_CAPABILITIES:
     "billing"
   ];
 
-const COMMUNITY_CAPABILITIES:
-  ExecutionCapability[] = [
-    "commands",
-    "community.view",
-    "community.manage",
-    "member.view",
-    "member.manage",
-    "moderation",
-    "bridge",
-    "automations",
-    "billing"
-  ];
-
 const COMMUNITY_CAPABILITY_PERMISSIONS:
   Array<
     readonly [
