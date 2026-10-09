@@ -423,9 +423,11 @@ function handleSettings(
       content: [
         personalTranslator("settings.personal.title"),
         personalTranslator("settings.personal.language"),
-        personalTranslator(currentLocale === "en"
+        personalTranslator(locale === "en"
           ? "settings.personal.language.en_selected"
-          : "settings.personal.language.ru_selected")
+          : locale === "ru"
+            ? "settings.personal.language.ru_selected"
+            : "settings.personal.language.auto_selected")
       ].join("\n"),
       buttons: [
         {
