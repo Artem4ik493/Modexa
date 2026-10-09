@@ -52,7 +52,8 @@ async function resolveTarget(
     identities.findUserByUsername(
       name,
       context.platform
-    );
+    ) ??
+    identities.getUser(name);
 
   if (direct) return direct;
 
