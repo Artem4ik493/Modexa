@@ -778,6 +778,79 @@ const server = createServer((req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/billing/plans" && req.method === "GET") {
+      json(res, 200, { items: runtimeServices.billingService.getPlans() }); return;
+    }
+
+    if (url.pathname === "/api/billing/subscriptions" && ["GET", "POST"].includes(req.method ?? "")) {
+      if (req.method === "GET") {
+        const communityId = url.searchParams.get("communityId");
+        if (communityId) {
+          if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) { json(res, 404, { error: "community_not_found" }); return; }
+          json(res, 200, { item: runtimeServices.billingService.getCommunitySubscription(communityId as never) ?? null }); return;
+        }
+        const state = database.getRuntimeState<{ subscriptions?: unknown[] }>("billing");
+        json(res, 200, { items: state?.subscriptions ?? [] }); return;
+      }
+      const body = await readJsonBody(req);
+      const communityId = typeof body.communityId === "string" ? body.communityId : "";
+      const planId = typeof body.planId === "string" ? body.planId : "";
+      if (!communityId || !planId || !database.getCommunitiesSnapshot().some((item) => item.id === communityId)) {
+        json(res, 400, { error: "communityId_and_planId_required" }); return;
+      }
+      try {
+        const expiresAt = typeof body.expiresAt === "string" ? new Date(body.expiresAt) : undefined;
+        if (expiresAt && !Number.isFinite(expiresAt.getTime())) { json(res, 400, { error: "invalid_expiresAt" }); return; }
+        const item = runtimeServices.billingService.createSubscription({
+          communityId: communityId as never,
+          planId,
+          ...(expiresAt ? { expiresAt } : {})
+        });
+        json(res, 201, { item }); return;
+      } catch (error) {
+        json(res, 409, { error: error instanceof Error ? error.message : "subscription_create_failed" }); return;
+      }
+    }
+
+    const subscriptionMatch = url.pathname.match(/^\/api\/billing\/subscriptions\/([^/]+)$/);
+    if (subscriptionMatch && ["PATCH", "DELETE"].includes(req.method ?? "")) {
+      const id = decodeURIComponent(subscriptionMatch[1]!);
+      try {
+        if (req.method === "DELETE") {
+          json(res, 200, { item: runtimeServices.billingService.cancelSubscription(id as never) }); return;
+        }
+        const body = await readJsonBody(req);
+        if (typeof body.planId === "string") {
+          json(res, 200, { item: runtimeServices.billingService.changePlan(id as never, body.planId) }); return;
+        }
+        json(res, 400, { error: "planId_required" }); return;
+      } catch (error) {
+        json(res, 404, { error: error instanceof Error ? error.message : "subscription_update_failed" }); return;
+      }
+    }
+
+    const subscriptionOverrideMatch = url.pathname.match(/^\/api\/billing\/subscriptions\/([^/]+)\/features\/([^/]+)$/);
+    if (subscriptionOverrideMatch && ["PUT", "DELETE"].includes(req.method ?? "")) {
+      const subscriptionId = decodeURIComponent(subscriptionOverrideMatch[1]!);
+      const feature = decodeURIComponent(subscriptionOverrideMatch[2]!);
+      const allowedFeatures = new Set(["basic_commands", "basic_moderation", "advanced_moderation", "automod", "bridge", "automations", "analytics", "backup"]);
+      if (!allowedFeatures.has(feature)) { json(res, 400, { error: "unknown_feature" }); return; }
+      if (req.method === "DELETE") {
+        runtimeServices.billingService.clearFeatureOverride(subscriptionId as never, feature as never);
+        json(res, 200, { cleared: true, subscriptionId, feature }); return;
+      }
+      const body = await readJsonBody(req);
+      if (typeof body.enabled !== "boolean" || (body.limit !== undefined && (!Number.isInteger(body.limit) || Number(body.limit) < 0))) {
+        json(res, 400, { error: "invalid_feature_override" }); return;
+      }
+      try {
+        const item = runtimeServices.billingService.setFeatureOverride({ subscriptionId: subscriptionId as never, feature: feature as never, enabled: body.enabled, ...(typeof body.limit === "number" ? { limit: body.limit } : {}) });
+        json(res, 200, { item }); return;
+      } catch (error) {
+        json(res, 404, { error: error instanceof Error ? error.message : "feature_override_failed" }); return;
+      }
+    }
+
     if (url.pathname === "/api/billing" && req.method === "GET") {
       json(res, 200, database.getRuntimeState("billing") ?? {
         subscriptions: [],
