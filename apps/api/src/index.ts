@@ -274,14 +274,16 @@ async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknow
     if (Buffer.byteLength(body) > 1_048_576) throw new Error("request_body_too_large");
   }
   if (!body.trim()) return {};
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(body);
-    return parsed && typeof parsed === "object"
-      ? parsed as Record<string, unknown>
-      : {};
+    parsed = JSON.parse(body);
   } catch {
-    return {};
+    throw new Error("invalid_json");
   }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("json_object_required");
+  }
+  return parsed as Record<string, unknown>;
 }
 
 function isAutomationTrigger(value: unknown): boolean {
@@ -1765,7 +1767,16 @@ const server = createServer((req, res) => {
 
     json(res, 404, { error: "not_found" });
   })().catch((error) => {
-    json(res, 500, { error: error instanceof Error ? error.message : "internal_error" });
+    const message = error instanceof Error ? error.message : "internal_error";
+    if (message === "request_body_too_large") {
+      json(res, 413, { error: message });
+      return;
+    }
+    if (message === "invalid_json" || message === "json_object_required") {
+      json(res, 400, { error: message });
+      return;
+    }
+    json(res, 500, { error: "internal_error" });
   });
 });
 
