@@ -250,14 +250,23 @@ export class DiscordAdapter
             ? action.metadata.targetDisplayName
             : target.globalName ?? target.username;
         const reason = action.reason?.trim() || "Причина не указана.";
+        const botMember = guild.members.me;
         const channel = guild.systemChannel;
-        if (channel && channel.permissionsFor(guild.members.me ?? guild.roles.everyone)?.has(PermissionsBitField.Flags.SendMessages)) {
+
+        if (
+          channel &&
+          botMember &&
+          channel.permissionsFor(botMember)?.has(PermissionsBitField.Flags.SendMessages)
+        ) {
           await channel.send(`⚠️ ${targetName} получил предупреждение. Причина: ${reason}`);
         }
-        await target.send(`⚠️ Вы получили предупреждение на сервере **${guild.name}**. Причина: ${reason}`).catch(() => undefined);
+
+        // Keep notification best-effort: a member may block bot DMs.
+        await target.send(
+          `⚠️ Вы получили предупреждение на сервере **${guild.name}**. Причина: ${reason}`
+        ).catch(() => undefined);
         return;
       }
-
       case "member.mute": {
         const guild = await this.client.guilds.fetch(action.communityExternalId);
         const member = await guild.members.fetch(action.userExternalId);
