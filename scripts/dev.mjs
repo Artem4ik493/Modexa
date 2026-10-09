@@ -1,5 +1,16 @@
 import { spawn } from "node:child_process";
 import { request } from "node:http";
+import { readFileSync } from "node:fs";
+
+function envValue(name) {
+  if (process.env[name]) return process.env[name];
+  try {
+    const line = readFileSync(".env", "utf8").split(/\r?\n/).find((item) => item.trim().startsWith(`${name}=`));
+    return line?.slice(line.indexOf("=") + 1).trim().replace(/^(['"])(.*)\\1$/, "$2");
+  } catch {
+    return undefined;
+  }
+}
 
 const processes = [];
 
@@ -33,8 +44,8 @@ function stopRunnerThroughApi() {
       timeout: 9000,
       headers: {
         "content-type": "application/json",
-        ...(process.env.MODEXA_API_KEY
-          ? { authorization: `Bearer ${process.env.MODEXA_API_KEY}` }
+        ...(envValue("MODEXA_API_KEY")
+          ? { authorization: `Bearer ${envValue("MODEXA_API_KEY")}` }
           : {})
       }
     }, (res) => {
