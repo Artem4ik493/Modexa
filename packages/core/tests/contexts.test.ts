@@ -104,13 +104,15 @@ describe(
           context,
           "moderation"
         )
-      ).toBe(true);
+      ).toBe(false);
 
       expect(
         service.canModerate(
           context
         )
-      ).toBe(true);
+      ).toBe(false);
+
+      expect(context.permissions).toEqual([]);
     });
 
     it("does not expose community capabilities in DM", () => {
