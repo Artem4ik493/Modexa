@@ -455,28 +455,52 @@ const server = createServer((req, res) => {
     if (url.pathname === "/api/openapi.json" && req.method === "GET") {
       json(res, 200, {
         openapi: "3.1.0",
-        info: { title: "Modexa API", version: "1.0.0", description: "API for Modexa communities, settings, moderation, automations and integrations." },
+        info: { title: "Modexa API", version: "1.0.0", description: "Modexa communities, settings, moderation and integrations API." },
         servers: [{ url: dashboardUrl }],
         security: [{ bearerAuth: [] }],
         components: { securitySchemes: { bearerAuth: { type: "http", scheme: "bearer" } } },
         paths: {
           "/health": { get: { security: [], summary: "Health check", responses: { "200": { description: "Healthy" } } } },
           "/api/config": { get: { security: [], summary: "Public dashboard configuration", responses: { "200": { description: "Configuration" } } } },
-          "/api/auth": { post: { security: [], summary: "Authenticate with API key", responses: { "200": { description: "Authenticated" }, "401": { description: "Invalid credentials" } } }, delete: { summary: "Clear API-key session", responses: { "204": { description: "Session cleared" } } } },
+          "/api/auth": {
+            post: { security: [], summary: "Authenticate with API key", responses: { "200": { description: "Authenticated" }, "401": { description: "Invalid credentials" } } },
+            delete: { summary: "Clear API-key session", responses: { "204": { description: "Session cleared" } } }
+          },
           "/api/communities": { get: { summary: "List communities", responses: { "200": { description: "Community list" } } } },
           "/api/communities/{id}": { get: { summary: "Get community", parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }], responses: { "200": { description: "Community details" }, "404": { description: "Not found" } } } },
           "/api/communities/{id}/members": { get: { summary: "List community members", parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }, { name: "page", in: "query", schema: { type: "integer", minimum: 1 } }, { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 100 } }, { name: "q", in: "query", schema: { type: "string" } }], responses: { "200": { description: "Paginated members" } } } },
-          "/api/communities/{id}/roles": { get: { summary: "List roles", responses: { "200": { description: "Role list" } } }, post: { summary: "Create role", responses: { "201": { description: "Role created" } } } },
-          "/api/communities/{id}/settings": { get: { summary: "Get community settings", responses: { "200": { description: "Settings" } } }, patch: { summary: "Update community settings", responses: { "200": { description: "Settings updated" } } } },
-          "/api/communities/{id}/ranking": { get: { summary: "Get ranking settings", responses: { "200": { description: "Ranking settings" } } }, put: { summary: "Replace ranking settings", responses: { "200": { description: "Settings updated" } } } },
-          "/api/communities/{id}/welcome": { get: { summary: "Get welcome settings", responses: { "200": { description: "Welcome settings" } } }, put: { summary: "Replace welcome settings", responses: { "200": { description: "Settings updated" } } } },
-          "/api/custom-commands": { get: { summary: "List custom commands", responses: { "200": { description: "Command list" } } }, post: { summary: "Create custom command", responses: { "201": { description: "Command created" } } } },
-          "/api/automations": { get: { summary: "List automations", responses: { "200": { description: "Automation list" } } }, post: { summary: "Create automation", responses: { "201": { description: "Automation created" } } } },
-          "/api/bridge": { get: { summary: "List bridge endpoints and links", responses: { "200": { description: "Bridge configuration" } } },
-          "/api/moderation": { get: { summary: "List moderation cases", responses: { "200": { description: "Moderation cases" } } },
-          "/api/audit": { get: { summary: "List audit events", responses: { "200": { description: "Audit events" } } },
-          "/api/analytics": { get: { summary: "Community analytics", responses: { "200": { description: "Analytics summary" } } },
-          "/api/runtime": { get: { summary: "Runner status", responses: { "200": { description: "Runner status" } }, post: { summary: "Control runner", responses: { "200": { description: "Runner state" } } }
+          "/api/communities/{id}/roles": {
+            get: { summary: "List roles", responses: { "200": { description: "Role list" } } },
+            post: { summary: "Create role", responses: { "201": { description: "Role created" } }
+          },
+          "/api/communities/{id}/settings": {
+            get: { summary: "Get community settings", responses: { "200": { description: "Settings" } } },
+            patch: { summary: "Update community settings", responses: { "200": { description: "Settings updated" } } }
+          },
+          "/api/communities/{id}/ranking": {
+            get: { summary: "Get ranking settings", responses: { "200": { description: "Ranking settings" } } },
+            put: { summary: "Update ranking settings", responses: { "200": { description: "Settings updated" } } }
+          },
+          "/api/communities/{id}/welcome": {
+            get: { summary: "Get welcome settings", responses: { "200": { description: "Welcome settings" } } },
+            put: { summary: "Update welcome settings", responses: { "200": { description: "Settings updated" } } }
+          },
+          "/api/custom-commands": {
+            get: { summary: "List custom commands", responses: { "200": { description: "Command list" } } },
+            post: { summary: "Create custom command", responses: { "201": { description: "Command created" } }
+          },
+          "/api/automations": {
+            get: { summary: "List automations", responses: { "200": { description: "Automation list" } } },
+            post: { summary: "Create automation", responses: { "201": { description: "Automation created" } }
+          },
+          "/api/bridge": { get: { summary: "List bridge endpoints and links", responses: { "200": { description: "Bridge configuration" } } } },
+          "/api/moderation": { get: { summary: "List moderation cases", responses: { "200": { description: "Moderation cases" } } } },
+          "/api/audit": { get: { summary: "List audit events", responses: { "200": { description: "Audit events" } } } },
+          "/api/analytics": { get: { summary: "Community analytics", responses: { "200": { description: "Analytics summary" } } } },
+          "/api/runtime": {
+            get: { summary: "Runner status", responses: { "200": { description: "Runner status" } } },
+            post: { summary: "Control runner", responses: { "200": { description: "Runner state" } } }
+          }
         }
       });
       return;
