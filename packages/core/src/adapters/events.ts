@@ -11,6 +11,7 @@ export type AdapterEventType =
   | "member.joined"
   | "member.left"
   | "member.banned"
+  | "member.unbanned"
   | "interaction.created"
   | "command.invoked";
 
@@ -175,6 +176,12 @@ export interface AdapterMemberBannedEvent {
   member: AdapterMemberEvent;
 }
 
+export interface AdapterMemberUnbannedEvent {
+  type: "member.unbanned";
+
+  member: AdapterMemberEvent;
+}
+
 export interface AdapterInteractionCreatedEvent {
   type: "interaction.created";
 
@@ -194,5 +201,6 @@ export type AdapterEvent =
   | AdapterMemberJoinedEvent
   | AdapterMemberLeftEvent
   | AdapterMemberBannedEvent
+  | AdapterMemberUnbannedEvent
   | AdapterInteractionCreatedEvent
   | AdapterCommandInvokedEvent;
