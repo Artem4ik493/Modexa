@@ -1178,16 +1178,22 @@ const server = createServer((req, res) => {
           !/^[a-zA-Z0-9_-]{1,32}$/.test(name) || !Array.isArray(body.actions) || body.actions.length < 1 || body.actions.length > 20) {
         json(res, 400, { error: "invalid_custom_command" }); return;
       }
-      const aliases = body.aliases === undefined ? [] : body.aliases;
-      const access = body.access === undefined ? { roleIds: [], channelIds: [], cooldownSeconds: 0 } : body.access;
-      const validAction = (action: any) => action && typeof action === "object" && (
-        (action.type === "message" && typeof action.content === "string" && action.content.length <= 4000) ||
-        (action.type === "alias" && typeof action.command === "string") ||
-        ((action.type === "role.add" || action.type === "role.remove") && typeof action.roleId === "string")
-      );
+      const aliases: unknown = body.aliases === undefined ? [] : body.aliases;
+      const accessValue: unknown = body.access === undefined ? { roleIds: [], channelIds: [], cooldownSeconds: 0 } : body.access;
+      const validAction = (value: unknown): boolean => {
+        if (!value || typeof value !== "object") return false;
+        const action = value as Record<string, unknown>;
+        return (action.type === "message" && typeof action.content === "string" && action.content.length <= 4000) ||
+          (action.type === "alias" && typeof action.command === "string" && action.command.length <= 64) ||
+          ((action.type === "role.add" || action.type === "role.remove") && typeof action.roleId === "string");
+      };
       if (!Array.isArray(aliases) || !aliases.every((v) => typeof v === "string" && /^[a-zA-Z0-9_-]{1,32}$/.test(v)) ||
-          !access || typeof access !== "object" || !Array.isArray(access.roleIds) || !Array.isArray(access.channelIds) ||
-          !Number.isInteger(access.cooldownSeconds) || access.cooldownSeconds < 0 ||
+          !accessValue || typeof accessValue !== "object") {
+        json(res, 400, { error: "invalid_custom_command_definition" }); return;
+      }
+      const access = accessValue as Record<string, unknown>;
+      if (!Array.isArray(access.roleIds) || !Array.isArray(access.channelIds) ||
+          !Number.isInteger(access.cooldownSeconds) || Number(access.cooldownSeconds) < 0 || Number(access.cooldownSeconds) > 86400 ||
           !access.roleIds.every((v: unknown) => typeof v === "string") || !access.channelIds.every((v: unknown) => typeof v === "string") ||
           !body.actions.every(validAction)) {
         json(res, 400, { error: "invalid_custom_command_definition" }); return;
@@ -1196,7 +1202,7 @@ const server = createServer((req, res) => {
       if (all.some((item) => item.communityId === targetCommunityId && String(item.name).toLowerCase() === name.toLowerCase())) {
         json(res, 409, { error: "custom_command_name_exists" }); return;
       }
-      const item = { id: `custom-${randomUUID()}`, communityId: targetCommunityId, name, description: typeof body.description === "string" ? body.description.slice(0, 300) : undefined, group: typeof body.group === "string" ? body.group.slice(0, 80) : undefined, enabled: body.enabled !== false, aliases, access, actions: body.actions, updatedAt: new Date().toISOString(), updatedBy: typeof body.updatedBy === "string" ? body.updatedBy : undefined };
+      const item = { id: `custom-${randomUUID()}`, communityId: targetCommunityId, name, description: typeof body.description === "string" ? body.description.slice(0, 300) : undefined, group: typeof body.group === "string" ? body.group.slice(0, 80) : undefined, enabled: body.enabled !== false, aliases: aliases as string[], access: access as { roleIds: string[]; channelIds: string[]; cooldownSeconds: number }, actions: body.actions, updatedAt: new Date().toISOString(), updatedBy: typeof body.updatedBy === "string" ? body.updatedBy : undefined };
       database.setRuntimeState("api.custom_commands", [...all, item]);
       runtimeServices.customCommandService.upsert(item as never);
       json(res, 201, { item }); return;
