@@ -551,6 +551,64 @@ async function handleMemberBanned(
   });
 }
 
+async function handleMemberUnbanned(
+  deps: PlatformEventHandlerDeps,
+  member: AdapterMemberEvent
+): Promise<void> {
+  deps.logger.debug("member.lifecycle.received", {
+    platform: deps.platform,
+    adapterId: deps.responder.id,
+    event: "unbanned",
+    userExternalId: member.user.externalId,
+    communityExternalId: member.community.externalId,
+    occurredAt: member.createdAt.toISOString()
+  });
+
+  const executionContext = buildExecutionContext(deps, {
+    correlationId: `${deps.platform}-member-unbanned-${member.externalId}`,
+    author: member.user,
+    community: member.community
+  });
+  const community = executionContext.community;
+  const user = executionContext.user;
+
+  if (!community || !deps.membershipService) {
+    deps.logger.warn("member.lifecycle.sync_skipped", {
+      platform: deps.platform,
+      event: "unbanned",
+      userId: user.id,
+      communityExternalId: member.community.externalId,
+      reason: !community ? "community_resolution_failed" : "membership_service_missing"
+    });
+    return;
+  }
+
+  const membership = deps.membershipService.findMembership(user.id, community.id);
+  const previousStatus = membership?.status ?? "missing";
+  if (membership && (membership.status === "banned" || membership.status === "active")) {
+    deps.membershipService.leave(membership.id, member.createdAt);
+  }
+
+  const current = deps.membershipService.findMembership(user.id, community.id);
+  deps.logger.info("member.lifecycle.synced", {
+    platform: deps.platform,
+    event: "unbanned",
+    userId: user.id,
+    userExternalId: member.user.externalId,
+    communityId: community.id,
+    communityExternalId: member.community.externalId,
+    previousStatus,
+    status: current?.status ?? "missing",
+    note: "unban_does_not_imply_membership"
+  });
+
+  deps.auditService?.record({
+    communityId: community.id,
+    action: "member.unban",
+    actorUserId: user.id
+  });
+}
+
 function rememberMessageAuthor(
   deps: PlatformEventHandlerDeps,
   message: AdapterMessage,
