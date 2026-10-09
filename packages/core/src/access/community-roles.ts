@@ -21,6 +21,7 @@ export function createBuiltinCommunityRoles(
         "community.manage",
         "member.view",
         "member.manage",
+        "moderation.view",
         "moderation.warn",
         "moderation.mute",
         "moderation.kick",
@@ -41,6 +42,7 @@ export function createBuiltinCommunityRoles(
         "community.manage",
         "member.view",
         "member.manage",
+        "moderation.view",
         "moderation.warn",
         "moderation.mute",
         "moderation.kick",
@@ -59,6 +61,7 @@ export function createBuiltinCommunityRoles(
       permissions: [
         "community.view",
         "member.view",
+        "moderation.view",
         "moderation.warn",
         "moderation.mute",
         "moderation.kick",
