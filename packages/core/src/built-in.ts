@@ -403,114 +403,125 @@ function handleSettings(
   const t = createTranslator(context.execution.locale);
 
   if (context.execution.type === "dm") {
-    const requestedLocale = context.args[1]?.toLowerCase();
-    if (context.args[0]?.toLowerCase() === "language") {
-      if (requestedLocale === "ru" || requestedLocale === "en") {
-        database?.setUserSetting(context.execution.user.id, "locale", requestedLocale);
-        context.execution.locale = requestedLocale;
-      } else if (requestedLocale === "auto") {
-        database?.deleteUserSetting(context.execution.user.id, "locale");
+    const category = context.args[0]?.toLowerCase() ?? "";
+    const action = context.args[1]?.toLowerCase() ?? "";
+    const userId = context.execution.user.id;
+
+    if (category === "language") {
+      if (action === "ru" || action === "en") {
+        database?.setUserSetting(userId, "locale", action);
+        context.execution.locale = action;
+      } else if (action === "auto") {
+        database?.deleteUserSetting(userId, "locale");
       }
+      return createPersonalAccountSettingsResponse(context, database);
     }
+    if (category === "notifications" && action === "toggle") {
+      const enabled = database?.getUserSetting(userId, "notifications.enabled") !== "false";
+      database?.setUserSetting(userId, "notifications.enabled", String(!enabled));
+      return createPersonalSettingsCategoryResponse(context, database, "notifications");
+    }
+    if (category === "privacy" && action === "toggle") {
+      const visible = database?.getUserSetting(userId, "profile.visible") !== "false";
+      database?.setUserSetting(userId, "profile.visible", String(!visible));
+      return createPersonalSettingsCategoryResponse(context, database, "privacy");
+    }
+    if (category === "account") return createPersonalAccountSettingsResponse(context, database);
+    if (category === "notifications" || category === "privacy") return createPersonalSettingsCategoryResponse(context, database, category);
 
-    const locale = database?.getUserSetting(context.execution.user.id, "locale");
-    const currentLocale = locale === "en" || locale === "ru"
-      ? locale
-      : context.execution.locale === "en" ? "en" : "ru";
-    const personalTranslator = createTranslator(currentLocale);
-
+    const savedLocale = database?.getUserSetting(userId, "locale");
+    const personalTranslator = createTranslator(savedLocale === "en" || savedLocale === "ru" ? savedLocale : context.execution.locale === "en" ? "en" : "ru");
     return {
-      content: [
-        personalTranslator("settings.personal.title"),
-        personalTranslator("settings.personal.language"),
-        personalTranslator(locale === "en"
-          ? "settings.personal.language.en_selected"
-          : locale === "ru"
-            ? "settings.personal.language.ru_selected"
-            : "settings.personal.language.auto_selected")
-      ].join("\n"),
+      content: personalTranslator("settings.personal.categories.title"),
       buttons: [
-        {
-          id: "settings-language-ru",
-          label: personalTranslator("settings.personal.language.ru"),
-          action: { type: "command", command: "/settings", args: ["language", "ru"] }
-        },
-        {
-          id: "settings-language-en",
-          label: personalTranslator("settings.personal.language.en"),
-          action: { type: "command", command: "/settings", args: ["language", "en"] }
-        },
-        {
-          id: "settings-language-auto",
-          label: personalTranslator("settings.personal.language.auto"),
-          action: { type: "command", command: "/settings", args: ["language", "auto"] }
-        },
-        createBackButton(personalTranslator),
-        createCloseButton(personalTranslator)
+        { id: "settings-personal-account", label: personalTranslator("settings.personal.category.account"), action: { type: "command", command: "/settings", args: ["account"] } },
+        { id: "settings-personal-notifications", label: personalTranslator("settings.personal.category.notifications"), action: { type: "command", command: "/settings", args: ["notifications"] } },
+        { id: "settings-personal-privacy", label: personalTranslator("settings.personal.category.privacy"), action: { type: "command", command: "/settings", args: ["privacy"] } },
+        createBackButton(personalTranslator), createCloseButton(personalTranslator)
       ]
     };
   }
 
   const community = context.execution.community;
+  if (!community || !communityService) return { content: t("settings.community_unavailable"), buttons: [createBackButton(t), createCloseButton(t)] };
 
-  if (!community || !communityService) {
-    return {
-      content: t("settings.community_unavailable"),
-      buttons: [createBackButton(t), createCloseButton(t)]
-    };
-  }
-
-  let category = context.args[0]?.toLowerCase();
-
+  const category = context.args[0]?.toLowerCase() ?? "";
   if (category === "public" || category === "private") {
     context.args = ["general", category];
-    category = "general";
-  }
-
-  if (category === "bridges") {
-    return createBridgeSettingsResponse(context, bridgeService);
-  }
-
-  if (category === "general") {
     return createGeneralSettingsResponse(context, communityService);
   }
+  if (category === "bridges") return createBridgeSettingsResponse(context, bridgeService);
+  if (category === "general") return createGeneralSettingsResponse(context, communityService);
 
+  if (["members", "moderation", "access", "automations"].includes(category)) {
+    const settingKey = ({ members: "members.list_visible", moderation: "moderation.logging_enabled", access: "access.member_profile_visible", automations: "automations.enabled" } as Record<string, string>)[category];
+    if (context.args[1]?.toLowerCase() === "toggle") {
+      if (!context.execution.capabilities.includes("community.manage")) return { content: t("settings.forbidden"), buttons: [createBackButton(t), createCloseButton(t)] };
+      const current = database?.getCommunitySetting(community.id, settingKey) !== "false";
+      database?.setCommunitySetting(community.id, settingKey, String(!current));
+    }
+    const current = database?.getCommunitySetting(community.id, settingKey) !== "false";
+    const titleKey = ({ members: "settings.category.members", moderation: "settings.category.moderation", access: "settings.category.access", automations: "settings.category.automations" } as Record<string, string>)[category];
+    const descriptionKey = ({ members: "settings.category.members.description", moderation: "settings.category.moderation.description", access: "settings.category.access.description", automations: "settings.category.automations.description" } as Record<string, string>)[category];
+    const canManage = context.execution.capabilities.includes("community.manage");
+    return {
+      content: [t(titleKey), t("settings.section.description"), t(descriptionKey), current ? t("settings.value.enabled") : t("settings.value.disabled")].join("\n"),
+      buttons: [
+        ...(canManage ? [{ id: `settings-${category}-toggle`, label: t("settings.toggle"), action: { type: "command" as const, command: "/settings", args: [category, "toggle"] } }] : []),
+        { id: `settings-${category}-back`, label: t("menu.back"), action: { type: "command", command: "/settings" } },
+        createCloseButton(t)
+      ]
+    };
+  }
   return createCommunitySettingsCategoriesResponse(context);
 }
 
-function createCommunitySettingsCategoriesResponse(
-  context: CommandContext
-): CommandResponse {
-  const t =
-    createTranslator(
-      context.execution.locale
-    );
-
+function createPersonalAccountSettingsResponse(context: CommandContext, database?: ModexaDatabase): CommandResponse {
+  const savedLocale = database?.getUserSetting(context.execution.user.id, "locale");
+  const locale = savedLocale === "en" || savedLocale === "ru" ? savedLocale : context.execution.locale === "en" ? "en" : "ru";
+  const t = createTranslator(locale);
   return {
-    content: t(
-      "settings.categories.title"
-    ),
+    content: [t("settings.personal.title"), t("settings.personal.account.description"), t("settings.personal.language"), t(savedLocale === "en" ? "settings.personal.language.en_selected" : savedLocale === "ru" ? "settings.personal.language.ru_selected" : "settings.personal.language.auto_selected")].join("\n"),
     buttons: [
-      {
-        id: "settings-general",
-        label: t("settings.category.general"),
-        action: {
-          type: "command",
-          command: "/settings",
-          args: ["general"]
-        }
-      },
-      {
-        id: "settings-bridges",
-        label: t("settings.category.bridges"),
-        action: {
-          type: "command",
-          command: "/settings",
-          args: ["bridges"]
-        }
-      },
-      createBackButton(t),
-      createCloseButton(t)
+      { id: "settings-language-ru", label: t("settings.personal.language.ru"), action: { type: "command", command: "/settings", args: ["language", "ru"] } },
+      { id: "settings-language-en", label: t("settings.personal.language.en"), action: { type: "command", command: "/settings", args: ["language", "en"] } },
+      { id: "settings-language-auto", label: t("settings.personal.language.auto"), action: { type: "command", command: "/settings", args: ["language", "auto"] } },
+      { id: "settings-personal-back", label: t("menu.back"), action: { type: "command", command: "/settings" } }, createCloseButton(t)
+    ]
+  };
+}
+
+function createPersonalSettingsCategoryResponse(context: CommandContext, database: ModexaDatabase | undefined, category: "notifications" | "privacy"): CommandResponse {
+  const savedLocale = database?.getUserSetting(context.execution.user.id, "locale");
+  const t = createTranslator(savedLocale === "en" || savedLocale === "ru" ? savedLocale : context.execution.locale === "en" ? "en" : "ru");
+  const notifications = category === "notifications";
+  const settingKey = notifications ? "notifications.enabled" : "profile.visible";
+  const enabled = database?.getUserSetting(context.execution.user.id, settingKey) !== "false";
+  return {
+    content: [
+      t(notifications ? "settings.personal.category.notifications" : "settings.personal.category.privacy"),
+      t(notifications ? "settings.personal.notifications.description" : "settings.personal.privacy.description"),
+      t(notifications ? enabled ? "settings.personal.notifications.state.on" : "settings.personal.notifications.state.off" : enabled ? "settings.personal.privacy.state.on" : "settings.personal.privacy.state.off")
+    ].join("\n"),
+    buttons: [
+      { id: `settings-personal-${category}-toggle`, label: t(notifications ? "settings.personal.notifications.toggle" : "settings.personal.privacy.toggle"), action: { type: "command", command: "/settings", args: [category, "toggle"] } },
+      { id: "settings-personal-back", label: t("menu.back"), action: { type: "command", command: "/settings" } }, createCloseButton(t)
+    ]
+  };
+}
+
+function createCommunitySettingsCategoriesResponse(context: CommandContext): CommandResponse {
+  const t = createTranslator(context.execution.locale);
+  return {
+    content: t("settings.categories.title"),
+    buttons: [
+      { id: "settings-general", label: t("settings.category.general"), action: { type: "command", command: "/settings", args: ["general"] } },
+      { id: "settings-members", label: t("settings.category.members"), action: { type: "command", command: "/settings", args: ["members"] } },
+      { id: "settings-moderation", label: t("settings.category.moderation"), action: { type: "command", command: "/settings", args: ["moderation"] } },
+      { id: "settings-access", label: t("settings.category.access"), action: { type: "command", command: "/settings", args: ["access"] } },
+      { id: "settings-bridges", label: t("settings.category.bridges"), action: { type: "command", command: "/settings", args: ["bridges"] } },
+      { id: "settings-automations", label: t("settings.category.automations"), action: { type: "command", command: "/settings", args: ["automations"] } },
+      createBackButton(t), createCloseButton(t)
     ]
   };
 }
