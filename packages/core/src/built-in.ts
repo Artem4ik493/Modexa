@@ -976,7 +976,8 @@ export function createBuiltinCommands(
               { id: "help-moderation", label: t("help.topic.moderation"), action: { type: "command", command: "/help", args: ["moderation"] } },
               { id: "help-bridge", label: t("help.topic.bridge"), action: { type: "command", command: "/help", args: ["bridge"] } },
               { id: "help-settings", label: t("help.topic.settings"), action: { type: "command", command: "/help", args: ["settings"] } },
-              { id: "help-commands", label: t("help.open_wiki"), action: { type: "command", command: "/commands" } }
+              { id: "help-commands", label: t("help.open_wiki"), action: { type: "command", command: "/commands" } },
+              { id: "help-menu", label: t("menu.title"), action: { type: "command", command: "/menu" } }
             ]
           },
           start: { title: t("help.topic.start"), body: t("help.page.start"), buttons: [] },
