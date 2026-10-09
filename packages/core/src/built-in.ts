@@ -487,6 +487,7 @@ function createPersonalAccountSettingsResponse(context: CommandContext, database
       { id: "settings-language-ru", label: t("settings.personal.language.ru"), action: { type: "command", command: "/settings", args: ["language", "ru"] } },
       { id: "settings-language-en", label: t("settings.personal.language.en"), action: { type: "command", command: "/settings", args: ["language", "en"] } },
       { id: "settings-language-auto", label: t("settings.personal.language.auto"), action: { type: "command", command: "/settings", args: ["language", "auto"] } },
+      { id: "settings-personal-linked-accounts", label: t("account.open"), action: { type: "command", command: "/account" } },
       { id: "settings-personal-back", label: t("menu.back"), action: { type: "command", command: "/settings" } }, createCloseButton(t)
     ]
   };
