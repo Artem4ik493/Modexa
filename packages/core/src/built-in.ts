@@ -975,8 +975,21 @@ export function createBuiltinCommands(
           { id: "account", label: t("help.category.account"), icon: "🔗", names: ["link", "link-account", "linkaccount", "account"] },
           { id: "utilities", label: t("help.category.utilities"), icon: "🧰", names: ["commands", "menu"] }
         ];
-        const section = context.args[0]?.toLowerCase() ?? "home";
-        const commandName = context.args[1]?.toLowerCase();
+        const requestedSection = context.args[0]?.toLowerCase() ?? "home";
+        const directCategory = categoryDefinitions.some((item) => item.id === requestedSection);
+        const directCommand = available.some((item) => item.name === requestedSection || item.aliases?.includes(requestedSection));
+        const section = requestedSection === "category" || requestedSection === "command"
+          ? requestedSection
+          : directCategory
+            ? "category"
+            : directCommand
+              ? "command"
+              : "home";
+        const commandName = section === "category"
+          ? (requestedSection === "category" ? context.args[1]?.toLowerCase() : requestedSection)
+          : section === "command"
+            ? (requestedSection === "command" ? context.args[1]?.toLowerCase() : requestedSection)
+            : context.args[1]?.toLowerCase();
         const pageArg = Number.parseInt(context.args[2] ?? "1", 10);
         const pageSize = 5;
         const commandDetails: Record<string, { usage: string; examples: string[]; notes?: string }> = {
