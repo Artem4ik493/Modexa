@@ -446,6 +446,10 @@ export class ModexaDatabase {
     );
   }
 
+  deleteBridgeEndpoint(endpointId: string): void {
+    this.database.prepare("DELETE FROM bridge_endpoints WHERE id = ?").run(endpointId);
+  }
+
   getBridgeEndpoints(): BridgeEndpoint[] {
     const rows =
       this.database.prepare(
