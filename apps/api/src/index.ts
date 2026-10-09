@@ -553,6 +553,7 @@ const server = createServer((req, res) => {
           ["/api/automations/{id}", ["post", "put", "patch", "delete"]],
           ["/api/bridge", ["get"]],
           ["/api/bridge/endpoints", ["post"]],
+          ["/api/bridge/endpoints/{id}", ["put", "delete"]],
           ["/api/bridge/links", ["post"]],
           ["/api/bridge/links/{id}", ["delete"]],
           ["/api/commands", ["get"]],
@@ -988,6 +989,40 @@ const server = createServer((req, res) => {
       database.upsertBridgeEndpoint(endpoint);
       json(res, 201, { item: endpoint });
       return;
+    }
+
+    const bridgeEndpointMatch = url.pathname.match(/^\/api\/bridge\/endpoints\/([^/]+)$/);
+    if (bridgeEndpointMatch && ["PUT", "DELETE"].includes(req.method ?? "")) {
+      const id = decodeURIComponent(bridgeEndpointMatch[1]!);
+      const existing = database.getBridgeEndpoints().find((item) => item.id === id);
+      if (!existing) { json(res, 404, { error: "bridge_endpoint_not_found" }); return; }
+      if (req.method === "DELETE") {
+        database.deleteBridgeEndpoint(id);
+        json(res, 200, { deleted: true, id }); return;
+      }
+      const body = await readJsonBody(req);
+      const platform = body.platform ?? existing.platform;
+      const communityExternalId = body.communityExternalId ?? existing.communityExternalId;
+      const communityName = body.communityName ?? existing.communityName;
+      const channelExternalId = body.channelExternalId ?? existing.channelExternalId;
+      const channelName = body.channelName ?? existing.channelName;
+      if (!["telegram", "discord"].includes(String(platform)) ||
+          [communityExternalId, communityName, channelExternalId, channelName].some((value) => typeof value !== "string" || !value.trim())) {
+        json(res, 400, { error: "invalid_bridge_endpoint" }); return;
+      }
+      const updated = {
+        ...existing,
+        platform: platform as "telegram" | "discord",
+        communityExternalId: String(communityExternalId).trim(),
+        communityName: String(communityName).trim(),
+        channelExternalId: String(channelExternalId).trim(),
+        channelName: String(channelName).trim(),
+        ...(typeof body.communityId === "string" ? { communityId: body.communityId } : {}),
+        ...(typeof body.channelId === "string" ? { channelId: body.channelId } : {}),
+        updatedAt: new Date()
+      };
+      database.upsertBridgeEndpoint(updated);
+      json(res, 200, { item: updated }); return;
     }
 
     if (url.pathname === "/api/bridge/links" && req.method === "POST") {
