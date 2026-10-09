@@ -254,11 +254,17 @@ describe("Telegram event handler", () => {
 
     await handler(
       interactionEvent(
-        callbackTokens(actions[2]).slice(-2)[0]
+        callbackTokens(actions[2])[0]
       )
     );
 
-    expect(actions[3]).toMatchObject({
+    await handler(
+      interactionEvent(
+        callbackTokens(actions[3])[7]
+      )
+    );
+
+    expect(actions[4]).toMatchObject({
       type: "message.edit",
       content: "Выберите действие:"
     });
