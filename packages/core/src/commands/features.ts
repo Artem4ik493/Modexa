@@ -159,7 +159,7 @@ export function createPublicFeatureCommands(
       name: "clear",
       aliases: ["purge", "очистить"],
       description: "Удалить указанное количество сообщений",
-      requiredCapabilities: ["moderation"],
+      requiredPermissions: ["moderation.clear"],
       handler: async (context) => {
         if (!context.channel?.externalId || !executeAction) {
           return panel("Очистка сообщений", "❌ Очистка недоступна в этом канале.", 0xff5d73);
@@ -185,7 +185,7 @@ export function createPublicFeatureCommands(
       name: "command",
       aliases: ["cmd"],
       description: "Включить или выключить команду",
-      requiredCapabilities: ["community.manage"],
+      requiredPermissions: ["commands.manage"],
       handler: async (context) => {
         if (!context.community) {
           return panel("Настройки команды", "Команда доступна только в сообществе.", 0xffb454);
@@ -373,6 +373,7 @@ export function createPublicFeatureCommands(
       name: "warnings",
       aliases: ["warns", "преды"],
       description: "Список активных предупреждений",
+      requiredPermissions: ["moderation.view"],
       handler: async (context) => {
         if (!context.community) {
           return panel("Предупреждения", "Команда доступна только в сообществе.", 0xffb454);
@@ -401,6 +402,7 @@ export function createPublicFeatureCommands(
       name: "mutes",
       aliases: ["mute-list"],
       description: "Список активных мутов",
+      requiredPermissions: ["moderation.view"],
       handler: async (context) => {
         if (!context.community) {
           return panel("Муты", "Команда доступна только в сообществе.", 0xffb454);
