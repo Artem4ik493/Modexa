@@ -1096,13 +1096,13 @@ export function createBuiltinCommands(
             "",
             `### ${t("help.usage")}`,
             "",
-            `\${usage}\`,
+            String.fromCharCode(96) + usage + String.fromCharCode(96),
             "",
             `### ${t("help.examples")}`,
             "",
             ...examples.flatMap((example, index) => [
               `**${t("help.example", { number: String(index + 1) })}**`,
-              `\${example}\`
+              String.fromCharCode(96) + example + String.fromCharCode(96)
             ]),
             ...(detail?.notes ? ["", detail.notes] : [])
           ].join("\n");
