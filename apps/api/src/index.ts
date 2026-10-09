@@ -316,7 +316,7 @@ function startRunner(): void {
   runnerProcess = spawn(runnerCommand, runnerArgs, {
     cwd: process.cwd(),
     env: process.env,
-    stdio: ["ignore", "pipe", "pipe"],
+    stdio: ["ignore", "pipe", "pipe", "ipc"],
     windowsHide: true
   });
   runnerProcess.stdout?.on("data", (chunk: Buffer) => appendRunnerLog("stdout", chunk));
@@ -332,12 +332,34 @@ function startRunner(): void {
 async function stopRunner(): Promise<void> {
   const child = runnerProcess;
   if (!child) return;
-  runnerProcess = undefined;
-  if (child.exitCode !== null || child.killed) return;
-  child.kill();
+  if (child.exitCode !== null) {
+    runnerProcess = undefined;
+    return;
+  }
+
   await new Promise<void>((resolve) => {
-    const timer = setTimeout(resolve, 3000);
-    child.once("exit", () => { clearTimeout(timer); resolve(); });
+    let settled = false;
+    const finish = (): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      child.off("exit", finish);
+      runnerProcess = undefined;
+      resolve();
+    };
+    const timer = setTimeout(() => {
+      if (child.exitCode === null) child.kill();
+      finish();
+    }, 8000);
+
+    child.once("exit", finish);
+    if (child.connected) {
+      child.send({ type: "shutdown" }, (error) => {
+        if (error && child.exitCode === null) child.kill();
+      });
+    } else {
+      child.kill();
+    }
   });
 }
 
