@@ -6,6 +6,7 @@ import type { PlatformUser } from "../adapters/types.js";
 import type { User } from "../identity/types.js";
 import { createTranslator } from "../i18n/translate.js";
 import type { Logger } from "../diagnostics/types.js";
+import type { ModexaDatabase } from "../database/service.js";
 
 export interface PlatformMemberDetails {
   user: PlatformUser;
@@ -144,9 +145,14 @@ function renderMemberDetails(
   identityService: IdentityService,
   membershipService: MembershipService,
   accessControlService: AccessControlService,
-  native?: PlatformMemberDetails
+  native?: PlatformMemberDetails,
+  database?: ModexaDatabase
 ): CommandResponse {
   const t = createTranslator(context.execution.locale);
+  if (database?.getUserSetting(user.id, "profile.visible") === "false") {
+    return { content: t("member.private_profile") };
+  }
+
   const membership =
     membershipService.findMembership(
       user.id,
@@ -239,10 +245,12 @@ export function createMemberCommand(
   membershipService: MembershipService,
   accessControlService: AccessControlService,
   memberDirectory?: MemberDirectory,
-  logger?: Logger
+  logger?: Logger,
+  database?: ModexaDatabase
 ): CommandDefinition {
   return {
     name: "member",
+    aliases: ["user"],
     descriptionKey: "command.member.description",
     requiredPermissions: ["member.view"],
     handler: async (context): Promise<CommandResponse> => {
@@ -450,7 +458,8 @@ export function createMemberCommand(
         identityService,
         membershipService,
         accessControlService,
-        native
+        native,
+        database
       );
     }
   };
@@ -460,7 +469,8 @@ export function createMembersCommand(
   identityService: IdentityService,
   membershipService: MembershipService,
   accessControlService: AccessControlService,
-  memberDirectory?: MemberDirectory
+  memberDirectory?: MemberDirectory,
+  database?: ModexaDatabase
 ): CommandDefinition {
   return {
     name: "members",
@@ -476,6 +486,11 @@ export function createMembersCommand(
         return {
           content: t("members.community_only")
         };
+      }
+
+      const canManageCommunity = context.execution.capabilities.includes("community.manage");
+      if (database?.getCommunitySetting(context.community.id, "members.list_visible") === "false" && !canManageCommunity) {
+        return { content: t("members.private_list") };
       }
 
       const pageSize = 10;
@@ -528,7 +543,8 @@ export function createMembersCommand(
           )
           .filter(
             (membership) =>
-              membership.status !== "left"
+              membership.status !== "left" &&
+              database?.getUserSetting(membership.userId, "profile.visible") !== "false"
           )
           .map((membership) => {
             const user =
