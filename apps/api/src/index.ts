@@ -987,9 +987,47 @@ const server = createServer((req, res) => {
       return;
     }
 
-    if (url.pathname === "/api/communities" && req.method === "GET") {
-      json(res, 200, { items: database.getCommunitiesSnapshot() });
-      return;
+    if (url.pathname === "/api/communities" && ["GET", "POST"].includes(req.method ?? "")) {
+      if (req.method === "GET") {
+        json(res, 200, { items: database.getCommunitiesSnapshot() }); return;
+      }
+      const body = await readJsonBody(req);
+      const name = typeof body.name === "string" ? body.name.trim() : "";
+      if (!name || name.length > 120) { json(res, 400, { error: "community_name_required_max_120" }); return; }
+      try {
+        const item = runtimeServices.communityService.createCommunity({ name });
+        if (body.mode === "private") runtimeServices.communityService.setMode(item.id, "private");
+        json(res, 201, { item: runtimeServices.communityService.getCommunity(item.id) }); return;
+      } catch (error) {
+        json(res, 400, { error: error instanceof Error ? error.message : "community_create_failed" }); return;
+      }
+    }
+
+    const communityIdentityMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/identities$/);
+    if (communityIdentityMatch && ["GET", "POST"].includes(req.method ?? "")) {
+      const communityId = decodeURIComponent(communityIdentityMatch[1]!);
+      if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) { json(res, 404, { error: "community_not_found" }); return; }
+      if (req.method === "GET") {
+        json(res, 200, { items: database.getCommunityIdentitiesSnapshot(communityId) }); return;
+      }
+      const body = await readJsonBody(req);
+      const platform = body.platform;
+      const externalId = typeof body.externalId === "string" ? body.externalId.trim() : "";
+      const name = typeof body.name === "string" ? body.name.trim().slice(0, 120) : undefined;
+      if (!["telegram", "discord"].includes(String(platform)) || !externalId) {
+        json(res, 400, { error: "platform_and_externalId_required" }); return;
+      }
+      try {
+        const item = runtimeServices.communityService.attachIdentity({
+          communityId: communityId as never,
+          platform: platform as "telegram" | "discord",
+          externalId,
+          ...(name ? { name } : {})
+        });
+        json(res, 201, { item }); return;
+      } catch (error) {
+        json(res, 409, { error: error instanceof Error ? error.message : "community_identity_attach_failed" }); return;
+      }
     }
 
     const communityRolesMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/roles$/);
@@ -1261,6 +1299,19 @@ const server = createServer((req, res) => {
         json(res, 404, { error: error instanceof Error ? error.message : "automation_update_failed" });
       }
       return;
+    }
+
+    if (url.pathname === "/api/command-settings" && req.method === "PUT") {
+      const body = await readJsonBody(req);
+      const communityId = typeof body.communityId === "string" ? body.communityId : "";
+      const items = body.items;
+      if (!communityId || !database.getCommunitiesSnapshot().some((item) => item.id === communityId) ||
+          !Array.isArray(items) || items.length < 1 || items.length > 200 ||
+          !items.every((item) => item && typeof item.commandName === "string" && /^[a-zA-Z0-9_-]{1,64}$/.test(item.commandName) && typeof item.enabled === "boolean")) {
+        json(res, 400, { error: "invalid_command_settings_batch" }); return;
+      }
+      for (const item of items) database.setCommandEnabled(communityId, item.commandName, item.enabled);
+      json(res, 200, { updated: items.length, items: database.getCommandSettings(communityId) }); return;
     }
 
     if (url.pathname === "/api/command-settings" && req.method === "POST") {
