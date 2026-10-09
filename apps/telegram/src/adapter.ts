@@ -330,7 +330,7 @@ export class TelegramAdapter
 
         await this.bot.api.sendMessage(
           Number(action.communityExternalId),
-          `⚠️ Пользователь ${targetDisplayName} получил предупреждение.\\n${details}`
+          `⚠️ Пользователь ${targetDisplayName} получил предупреждение.\n${details}`
         );
         return;
       }
