@@ -321,7 +321,7 @@ export class DiscordAdapter
         if (!me.permissions.has(PermissionsBitField.Flags.BanMembers)) {
           throw new Error("Discord bot is missing the Ban Members permission");
         }
-        await guild.bans.remove(action.userExternalId, action.reason);
+        await guild.bans.remove(action.userExternalId);
         return;
       }
 
