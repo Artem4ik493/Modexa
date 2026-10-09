@@ -314,10 +314,10 @@ export function createModerationCommands(
             moderationService.revokeCase(context.user.id, item.id);
           } catch (error) {
             return {
-              content: \`❌ Не удалось снять предупреждение: \${error instanceof Error ? error.message : "ошибка"}\`
+              content: `❌ Не удалось снять предупреждение: ${error instanceof Error ? error.message : "ошибка"}`
             };
           }
-          return { content: \`✅ Предупреждение \${item.id} снято.\` };
+          return { content: `✅ Предупреждение ${item.id} снято.` };
         }
 
         const target = await resolveModerationTarget(
@@ -340,17 +340,17 @@ export function createModerationCommands(
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
 
         if (!warning) {
-          return { content: \`У \${target.displayName} нет активных предупреждений.\` };
+          return { content: `У ${target.displayName} нет активных предупреждений.` };
         }
 
         try {
           moderationService.revokeCase(context.user.id, warning.id);
         } catch (error) {
           return {
-            content: \`❌ Не удалось снять предупреждение: \${error instanceof Error ? error.message : "ошибка"}\`
+            content: `❌ Не удалось снять предупреждение: ${error instanceof Error ? error.message : "ошибка"}`
           };
         }
-        return { content: \`✅ Предупреждение \${warning.id} участника \${target.displayName} снято.\` };
+        return { content: `✅ Предупреждение ${warning.id} участника ${target.displayName} снято.` };
       }
     },
     {
