@@ -120,6 +120,14 @@ export class BridgeService {
     this.gateway = gateway;
   }
 
+  refreshFromDatabase(): void {
+    if (!this.database) return;
+    this.endpoints.clear();
+    for (const endpoint of this.database.getBridgeEndpoints()) this.endpoints.set(endpoint.id, endpoint);
+    this.links.clear();
+    for (const link of this.database.getBridgeLinks()) this.links.set(link.id, link);
+  }
+
   registerEndpoint(
     endpoint: Omit<BridgeEndpoint, "id" | "updatedAt"> & {
       id?: string;
