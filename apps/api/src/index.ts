@@ -1256,7 +1256,7 @@ const server = createServer((req, res) => {
       }
       const body = await readJsonBody(req);
       const current = all[index]!;
-      const next = { ...current, ...body, id: current.id, communityId: current.communityId, updatedAt: new Date().toISOString() };
+      const next: Record<string, any> = { ...current, ...body, id: current.id, communityId: current.communityId, updatedAt: new Date().toISOString() };
       if (typeof next.name !== "string" || !/^[a-zA-Z0-9_-]{1,32}$/.test(next.name.replace(/^\//, "")) ||
           typeof next.enabled !== "boolean" || !Array.isArray(next.aliases) || !Array.isArray(next.actions) ||
           next.actions.length < 1 || next.actions.length > 20) {
