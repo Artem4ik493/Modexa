@@ -3,6 +3,7 @@ import type { IdentityService } from "../identity/service.js";
 import type { MembershipService } from "../memberships/service.js";
 import type { AccessControlService } from "../access/service.js";
 import { createBuiltinCommunityRoles } from "../access/community-roles.js";
+import { translate } from "../i18n/translate.js";
 import type { MemberDirectory } from "./command.js";
 
 export function createRoleCommand(
