@@ -98,7 +98,27 @@ export function createRoleCommand(
 
       if (!target) return { content: `Участник ${targetArg} не найден.` };
 
-      const membership = membershipService.findMembership(target.id, context.community.id);
+      let membership = membershipService.findMembership(target.id, context.community.id);
+      if (!membership && memberDirectory) {
+        const nativeIdentity = identityService
+          .getUserIdentities(target.id)
+          .find((identity) => identity.platform === context.platform);
+        const native = nativeIdentity
+          ? await memberDirectory.getMember(
+              context.community.id,
+              nativeIdentity.externalId
+            )
+          : undefined;
+
+        if (native && native.isMember !== false) {
+          membership = membershipService.createMembership({
+            userId: target.id,
+            communityId: context.community.id,
+            now: native.joinedAt
+          });
+        }
+      }
+
       if (!membership || membership.status !== "active") {
         return { content: translate("command.role.inactive_member", undefined, context.execution.locale) };
       }
