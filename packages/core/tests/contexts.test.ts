@@ -8,6 +8,10 @@ import {
   ExecutionContextService
 } from "../src/contexts/index.js";
 
+import { AccessControlService } from "../src/access/service.js";
+import { CommunityAccessService } from "../src/access/community-access.js";
+import { MembershipService } from "../src/memberships/service.js";
+
 import type {
   Community
 } from "../src/communities/types.js";
@@ -145,6 +149,43 @@ describe(
           "community.manage"
         )
       ).toBe(false);
+    });
+
+    it("resolves exact permissions and does not broaden a warn-only role", () => {
+      const membershipService = new MembershipService();
+      const accessControlService = new AccessControlService();
+      const role = {
+        id: "community-1:warn-only",
+        communityId: community.id,
+        name: "WARN_ONLY",
+        permissions: ["commands.use", "moderation.warn"] as const
+      };
+
+      accessControlService.registerCommunityRole({
+        ...role,
+        permissions: [...role.permissions]
+      });
+      accessControlService.assignCommunityRole(user.id, role.id);
+      membershipService.createMembership({
+        userId: user.id,
+        communityId: community.id
+      });
+
+      const service = new ExecutionContextService(
+        new CommunityAccessService(membershipService, accessControlService),
+        accessControlService
+      );
+      const context = service.create({
+        platform: "telegram",
+        user,
+        community
+      });
+
+      expect(context.permissions).toContain("moderation.warn");
+      expect(context.permissions).not.toContain("moderation.mute");
+      expect(context.capabilities).toContain("moderation.warn");
+      expect(context.capabilities).not.toContain("moderation.mute");
+      expect(context.capabilities).toContain("commands");
     });
 
     it("does not expose account linking as a community-only capability", () => {
