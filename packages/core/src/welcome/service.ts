@@ -28,10 +28,13 @@ export class WelcomeService {
     const settings = store?.getRuntimeState<Array<[string, WelcomeSettings]>>("welcome.settings") ?? [];
     for (const [communityId, value] of settings) this.settings.set(communityId, { ...value, startingRoleIds: [...value.startingRoleIds] });
     const departed = store?.getRuntimeState<StoredDeparture[]>("welcome.departed") ?? [];
-    for (const item of departed) this.departed.set(item.communityId + ":" + item.snapshot.userId, {
-      communityId: item.communityId,
-      snapshot: { ...item.snapshot, roleIds: [...item.snapshot.roleIds], ...(item.snapshot.leftAt ? { leftAt: new Date(item.snapshot.leftAt) } : {}) }
-    });
+    for (const item of departed) {
+      const { leftAt, ...snapshot } = item.snapshot;
+      this.departed.set(item.communityId + ":" + snapshot.userId, {
+        communityId: item.communityId,
+        snapshot: { ...snapshot, roleIds: [...snapshot.roleIds], ...(leftAt ? { leftAt: new Date(leftAt) } : {}) }
+      });
+    }
   }
 
   private persistSettings(): void {
