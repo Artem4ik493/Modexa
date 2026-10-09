@@ -16,7 +16,35 @@ export interface WelcomeMemberSnapshot {
   leftAt?: Date;
 }
 
+export interface WelcomeStateStore {
+  getRuntimeState<T>(key: string): T | undefined;
+  setRuntimeState(key: string, value: unknown, now?: Date): void;
+}
+
+type StoredDeparture = { communityId: string; snapshot: Omit<WelcomeMemberSnapshot, "leftAt"> & { leftAt?: string } };
+
 export class WelcomeService {
+  constructor(private readonly store?: WelcomeStateStore) {
+    const settings = store?.getRuntimeState<Array<[string, WelcomeSettings]>>("welcome.settings") ?? [];
+    for (const [communityId, value] of settings) this.settings.set(communityId, { ...value, startingRoleIds: [...value.startingRoleIds] });
+    const departed = store?.getRuntimeState<StoredDeparture[]>("welcome.departed") ?? [];
+    for (const item of departed) this.departed.set(item.communityId + ":" + item.snapshot.userId, {
+      communityId: item.communityId,
+      snapshot: { ...item.snapshot, roleIds: [...item.snapshot.roleIds], ...(item.snapshot.leftAt ? { leftAt: new Date(item.snapshot.leftAt) } : {}) }
+    });
+  }
+
+  private persistSettings(): void {
+    this.store?.setRuntimeState("welcome.settings", [...this.settings.entries()]);
+  }
+
+  private persistDeparted(): void {
+    this.store?.setRuntimeState("welcome.departed", [...this.departed.values()].map((item) => ({
+      communityId: item.communityId,
+      snapshot: { ...item.snapshot, leftAt: item.snapshot.leftAt?.toISOString() }
+    })));
+  }
+
   private readonly settings = new Map<string, WelcomeSettings>();
   private readonly departed = new Map<string, { communityId: string; snapshot: WelcomeMemberSnapshot }>();
 
@@ -37,6 +65,7 @@ export class WelcomeService {
       ...settings,
       startingRoleIds: [...settings.startingRoleIds]
     });
+    this.persistSettings();
   }
 
   recordDeparture(communityId: string, snapshot: WelcomeMemberSnapshot): void {
@@ -48,6 +77,7 @@ export class WelcomeService {
         leftAt: new Date()
       }
     });
+    this.persistDeparted();
   }
 
   resolveJoin(communityId: string, userId: string): {
@@ -62,6 +92,7 @@ export class WelcomeService {
     }
 
     this.departed.delete(communityId + ":" + userId);
+    this.persistDeparted();
     const settings = this.getSettings(communityId);
 
     if (!settings) {
