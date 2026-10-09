@@ -8,7 +8,7 @@ import type { MembershipService } from "../memberships/service.js";
 import type { CommunityService } from "../communities/service.js";
 import type { MemberDirectory } from "../members/command.js";
 import type { AdapterAction } from "../adapters/actions.js";
-import type { ExecutionCapability } from "../contexts/types.js";
+import type { Permission } from "../access/types.js";
 import { ModerationService } from "./service.js";
 import type { ModerationActionType } from "./types.js";
 
@@ -16,14 +16,19 @@ export type ModerationActionExecutor = (
   action: AdapterAction
 ) => Promise<void>;
 
-const MODERATION_CAPABILITIES: ExecutionCapability[] = ["moderation"];
-
 const ACTIONS: ModerationActionType[] = [
   "warn",
   "mute",
   "kick",
   "ban"
 ];
+
+const ACTION_PERMISSIONS: Record<ModerationActionType, Permission> = {
+  warn: "moderation.warn",
+  mute: "moderation.mute",
+  kick: "moderation.kick",
+  ban: "moderation.ban"
+};
 
 const DURATION_UNITS: Record<string, number> = {
   s: 1,
@@ -121,7 +126,7 @@ export function createModerationCommands(
   const actionCommands: CommandDefinition[] = ACTIONS.map((action) => ({
     name: action,
     description: `Moderation: ${action}`,
-    requiredCapabilities: MODERATION_CAPABILITIES,
+    requiredPermissions: [ACTION_PERMISSIONS[action]],
     handler: async (
       context: CommandContext
     ): Promise<CommandResponse> => {
