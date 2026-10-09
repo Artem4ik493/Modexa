@@ -75,6 +75,46 @@ describe("member commands", () => {
     };
   }
 
+  it("hides a user's profile from /member when privacy is enabled", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "modexa-member-privacy-"));
+    const database = new ModexaDatabase({ path: join(directory, "modexa.sqlite") });
+    const identityService = new IdentityService(database);
+    const membershipService = new MembershipService(database);
+    const accessControlService = new AccessControlService(database, database);
+    const communityId = "privacy-community";
+    const now = new Date();
+    database.upsertCommunity({ id: communityId, name: "Privacy", createdAt: now, updatedAt: now });
+    for (const role of createBuiltinCommunityRoles(communityId)) accessControlService.registerCommunityRole(role);
+    const target = identityService.createUser({ displayName: "Private User" });
+    identityService.attachIdentity({ userId: target.id, platform: "discord", externalId: "private-42", username: "privateuser" });
+    membershipService.createMembership({ userId: target.id, communityId });
+    database.setUserSetting(target.id, "profile.visible", "false");
+    const command = createMemberCommand(identityService, membershipService, accessControlService, undefined, undefined, database);
+    const context = createContext(identityService, communityId);
+    const response = await command.handler({ ...context, args: ["privateuser"], rawText: "/member privateuser" });
+    expect(response.content).toContain("enabled Modexa profile privacy");
+    database.close();
+    rmSync(directory, { recursive: true, force: true });
+  });
+
+  it("hides the community member list from non-managers when disabled", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "modexa-member-list-privacy-"));
+    const database = new ModexaDatabase({ path: join(directory, "modexa.sqlite") });
+    const identityService = new IdentityService(database);
+    const membershipService = new MembershipService(database);
+    const accessControlService = new AccessControlService(database, database);
+    const communityId = "list-privacy-community";
+    const now = new Date();
+    database.upsertCommunity({ id: communityId, name: "Private List", createdAt: now, updatedAt: now });
+    database.setCommunitySetting(communityId, "members.list_visible", "false");
+    const command = createMembersCommand(identityService, membershipService, accessControlService, undefined, database);
+    const context = createContext(identityService, communityId);
+    const response = await command.handler({ ...context, args: [], rawText: "/members" });
+    expect(response.content).toContain("member list is hidden");
+    database.close();
+    rmSync(directory, { recursive: true, force: true });
+  });
+
   it("lists members with pagination and search", async () => {
     const identityService =
       new IdentityService();
