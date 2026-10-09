@@ -5,6 +5,7 @@ import type { BillingService } from "../billing/service.js";
 export interface AutomationStateStore {
   getRuntimeState<T>(key: string): T | undefined;
   setRuntimeState(key: string, value: unknown, now?: Date): void;
+  getCommunitySetting?(communityId: string, key: string): string | undefined;
 }
 
 const STATE_KEY = "automations";
@@ -103,11 +104,19 @@ export class AutomationService {
 
   getDue(now = new Date()): Automation[] {
     return [...this.automations.values()].filter(
-      (item) => item.enabled && item.trigger.type === "interval" && !!item.nextRunAt && item.nextRunAt <= now
+      (item) =>
+        this.store?.getCommunitySetting?.(item.communityId, "automations.enabled") !== "false" &&
+        item.enabled &&
+        item.trigger.type === "interval" &&
+        !!item.nextRunAt &&
+        item.nextRunAt <= now
     );
   }
 
   matchMessage(communityId: string, content: string): Automation[] {
+    if (this.store?.getCommunitySetting?.(communityId, "automations.enabled") === "false") {
+      return [];
+    }
     return this.list(communityId).filter(
       (item) =>
         item.enabled &&
