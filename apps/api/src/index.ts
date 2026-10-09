@@ -547,6 +547,9 @@ const server = createServer((req, res) => {
           ["/api/communities/{id}/ranking/cookies", ["post"]],
           ["/api/communities/{id}/welcome", ["get", "put", "patch"]],
           ["/api/communities/{id}/welcome/preview", ["post"]],
+          ["/api/communities/{id}/automod/rules", ["get", "post"]],
+          ["/api/communities/{id}/automod/rules/{ruleId}", ["delete"]],
+          ["/api/communities/{id}/welcome/preview", ["post"]],
           ["/api/users/{id}/settings", ["get", "put", "patch"]],
           ["/api/users/{id}/system-roles", ["get", "post", "delete"]],
           ["/api/automations", ["get", "post"]],
@@ -862,6 +865,10 @@ const server = createServer((req, res) => {
         auditEventsLast7Days: audit.filter((item) => item.createdAt.getTime() >= since).length
       });
       return;
+    }
+
+    if (url.pathname.startsWith("/api/billing") && !authorized(req)) {
+      json(res, 403, { error: "api_key_required_for_billing" }); return;
     }
 
     if (url.pathname === "/api/billing/plans" && req.method === "GET") {
@@ -1470,6 +1477,10 @@ const server = createServer((req, res) => {
       return;
     }
 
+    if (url.pathname.includes("/system-roles") && !authorized(req)) {
+      json(res, 403, { error: "api_key_required_for_system_roles" }); return;
+    }
+
     const userSystemRolesMatch = url.pathname.match(/^\/api\/users\/([^/]+)\/system-roles$/);
     if (userSystemRolesMatch && ["GET", "POST", "DELETE"].includes(req.method ?? "")) {
       const userId = decodeURIComponent(userSystemRolesMatch[1]!);
@@ -1746,6 +1757,7 @@ const server = createServer((req, res) => {
     }
 
     if (url.pathname === "/api/backup" && req.method === "GET") {
+      if (!authorized(req)) { json(res, 403, { error: "api_key_required" }); return; }
       const artifact = backup.exportSnapshot();
       json(res, 200, artifact);
       return;
