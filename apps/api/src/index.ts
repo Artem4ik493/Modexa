@@ -452,6 +452,36 @@ const server = createServer((req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/openapi.json" && req.method === "GET") {
+      json(res, 200, {
+        openapi: "3.1.0",
+        info: { title: "Modexa API", version: "1.0.0", description: "API for Modexa communities, settings, moderation, automations and integrations." },
+        servers: [{ url: dashboardUrl }],
+        security: [{ bearerAuth: [] }],
+        components: { securitySchemes: { bearerAuth: { type: "http", scheme: "bearer" } } },
+        paths: {
+          "/health": { get: { security: [], summary: "Health check", responses: { "200": { description: "Healthy" } } } },
+          "/api/config": { get: { security: [], summary: "Public dashboard configuration", responses: { "200": { description: "Configuration" } } } },
+          "/api/auth": { post: { security: [], summary: "Authenticate with API key", responses: { "200": { description: "Authenticated" }, "401": { description: "Invalid credentials" } } }, delete: { summary: "Clear API-key session", responses: { "204": { description: "Session cleared" } } } },
+          "/api/communities": { get: { summary: "List communities", responses: { "200": { description: "Community list" } } } },
+          "/api/communities/{id}": { get: { summary: "Get community", parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }], responses: { "200": { description: "Community details" }, "404": { description: "Not found" } } } },
+          "/api/communities/{id}/members": { get: { summary: "List community members", parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }, { name: "page", in: "query", schema: { type: "integer", minimum: 1 } }, { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 100 } }, { name: "q", in: "query", schema: { type: "string" } }], responses: { "200": { description: "Paginated members" } } } },
+          "/api/communities/{id}/roles": { get: { summary: "List roles", responses: { "200": { description: "Role list" } } }, post: { summary: "Create role", responses: { "201": { description: "Role created" } } } },
+          "/api/communities/{id}/settings": { get: { summary: "Get community settings", responses: { "200": { description: "Settings" } } }, patch: { summary: "Update community settings", responses: { "200": { description: "Settings updated" } } } },
+          "/api/communities/{id}/ranking": { get: { summary: "Get ranking settings", responses: { "200": { description: "Ranking settings" } } }, put: { summary: "Replace ranking settings", responses: { "200": { description: "Settings updated" } } } },
+          "/api/communities/{id}/welcome": { get: { summary: "Get welcome settings", responses: { "200": { description: "Welcome settings" } } }, put: { summary: "Replace welcome settings", responses: { "200": { description: "Settings updated" } } } },
+          "/api/custom-commands": { get: { summary: "List custom commands", responses: { "200": { description: "Command list" } } }, post: { summary: "Create custom command", responses: { "201": { description: "Command created" } } } },
+          "/api/automations": { get: { summary: "List automations", responses: { "200": { description: "Automation list" } } }, post: { summary: "Create automation", responses: { "201": { description: "Automation created" } } } },
+          "/api/bridge": { get: { summary: "List bridge endpoints and links", responses: { "200": { description: "Bridge configuration" } } },
+          "/api/moderation": { get: { summary: "List moderation cases", responses: { "200": { description: "Moderation cases" } } },
+          "/api/audit": { get: { summary: "List audit events", responses: { "200": { description: "Audit events" } } },
+          "/api/analytics": { get: { summary: "Community analytics", responses: { "200": { description: "Analytics summary" } } },
+          "/api/runtime": { get: { summary: "Runner status", responses: { "200": { description: "Runner status" } }, post: { summary: "Control runner", responses: { "200": { description: "Runner state" } } }
+        }
+      });
+      return;
+    }
+
     if (url.pathname === "/health") {
       json(res, 200, { status: "ok", service: "modexa-api", time: new Date().toISOString() });
       return;
@@ -1111,6 +1141,28 @@ const server = createServer((req, res) => {
       return;
     }
 
+    const userSettingsMatch = url.pathname.match(/^\/api\/users\/([^/]+)\/settings$/);
+    if (userSettingsMatch && ["GET", "PATCH", "PUT"].includes(req.method ?? "")) {
+      const userId = decodeURIComponent(userSettingsMatch[1]!);
+      if (!database.getUser(userId)) { json(res, 404, { error: "user_not_found" }); return; }
+      if (req.method === "GET") { json(res, 200, { items: database.getUserSettings(userId) }); return; }
+      const body = await readJsonBody(req);
+      const allowed = new Set(["locale", "notifications.enabled", "profile.visible"]);
+      const entries = Object.entries(body);
+      if (!entries.length || entries.some(([key, value]) => !allowed.has(key) || !(typeof value === "string" || typeof value === "boolean"))) {
+        json(res, 400, { error: "invalid_user_settings" }); return;
+      }
+      for (const [key, value] of entries) {
+        const normalized = String(value);
+        if (key === "locale" && !["ru", "en"].includes(normalized)) { json(res, 400, { error: "locale_must_be_ru_or_en" }); return; }
+        if ((key === "notifications.enabled" || key === "profile.visible") && !["true", "false"].includes(normalized)) {
+          json(res, 400, { error: "boolean_setting_expected" }); return;
+        }
+      }
+      for (const [key, value] of entries) database.setUserSetting(userId, key, String(value));
+      json(res, 200, { updated: true, items: database.getUserSettings(userId) }); return;
+    }
+
     if (url.pathname === "/api/system" && req.method === "GET") {
       json(res, 200, {
         maintenanceMode: database.getSystemSetting("maintenance_mode") === "true"
@@ -1227,6 +1279,44 @@ const server = createServer((req, res) => {
       const limit = Math.min(100, Math.max(1, Number.parseInt(url.searchParams.get("limit") ?? "25", 10) || 25));
       const items = database.getAuditEntries(communityId, 500);
       json(res, 200, { items: items.slice((page - 1) * limit, page * limit), pagination: { page, limit, total: items.length, pages: Math.ceil(items.length / limit) } });
+      return;
+    }
+
+    if (url.pathname === "/api/moderation/cases" && req.method === "POST") {
+      const body = await readJsonBody(req);
+      const action = body.action;
+      const platform = body.platform;
+      const actorUserId = typeof body.actorUserId === "string" ? body.actorUserId : "";
+      const targetUserId = typeof body.targetUserId === "string" ? body.targetUserId : "";
+      const communityId = typeof body.communityId === "string" ? body.communityId : "";
+      const communityExternalId = typeof body.communityExternalId === "string" ? body.communityExternalId : "";
+      const userExternalId = typeof body.userExternalId === "string" ? body.userExternalId : "";
+      if (!["warn", "mute", "kick", "ban"].includes(String(action)) ||
+          !["telegram", "discord"].includes(String(platform)) || !actorUserId || !targetUserId ||
+          !communityId || !communityExternalId || !userExternalId ||
+          !database.getUser(actorUserId) || !database.getUser(targetUserId) ||
+          !database.getCommunitiesSnapshot().some((item) => item.id === communityId)) {
+        json(res, 400, { error: "invalid_moderation_case" }); return;
+      }
+      if (body.durationSeconds !== undefined && (!Number.isFinite(body.durationSeconds) || Number(body.durationSeconds) <= 0)) {
+        json(res, 400, { error: "durationSeconds_must_be_positive" }); return;
+      }
+      try {
+        const result = runtimeServices.moderationService.createCase({
+          action: action as "warn" | "mute" | "kick" | "ban",
+          actorUserId: actorUserId as never,
+          targetUserId: targetUserId as never,
+          communityId: communityId as never,
+          platform: platform as "telegram" | "discord",
+          communityExternalId,
+          userExternalId,
+          ...(typeof body.durationSeconds === "number" ? { durationSeconds: body.durationSeconds } : {}),
+          ...(typeof body.reason === "string" ? { reason: body.reason.slice(0, 1000) } : {})
+        });
+        json(res, 201, { item: result.case, adapterAction: result.adapterAction, execution: "action_created_not_dispatched" });
+      } catch (error) {
+        json(res, 403, { error: error instanceof Error ? error.message : "moderation_create_failed" });
+      }
       return;
     }
 
