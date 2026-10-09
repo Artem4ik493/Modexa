@@ -1344,6 +1344,22 @@ const server = createServer((req, res) => {
       return;
     }
 
+    const userSystemRolesMatch = url.pathname.match(/^\/api\/users\/([^/]+)\/system-roles$/);
+    if (userSystemRolesMatch && ["GET", "POST", "DELETE"].includes(req.method ?? "")) {
+      const userId = decodeURIComponent(userSystemRolesMatch[1]!);
+      if (!database.getUser(userId)) { json(res, 404, { error: "user_not_found" }); return; }
+      if (req.method === "GET") {
+        const ids = database.getUserSystemRoleIds(userId);
+        json(res, 200, { items: ids.map((id) => database.getSystemRole(id)).filter(Boolean) }); return;
+      }
+      const body = await readJsonBody(req);
+      const roleId = typeof body.roleId === "string" ? body.roleId : "";
+      if (!roleId || !database.getSystemRole(roleId)) { json(res, 404, { error: "system_role_not_found" }); return; }
+      if (req.method === "POST") database.assignSystemRole(userId, roleId);
+      else database.revokeSystemRole(userId, roleId);
+      json(res, 200, { updated: true, items: database.getUserSystemRoleIds(userId) }); return;
+    }
+
     const userSettingsMatch = url.pathname.match(/^\/api\/users\/([^/]+)\/settings$/);
     if (userSettingsMatch && ["GET", "PATCH", "PUT"].includes(req.method ?? "")) {
       const userId = decodeURIComponent(userSettingsMatch[1]!);
@@ -1585,6 +1601,15 @@ const server = createServer((req, res) => {
       const queue = database.getRuntimeState<Array<Record<string, unknown>>>("api.action_queue") ?? [];
       const items = queue.filter((item) => (!communityId || item.communityId === communityId) && (!status || item.status === status)).slice(-limit).reverse();
       json(res, 200, { items, limit }); return;
+    }
+
+    const actionMatch = url.pathname.match(/^\/api\/actions\/([^/]+)$/);
+    if (actionMatch && req.method === "GET") {
+      const id = decodeURIComponent(actionMatch[1]!);
+      const queue = database.getRuntimeState<Array<Record<string, unknown>>>("api.action_queue") ?? [];
+      const item = queue.find((entry) => entry.id === id);
+      if (!item) { json(res, 404, { error: "action_not_found" }); return; }
+      json(res, 200, { item }); return;
     }
 
     if (url.pathname === "/api/backup" && req.method === "GET") {
