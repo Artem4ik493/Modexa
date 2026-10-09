@@ -454,15 +454,16 @@ function handleSettings(
   if (category === "general") return createGeneralSettingsResponse(context, communityService);
 
   if (["members", "moderation", "access", "automations"].includes(category)) {
-    const settingKey = ({ members: "members.list_visible", moderation: "moderation.logging_enabled", access: "access.member_profile_visible", automations: "automations.enabled" } as Record<string, string>)[category];
+    const settingsCategory = category as "members" | "moderation" | "access" | "automations";
+    const settingKey = ({ members: "members.list_visible", moderation: "moderation.logging_enabled", access: "access.member_profile_visible", automations: "automations.enabled" } as const)[settingsCategory];
     if (context.args[1]?.toLowerCase() === "toggle") {
       if (!context.execution.capabilities.includes("community.manage")) return { content: t("settings.forbidden"), buttons: [createBackButton(t), createCloseButton(t)] };
       const current = database?.getCommunitySetting(community.id, settingKey) !== "false";
       database?.setCommunitySetting(community.id, settingKey, String(!current));
     }
     const current = database?.getCommunitySetting(community.id, settingKey) !== "false";
-    const titleKey = ({ members: "settings.category.members", moderation: "settings.category.moderation", access: "settings.category.access", automations: "settings.category.automations" } as Record<string, string>)[category];
-    const descriptionKey = ({ members: "settings.category.members.description", moderation: "settings.category.moderation.description", access: "settings.category.access.description", automations: "settings.category.automations.description" } as Record<string, string>)[category];
+    const titleKey = ({ members: "settings.category.members", moderation: "settings.category.moderation", access: "settings.category.access", automations: "settings.category.automations" } as const)[settingsCategory];
+    const descriptionKey = ({ members: "settings.category.members.description", moderation: "settings.category.moderation.description", access: "settings.category.access.description", automations: "settings.category.automations.description" } as const)[settingsCategory];
     const canManage = context.execution.capabilities.includes("community.manage");
     return {
       content: [t(titleKey), t("settings.section.description"), t(descriptionKey), current ? t("settings.value.enabled") : t("settings.value.disabled")].join("\n"),
