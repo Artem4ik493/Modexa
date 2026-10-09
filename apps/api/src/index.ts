@@ -114,6 +114,13 @@ const runnerArgs = ["--env-file=.env", "--import=tsx", "apps/runner/src/index.ts
 let runnerProcess: ChildProcess | undefined;
 let runnerStartedAt: string | undefined;
 let runnerLastExit: { code: number | null; signal: string | null; at: string } | undefined;
+const runnerLogs: Array<{ at: string; stream: "stdout" | "stderr"; message: string }> = [];
+function appendRunnerLog(stream: "stdout" | "stderr", chunk: Buffer | string): void {
+  for (const line of String(chunk).split(/\\r?\\n/).filter(Boolean)) {
+    runnerLogs.push({ at: new Date().toISOString(), stream, message: line.slice(0, 4000) });
+  }
+  if (runnerLogs.length > 500) runnerLogs.splice(0, runnerLogs.length - 500);
+}
 
 const discordRedirectUri =
   process.env.DISCORD_REDIRECT_URI ??
@@ -270,9 +277,11 @@ function startRunner(): void {
   runnerProcess = spawn(runnerCommand, runnerArgs, {
     cwd: process.cwd(),
     env: process.env,
-    stdio: "inherit",
-    windowsHide: false
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true
   });
+  runnerProcess.stdout?.on("data", (chunk: Buffer) => appendRunnerLog("stdout", chunk));
+  runnerProcess.stderr?.on("data", (chunk: Buffer) => appendRunnerLog("stderr", chunk));
   runnerStartedAt = new Date().toISOString();
   runnerLastExit = undefined;
   runnerProcess.on("exit", (code, signal) => {
@@ -677,6 +686,15 @@ const server = createServer((req, res) => {
     // role, only the server API key may perform mutations.
     if (!["GET", "HEAD", "OPTIONS"].includes(req.method ?? "") && !authorized(req)) {
       json(res, 403, { error: "api_key_required_for_mutations" });
+      return;
+    }
+
+    if (url.pathname === "/api/runtime/logs" && req.method === "GET") {
+      const limit = Math.min(500, Math.max(1, Number.parseInt(url.searchParams.get("limit") ?? "100", 10) || 100));
+      const stream = url.searchParams.get("stream");
+      if (stream && stream !== "stdout" && stream !== "stderr") { json(res, 400, { error: "stream_must_be_stdout_or_stderr" }); return; }
+      const items = runnerLogs.filter((item) => !stream || item.stream === stream).slice(-limit);
+      json(res, 200, { items, totalBuffered: runnerLogs.length, limit });
       return;
     }
 
