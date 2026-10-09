@@ -813,6 +813,10 @@ export class ModexaDatabase {
     }));
   }
 
+  deleteCommunityRole(roleId: string): void {
+    this.database.prepare("DELETE FROM community_roles WHERE id = ?").run(roleId);
+  }
+
   assignCommunityRole(userId: string, roleId: string): void {
     this.database.prepare(`INSERT OR IGNORE INTO user_community_roles (user_id, role_id) VALUES (?, ?)`).run(userId, roleId);
   }
