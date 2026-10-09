@@ -406,7 +406,8 @@ async function resolveModerationTarget(
 
   let target =
     identityService.findUserByIdentity(context.platform, targetArg) ??
-    identityService.findUserByUsername(normalizedTarget, context.platform);
+    identityService.findUserByUsername(normalizedTarget, context.platform) ??
+    identityService.getUser(normalizedTarget);
 
   if (!target && context.community) {
     target = membershipService.getCommunityMemberships(context.community.id)
