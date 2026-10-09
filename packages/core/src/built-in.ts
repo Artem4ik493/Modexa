@@ -397,14 +397,47 @@ export function createAccountInteractionHandler(
 function handleSettings(
   context: CommandContext,
   communityService?: CommunityService,
-  bridgeService?: BridgeService
+  bridgeService?: BridgeService,
+  database?: ModexaDatabase
 ): CommandResponse {
   const t = createTranslator(context.execution.locale);
 
   if (context.execution.type === "dm") {
+    const requestedLocale = context.args[1]?.toLowerCase();
+    if (context.args[0]?.toLowerCase() === "language" &&
+        (requestedLocale === "ru" || requestedLocale === "en")) {
+      database?.setUserSetting(context.execution.user.id, "locale", requestedLocale);
+      context.execution.locale = requestedLocale;
+    }
+
+    const locale = database?.getUserSetting(context.execution.user.id, "locale");
+    const currentLocale = locale === "en" || locale === "ru"
+      ? locale
+      : context.execution.locale === "en" ? "en" : "ru";
+    const personalTranslator = createTranslator(currentLocale);
+
     return {
-      content: t("settings.dm"),
-      buttons: [createBackButton(t), createCloseButton(t)]
+      content: [
+        personalTranslator("settings.personal.title"),
+        personalTranslator("settings.personal.language"),
+        personalTranslator(currentLocale === "en"
+          ? "settings.personal.language.en_selected"
+          : "settings.personal.language.ru_selected")
+      ].join("\n"),
+      buttons: [
+        {
+          id: "settings-language-ru",
+          label: personalTranslator("settings.personal.language.ru"),
+          action: { type: "command", command: "/settings", args: ["language", "ru"] }
+        },
+        {
+          id: "settings-language-en",
+          label: personalTranslator("settings.personal.language.en"),
+          action: { type: "command", command: "/settings", args: ["language", "en"] }
+        },
+        createBackButton(personalTranslator),
+        createCloseButton(personalTranslator)
+      ]
     };
   }
 
@@ -956,7 +989,8 @@ export function createBuiltinCommands(
         handleSettings(
           context,
           communityService,
-          bridgeService
+          bridgeService,
+          database
         )
     },
     {
