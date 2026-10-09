@@ -745,6 +745,66 @@ const server = createServer((req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/bridge/endpoints" && req.method === "POST") {
+      const body = await readJsonBody(req);
+      const required = ["platform", "communityExternalId", "communityName", "channelExternalId", "channelName"];
+      if (required.some((key) => typeof body[key] !== "string" || !(body[key] as string).trim()) ||
+          !["telegram", "discord"].includes(String(body.platform))) {
+        json(res, 400, { error: "invalid_bridge_endpoint" });
+        return;
+      }
+      const endpoint = {
+        id: typeof body.id === "string" && body.id.trim() ? body.id : `endpoint-${randomUUID()}`,
+        platform: body.platform as "telegram" | "discord",
+        communityExternalId: (body.communityExternalId as string).trim(),
+        communityName: (body.communityName as string).trim(),
+        channelExternalId: (body.channelExternalId as string).trim(),
+        channelName: (body.channelName as string).trim(),
+        ...(typeof body.communityId === "string" ? { communityId: body.communityId } : {}),
+        ...(typeof body.channelId === "string" ? { channelId: body.channelId } : {}),
+        updatedAt: new Date()
+      };
+      database.upsertBridgeEndpoint(endpoint);
+      json(res, 201, { item: endpoint });
+      return;
+    }
+
+    if (url.pathname === "/api/bridge/links" && req.method === "POST") {
+      const body = await readJsonBody(req);
+      const sourceEndpointId = typeof body.sourceEndpointId === "string" ? body.sourceEndpointId : "";
+      const targetEndpointId = typeof body.targetEndpointId === "string" ? body.targetEndpointId : "";
+      const endpoints = database.getBridgeEndpoints();
+      if (!sourceEndpointId || !targetEndpointId || sourceEndpointId === targetEndpointId ||
+          !endpoints.some((item) => item.id === sourceEndpointId) ||
+          !endpoints.some((item) => item.id === targetEndpointId)) {
+        json(res, 400, { error: "invalid_bridge_link_endpoints" });
+        return;
+      }
+      const existing = database.getBridgeLinks().find((item) =>
+        item.sourceEndpointId === sourceEndpointId && item.targetEndpointId === targetEndpointId
+      );
+      if (existing) { json(res, 200, { item: existing, existing: true }); return; }
+      const now = new Date();
+      const link = { id: `bridge-${randomUUID()}`, sourceEndpointId, targetEndpointId, createdAt: now, updatedAt: now };
+      try {
+        database.upsertBridgeLink(link);
+        json(res, 201, { item: link });
+      } catch {
+        json(res, 400, { error: "bridge_link_create_failed" });
+      }
+      return;
+    }
+
+    const bridgeLinkMatch = url.pathname.match(/^\/api\/bridge\/links\/([^/]+)$/);
+    if (bridgeLinkMatch && req.method === "DELETE") {
+      const id = decodeURIComponent(bridgeLinkMatch[1]!);
+      const exists = database.getBridgeLinks().some((item) => item.id === id);
+      if (!exists) { json(res, 404, { error: "bridge_link_not_found" }); return; }
+      database.deleteBridgeLink(id);
+      json(res, 200, { deleted: true, id });
+      return;
+    }
+
     if (url.pathname === "/api/commands" && req.method === "GET") {
       const communityId = url.searchParams.get("communityId");
       if (!communityId) {
