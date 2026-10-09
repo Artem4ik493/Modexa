@@ -153,6 +153,7 @@ const MESSAGE_KEYS = [
   "member.platform_status",
   "command.members.description",
   "command.role.description",
+  "command.role.inactive_member",
   "members.community_only",
   "members.title",
   "members.empty",
