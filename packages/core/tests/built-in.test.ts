@@ -22,14 +22,13 @@ describe("built-in commands", () => {
     expect(registry.get("help")).toBeDefined();
   });
 
-  it("registers commands alias for help", () => {
+  it("registers a separate command catalog", () => {
     const registry = new CommandRegistry();
 
     createBuiltinCommands(registry);
 
-    expect(registry.get("commands")).toBe(
-      registry.get("help")
-    );
+    expect(registry.get("commands")).toBeDefined();
+    expect(registry.get("commands")).not.toBe(registry.get("help"));
   });
 
   it("executes ping in Russian by default", async () => {
@@ -167,9 +166,8 @@ describe("built-in commands", () => {
     );
   });
 
-  it("generates help from the command registry", async () => {
+  it("renders help as a knowledge-base guide rather than a command list", async () => {
     const registry = new CommandRegistry();
-
     createBuiltinCommands(registry);
 
     const result = await registry.execute("help", {
@@ -199,17 +197,44 @@ describe("built-in commands", () => {
     });
 
     const content = result?.content ?? "";
+    expect(content).toContain("Путеводитель по Modexa");
+    expect(content).toContain("базе знаний Modexa");
+    expect(content).not.toContain("/ping —");
+    expect(result?.buttons?.some((button) => button.action.type === "command" && button.action.command === "/commands")).toBe(true);
+  });
 
-    expect(content).toContain(
-      "Доступные команды:"
-    );
+  it("renders a separate catalog in /commands", async () => {
+    const registry = new CommandRegistry();
+    createBuiltinCommands(registry);
 
-    expect(content).toContain(
-      "/ping — Проверить, что Modexa работает"
-    );
+    const result = await registry.execute("commands", {
+      platform: "telegram",
+      user: {
+        id: "user-1",
+        platform: "telegram",
+        displayName: "Test User"
+      },
+      args: [],
+      rawText: "/commands",
+      execution: {
+        type: "dm",
+        platform: "telegram",
+        correlationId: "test",
+        user: {
+          id: "user-1",
+          displayName: "Test User"
+        },
+        capabilities: [
+          "commands",
+          "account.manage",
+          "identity.link",
+          "billing"
+        ]
+      }
+    });
 
-    expect(content).toContain(
-      "/help (/commands) — Показать список команд"
-    );
+    expect(result?.content).toContain("/ping");
+    expect(result?.content).toContain("Общие функции");
+    expect(result?.content).not.toContain("/commands —");
   });
 });

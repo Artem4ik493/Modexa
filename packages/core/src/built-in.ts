@@ -961,97 +961,85 @@ export function createBuiltinCommands(
     },
     {
       name: "help",
-      aliases: ["commands"],
-      descriptionKey:
-        "command.help.description",
+      descriptionKey: "command.help.description",
       handler: (context) => {
-        const t = createTranslator(
-          context.execution?.locale
-        );
+        const t = createTranslator(context.execution.locale);
+        const section = context.args[0]?.toLowerCase() ?? "home";
+        const pages: Record<string, { title: string; body: string; buttons: InteractionButton[] }> = {
+          home: {
+            title: t("help.title"),
+            body: t("help.intro"),
+            buttons: [
+              { id: "help-start", label: t("help.topic.start"), action: { type: "command", command: "/help", args: ["start"] } },
+              { id: "help-account", label: t("help.topic.account"), action: { type: "command", command: "/help", args: ["account"] } },
+              { id: "help-community", label: t("help.topic.community"), action: { type: "command", command: "/help", args: ["community"] } },
+              { id: "help-moderation", label: t("help.topic.moderation"), action: { type: "command", command: "/help", args: ["moderation"] } },
+              { id: "help-bridge", label: t("help.topic.bridge"), action: { type: "command", command: "/help", args: ["bridge"] } },
+              { id: "help-settings", label: t("help.topic.settings"), action: { type: "command", command: "/help", args: ["settings"] } },
+              { id: "help-commands", label: t("help.open_wiki"), action: { type: "command", command: "/commands" } }
+            ]
+          },
+          start: { title: t("help.topic.start"), body: t("help.page.start"), buttons: [] },
+          account: { title: t("help.topic.account"), body: t("help.page.account"), buttons: [] },
+          community: { title: t("help.topic.community"), body: t("help.page.community"), buttons: [] },
+          moderation: { title: t("help.topic.moderation"), body: t("help.page.moderation"), buttons: [] },
+          bridge: { title: t("help.topic.bridge"), body: t("help.page.bridge"), buttons: [] },
+          settings: { title: t("help.topic.settings"), body: t("help.page.settings"), buttons: [] }
+        };
+        const page = pages[section] ?? pages.home!;
+        const buttons: InteractionButton[] = [...page.buttons];
+        if (section !== "home") {
+          buttons.push({
+            id: "help-home",
+            label: t("help.home"),
+            action: { type: "command", command: "/help" }
+          });
+        }
+        buttons.push(createCloseButton(t));
+        return {
+          content: `📚 ${page.title}\n\n${page.body}`,
+          buttons
+        };
+      }
+    },
+    {
+      name: "commands",
+      descriptionKey: "command.commands.description",
+      handler: (context) => {
+        const t = createTranslator(context.execution.locale);
         const available = registry
           .listAvailable(context.execution.capabilities, context.execution.permissions ?? [])
-          .filter((command) => command.name !== "menu");
-
+          .filter((command) => command.name !== "menu" && command.name !== "help" && command.name !== "commands");
         const groupFor = (name: string): string => {
-          if ([
-            "warn","mute","kick","ban","unmute","unban",
-            "clear","warns","remwarn","resetwarns","case","modhistory"
-          ].includes(name)) return "🛡 Модерация";
-          if (["member","members","role"].includes(name)) return "👥 Участники";
-          if (["settings","command"].includes(name)) return "⚙️ Настройки";
-          if (["account","link"].includes(name)) return "🔗 Аккаунт";
-          return "📦 Основное";
+          if (["warn", "mute", "kick", "ban", "unmute", "unban", "clear", "warns", "remwarn", "resetwarns", "case", "modhistory", "mutes", "mute-list", "warnings"].includes(name)) return t("commands.group.moderation");
+          if (["member", "members", "role", "user", "profile"].includes(name)) return t("commands.group.members");
+          if (["settings", "command", "server", "community"].includes(name)) return t("commands.group.settings");
+          if (["account", "link"].includes(name)) return t("commands.group.account");
+          return t("commands.group.general");
         };
-
         const groups = new Map<string, CommandDefinition[]>();
         for (const command of available) {
           const group = groupFor(command.name);
-          const items = groups.get(group) ?? [];
-          items.push(command);
-          groups.set(group, items);
+          const list = groups.get(group) ?? [];
+          list.push(command);
+          groups.set(group, list);
         }
-
-        const category = context.args[0]?.toLowerCase();
-        const categoryAliases: Record<string, string> = {
-          moderation: "🛡 Модерация",
-          mod: "🛡 Модерация",
-          members: "👥 Участники",
-          users: "👥 Участники",
-          settings: "⚙️ Настройки",
-          account: "🔗 Аккаунт",
-          basic: "📦 Основное"
-        };
-        const selectedGroup = categoryAliases[category ?? ""];
-        const entries = selectedGroup
-          ? [[selectedGroup, groups.get(selectedGroup) ?? []] as const]
-          : [...groups.entries()];
-
-        const commandList = entries
-          .map(([group, commands]) => {
-            const lines = commands.map((command) => {
-              const aliases =
-                command.aliases && command.aliases.length > 0
-                  ? ` (${command.aliases.map((alias) => `/${alias}`).join(", ")})`
-                  : "";
-              const description =
-                command.descriptionKey
-                  ? t(command.descriptionKey)
-                  : (command.description ?? t("help.no_description"));
-              return `/${command.name}${aliases} — ${description}`;
-            });
-            return `**${group}**\n${lines.join("\n")}`;
-          })
-          .join("\n\n");
-
-        const categoryButtons = [
-          ["🛡 Модерация", "moderation"],
-          ["👥 Участники", "members"],
-          ["⚙️ Настройки", "settings"],
-          ["🔗 Аккаунт", "account"],
-          ["📦 Основное", "basic"]
-        ]
-          .filter(([label]) => !selectedGroup || label === selectedGroup)
-          .map(([label, value]) => ({
-            id: `help-${value}`,
-            label,
-            action: {
-              type: "command" as const,
-              command: "/help",
-              args: [value]
-            }
-          }));
-
+        const content = [...groups.entries()].map(([group, commands]) =>
+          `**${group}**\n${commands.map((command) => {
+            const aliases = command.aliases?.length ? ` (${command.aliases.map((alias) => `/${alias}`).join(", ")})` : "";
+            const description = command.descriptionKey ? t(command.descriptionKey) : command.description ?? t("help.no_description");
+            return `/${command.name}${aliases} — ${description}`;
+          }).join("\n")}`
+        ).join("\n\n");
         return {
-          content: commandList
-            ? `${t("help.title")}\n\n${commandList}`
-            : t("help.empty"),
+          content: content || t("help.empty"),
           buttons: [
-            ...categoryButtons,
-            ...(selectedGroup ? [createBackButton(t)] : []),
+            { id: "commands-help", label: t("help.home"), action: { type: "command", command: "/help" } },
             createCloseButton(t)
           ]
         };
-      }}
+      }
+    }
   ];
 
   for (const command of commands) {

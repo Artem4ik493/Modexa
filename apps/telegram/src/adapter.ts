@@ -322,23 +322,18 @@ export class TelegramAdapter
 
       case "member.warn": {
         const targetDisplayName =
-          this.getModerationTargetName(
-            action.metadata
-          );
-
-        const reason =
-          action.reason
-            ? `\\nПричина: ${action.reason}`
-            : "";
+          this.getModerationTargetName(action.metadata);
+        const reason = action.reason?.trim();
+        const details = reason
+          ? `Причина: ${reason}`
+          : "Причина не указана.";
 
         await this.bot.api.sendMessage(
           Number(action.communityExternalId),
-          `⚠️ Пользователь ${targetDisplayName} получил предупреждение.${reason}`
+          `⚠️ Пользователь ${targetDisplayName} получил предупреждение.\n${details}`
         );
-
         return;
       }
-
       case "member.mute": {
         if (
           action.durationSeconds === undefined ||
@@ -933,6 +928,11 @@ export class TelegramAdapter
           displayName:
             author.first_name,
 
+          locale:
+            "language_code" in author && typeof author.language_code === "string"
+              ? author.language_code
+              : undefined,
+
           avatarUrl,
 
           platformRole
@@ -1228,6 +1228,7 @@ export class TelegramAdapter
               externalId: String(user.id),
               username: user.username,
               displayName: user.first_name,
+              locale: user.language_code,
               avatarUrl: await this.resolveAvatarUrl(user.id),
               platformRole
             },
