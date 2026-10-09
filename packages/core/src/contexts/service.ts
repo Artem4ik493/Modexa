@@ -70,34 +70,15 @@ const COMMUNITY_CAPABILITY_PERMISSIONS:
       "commands.use",
       "commands"
     ],
-    [
-      "bridge.view",
-      "bridge"
-    ],
-    [
-      "bridge.manage",
-      "bridge"
-    ],
-    [
-      "moderation.warn",
-      "moderation"
-    ],
-    [
-      "moderation.mute",
-      "moderation"
-    ],
-    [
-      "moderation.kick",
-      "moderation"
-    ],
-    [
-      "moderation.ban",
-      "moderation"
-    ],
-    [
-      "moderation.clear",
-      "moderation"
-    ]
+    ["bridge.view", "bridge.view"],
+    ["bridge.manage", "bridge.manage"],
+    ["commands.manage", "commands.manage"],
+    ["moderation.view", "moderation.view"],
+    ["moderation.warn", "moderation.warn"],
+    ["moderation.mute", "moderation.mute"],
+    ["moderation.kick", "moderation.kick"],
+    ["moderation.ban", "moderation.ban"],
+    ["moderation.clear", "moderation.clear"]
   ];
 
 export class ExecutionContextService {
@@ -128,7 +109,8 @@ export class ExecutionContextService {
         capabilities:
           this.getDmCapabilities(
             input.user.id
-          )
+          ),
+        permissions: []
       };
     }
 
@@ -162,7 +144,11 @@ export class ExecutionContextService {
       channel:
         input.channel,
       locale,
-      capabilities
+      capabilities,
+      permissions: this.getCommunityPermissions(
+        input.user.id,
+        input.community.id
+      )
     };
   }
 
@@ -266,6 +252,36 @@ export class ExecutionContextService {
     return capabilities;
   }
 
+  private getCommunityPermissions(
+    userId: string,
+    communityId: string
+  ): Permission[] {
+    if (!this.communityAccess) {
+      return [];
+    }
+
+    const permissions: Permission[] = [
+      "community.view",
+      "community.manage",
+      "member.view",
+      "member.manage",
+      "moderation.view",
+      "moderation.warn",
+      "moderation.mute",
+      "moderation.kick",
+      "moderation.ban",
+      "moderation.clear",
+      "commands.use",
+      "commands.manage",
+      "bridge.view",
+      "bridge.manage"
+    ];
+
+    return permissions.filter((permission) =>
+      this.communityAccess!.can(userId, communityId, permission)
+    );
+  }
+
   private getCommunityCapabilities(
     userId: string,
     communityId: string
@@ -278,10 +294,9 @@ export class ExecutionContextService {
      * The real runtime always supplies CommunityAccessService,
      * so production authorization is permission-based.
      */
+    // Fail closed if the runtime has no access service.
     if (!this.communityAccess) {
-      return [
-        ...COMMUNITY_CAPABILITIES
-      ];
+      return ["commands"];
     }
 
     const capabilities =
