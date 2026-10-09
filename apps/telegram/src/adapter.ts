@@ -322,18 +322,18 @@ export class TelegramAdapter
 
       case "member.warn": {
         const targetDisplayName =
-          this.getModerationTargetName(
-            action.metadata
-          );
+          this.getModerationTargetName(action.metadata);
+        const reason = action.reason?.trim();
+        const details = reason
+          ? `Причина: ${reason}`
+          : "Причина не указана.";
 
-        const reason =
-          action.reason
-            ? `\\nПричина: ${action.reason}`
-            : "";
-
+        // A warning is recorded by Core. Notify the community so the
+        // moderation action is visible even when the target has not
+        // started a private conversation with the bot.
         await this.bot.api.sendMessage(
           Number(action.communityExternalId),
-          `⚠️ Пользователь ${targetDisplayName} получил предупреждение.${reason}`
+          `⚠️ Пользователь ${targetDisplayName} получил предупреждение.\\n${details}`
         );
 
         return;
