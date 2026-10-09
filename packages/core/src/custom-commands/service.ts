@@ -32,9 +32,29 @@ export interface CustomCommandInvocation {
   now?: Date;
 }
 
+export interface CustomCommandStateStore {
+  getRuntimeState<T>(key: string): T | undefined;
+  setRuntimeState(key: string, value: unknown, now?: Date): void;
+}
+
 export class CustomCommandService {
   private readonly commands = new Map<string, CustomCommand>();
   private readonly lastRun = new Map<string, number>();
+
+  constructor(private readonly store?: CustomCommandStateStore) {
+    const stored = store?.getRuntimeState<Array<Omit<CustomCommand, "updatedAt"> & { updatedAt: string }>>("custom_commands") ?? [];
+    for (const item of stored) this.commands.set(item.id, {
+      ...item,
+      updatedAt: new Date(item.updatedAt),
+      aliases: [...item.aliases],
+      actions: [...item.actions],
+      access: { ...item.access, roleIds: [...item.access.roleIds], channelIds: [...item.access.channelIds] }
+    });
+  }
+
+  private persist(): void {
+    this.store?.setRuntimeState("custom_commands", [...this.commands.values()].map((item) => ({ ...item, updatedAt: item.updatedAt.toISOString() })));
+  }
 
   upsert(command: CustomCommand): void {
     this.commands.set(command.id, {
@@ -47,10 +67,12 @@ export class CustomCommandService {
         channelIds: [...command.access.channelIds]
       }
     });
+    this.persist();
   }
 
   remove(commandId: string): void {
     this.commands.delete(commandId);
+    this.persist();
   }
 
   get(communityId: string, name: string): CustomCommand | undefined {
