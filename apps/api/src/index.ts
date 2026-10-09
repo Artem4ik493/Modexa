@@ -31,6 +31,15 @@ const database = new ModexaDatabase({
 });
 const backup = new BackupService(database);
 const runtimeServices = createRuntimeServices(undefined, database);
+for (const community of database.getCommunitiesSnapshot()) {
+  const ranking = database.getRuntimeState<Record<string, unknown>>(`api.ranking.${community.id}`);
+  if (ranking) runtimeServices.rankingService.setSettings(community.id, ranking as never);
+  const welcome = database.getRuntimeState<Record<string, unknown>>(`api.welcome.${community.id}`);
+  if (welcome) runtimeServices.welcomeService.setSettings(community.id, welcome as never);
+}
+for (const command of database.getRuntimeState<Array<Record<string, unknown>>>("api.custom_commands") ?? []) {
+  runtimeServices.customCommandService.upsert(command as never);
+}
 const accessControlService = runtimeServices.accessControlService;
 
 if (!accessControlService) {
@@ -855,6 +864,7 @@ const server = createServer((req, res) => {
         json(res, 400, { error: "invalid_ranking_settings" }); return;
       }
       database.setRuntimeState(key, next);
+      runtimeServices.rankingService.setSettings(communityId, next as never);
       json(res, 200, { updated: true, item: next }); return;
     }
 
@@ -877,6 +887,7 @@ const server = createServer((req, res) => {
         json(res, 400, { error: "invalid_welcome_settings" }); return;
       }
       database.setRuntimeState(key, next);
+      runtimeServices.welcomeService.setSettings(communityId, next as never);
       json(res, 200, { updated: true, item: next }); return;
     }
 
@@ -914,6 +925,7 @@ const server = createServer((req, res) => {
       }
       const item = { id: `custom-${randomUUID()}`, communityId: targetCommunityId, name, description: typeof body.description === "string" ? body.description.slice(0, 300) : undefined, group: typeof body.group === "string" ? body.group.slice(0, 80) : undefined, enabled: body.enabled !== false, aliases, access, actions: body.actions, updatedAt: new Date().toISOString(), updatedBy: typeof body.updatedBy === "string" ? body.updatedBy : undefined };
       database.setRuntimeState("api.custom_commands", [...all, item]);
+      runtimeServices.customCommandService.upsert(item as never);
       json(res, 201, { item }); return;
     }
 
@@ -925,6 +937,7 @@ const server = createServer((req, res) => {
       if (index < 0) { json(res, 404, { error: "custom_command_not_found" }); return; }
       if (req.method === "DELETE") {
         database.setRuntimeState("api.custom_commands", all.filter((item) => item.id !== id));
+        runtimeServices.customCommandService.remove(id);
         json(res, 200, { deleted: true, id }); return;
       }
       const body = await readJsonBody(req);
@@ -938,6 +951,7 @@ const server = createServer((req, res) => {
       next.name = next.name.replace(/^\//, "");
       all[index] = next;
       database.setRuntimeState("api.custom_commands", all);
+      runtimeServices.customCommandService.upsert(next as never);
       json(res, 200, { item: next }); return;
     }
 
