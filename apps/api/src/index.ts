@@ -21,7 +21,11 @@ import {
 
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST ?? "0.0.0.0";
-const apiKey = process.env.MODEXA_API_KEY ?? "change-me";
+const apiKey = process.env.MODEXA_API_KEY ?? "";
+if (apiKey.length < 32 || apiKey === "change-me" || apiKey === "REPLACE_WITH_A_LONG_RANDOM_SECRET") {
+  throw new Error("MODEXA_API_KEY must be configured with a random secret of at least 32 characters");
+}
+const allowedOrigins = new Set((process.env.MODEXA_ALLOWED_ORIGINS ?? "").split(",").map((origin) => origin.trim()).filter(Boolean));
 const database = new ModexaDatabase({
   path: process.env.MODEXA_DATABASE_PATH ?? "data/modexa.sqlite"
 });
@@ -215,7 +219,8 @@ function json(res: ServerResponse, status: number, value: unknown): void {
   res.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
     "content-length": Buffer.byteLength(body),
-    "access-control-allow-origin": "*"
+    "cache-control": "no-store",
+    "x-content-type-options": "nosniff"
   });
   res.end(body);
 }
@@ -236,7 +241,10 @@ function authorized(req: IncomingMessage): boolean {
 
 async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   let body = "";
-  for await (const chunk of req) body += chunk;
+  for await (const chunk of req) {
+    body += chunk;
+    if (Buffer.byteLength(body) > 1_048_576) throw new Error("request_body_too_large");
+  }
   if (!body.trim()) return {};
   try {
     const parsed = JSON.parse(body);
@@ -297,13 +305,26 @@ const server = createServer((req, res) => {
   void (async () => {
     const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
 
+    const requestOrigin = req.headers.origin;
+    const requestHost = req.headers.host ?? "localhost";
+    const sameOrigin = !requestOrigin || requestOrigin === "http://" + requestHost || requestOrigin === "https://" + requestHost;
+    const originAllowed = sameOrigin || allowedOrigins.has(requestOrigin ?? "");
+
     if (req.method === "OPTIONS") {
+      if (!originAllowed) { res.writeHead(403); res.end(); return; }
       res.writeHead(204, {
-        "access-control-allow-origin": "*",
-        "access-control-allow-methods": "GET,POST,OPTIONS",
-        "access-control-allow-headers": "authorization,content-type"
+        "access-control-allow-origin": requestOrigin ?? "",
+        "vary": "Origin",
+        "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+        "access-control-allow-headers": "authorization,content-type",
+        "access-control-max-age": "600"
       });
       res.end();
+      return;
+    }
+
+    if (!originAllowed) {
+      json(res, 403, { error: "origin_not_allowed" });
       return;
     }
 
@@ -447,7 +468,13 @@ const server = createServer((req, res) => {
 
     if (url.pathname === "/api/auth" && req.method === "POST") {
       let body = "";
-      for await (const chunk of req) body += chunk;
+      for await (const chunk of req) {
+        body += chunk;
+        if (Buffer.byteLength(body) > 16_384) {
+          json(res, 413, { error: "request_body_too_large" });
+          return;
+        }
+      }
       let supplied = "";
       try {
         supplied = String((JSON.parse(body) as { key?: unknown }).key ?? "");
