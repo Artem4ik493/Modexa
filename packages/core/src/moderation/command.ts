@@ -156,8 +156,8 @@ export function createModerationCommands(
 
       if (!target) return { content: `Участник ${targetArg} не найден.` };
 
-      const membership = membershipService.findMembership(target.id, context.community.id);
-      if (!membership && memberDirectory) {
+      let membership = membershipService.findMembership(target.id, context.community.id);
+      if ((!membership || membership.status === "left") && memberDirectory) {
         const nativeIdentity = identityService.getUserIdentities(target.id)
           .find((identity) => identity.platform === context.platform);
         const native = nativeIdentity
@@ -166,12 +166,18 @@ export function createModerationCommands(
               nativeIdentity.externalId
             )
           : undefined;
+
+        // Restore missing/left records only when the platform confirms
+        // that the account currently belongs to this community.
+        // Preserve Modexa bans: they must be lifted explicitly.
         if (native && native.isMember !== false) {
-          membershipService.createMembership({
-            userId: target.id,
-            communityId: context.community.id,
-            now: native.joinedAt
-          });
+          membership = membership
+            ? membershipService.reactivate(membership.id)
+            : membershipService.createMembership({
+                userId: target.id,
+                communityId: context.community.id,
+                now: native.joinedAt
+              });
         }
       }
 
