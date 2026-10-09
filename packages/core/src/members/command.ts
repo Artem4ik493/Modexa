@@ -149,12 +149,14 @@ function renderMemberDetails(
   database?: ModexaDatabase
 ): CommandResponse {
   const t = createTranslator(context.execution.locale);
-  if (
-    database?.getUserSetting(user.id, "profile.visible") === "false" ||
-    (database?.getCommunitySetting(context.community!.id, "access.member_profile_visible") === "false" &&
-      !context.execution.capabilities.includes("community.manage"))
-  ) {
+  if (database?.getUserSetting(user.id, "profile.visible") === "false") {
     return { content: t("member.private_profile") };
+  }
+  if (
+    database?.getCommunitySetting(context.community!.id, "access.member_profile_visible") === "false" &&
+    !context.execution.capabilities.includes("community.manage")
+  ) {
+    return { content: t("member.community_profile_hidden") };
   }
 
   const membership =
@@ -495,6 +497,10 @@ export function createMembersCommand(
       const canManageCommunity = context.execution.capabilities.includes("community.manage");
       if (database?.getCommunitySetting(context.community.id, "members.list_visible") === "false" && !canManageCommunity) {
         return { content: t("members.private_list") };
+      }
+
+      if (database?.getCommunitySetting(context.community.id, "access.member_profile_visible") === "false" && !context.execution.capabilities.includes("community.manage")) {
+        return { content: t("members.community_profiles_hidden") };
       }
 
       const pageSize = 10;
