@@ -301,6 +301,15 @@ async function handleMemberJoined(
   deps: PlatformEventHandlerDeps,
   member: AdapterMemberEvent
 ): Promise<void> {
+  deps.logger.debug("member.lifecycle.received", {
+    platform: deps.platform,
+    adapterId: deps.responder.id,
+    event: "joined",
+    userExternalId: member.user.externalId,
+    communityExternalId: member.community.externalId,
+    occurredAt: member.createdAt.toISOString()
+  });
+
   const executionContext =
     buildExecutionContext(
       deps,
@@ -391,12 +400,28 @@ async function handleMemberJoined(
     }
   }
 
+  const finalMembership = executionContext.community
+    ? deps.membershipService?.findMembership(
+        executionContext.user.id,
+        executionContext.community.id
+      )
+    : undefined;
+
+  deps.logger.info("member.lifecycle.synced", {
+    platform: deps.platform,
+    event: "joined",
+    userId: executionContext.user.id,
+    userExternalId: member.user.externalId,
+    communityId: executionContext.community?.id,
+    communityExternalId: member.community.externalId,
+    previousStatus: "unknown",
+    status: finalMembership?.status ?? "unavailable"
+  });
+
   deps.auditService?.record({
-    communityId:
-      executionContext.community?.id ?? "system",
+    communityId: executionContext.community?.id ?? "system",
     action: "member.join",
-    actorUserId:
-      executionContext.user.id
+    actorUserId: executionContext.user.id
   });
 }
 
@@ -404,39 +429,52 @@ async function handleMemberLeft(
   deps: PlatformEventHandlerDeps,
   member: AdapterMemberEvent
 ): Promise<void> {
-  if (!deps.identityService || !deps.membershipService) {
+  deps.logger.debug("member.lifecycle.received", {
+    platform: deps.platform,
+    adapterId: deps.responder.id,
+    event: "left",
+    userExternalId: member.user.externalId,
+    communityExternalId: member.community.externalId,
+    occurredAt: member.createdAt.toISOString()
+  });
+
+  const executionContext = buildExecutionContext(deps, {
+    correlationId: `${deps.platform}-member-left-${member.externalId}`,
+    author: member.user,
+    community: member.community
+  });
+  const community = executionContext.community;
+  const user = executionContext.user;
+
+  if (!community || !deps.membershipService) {
+    deps.logger.warn("member.lifecycle.sync_skipped", {
+      platform: deps.platform,
+      event: "left",
+      userId: user.id,
+      communityExternalId: member.community.externalId,
+      reason: !community ? "community_resolution_failed" : "membership_service_missing"
+    });
     return;
   }
 
-  const community =
-    deps.communityService?.findByIdentity(
-      deps.platform,
-      member.community.externalId
-    );
+  const membership = deps.membershipService.findMembership(user.id, community.id);
+  const previousStatus = membership?.status ?? "missing";
 
-  if (!community) {
-    return;
-  }
-
-  const user =
-    deps.identityService.findUserByIdentity(
-      deps.platform,
-      member.user.externalId
-    );
-
-  if (!user) {
-    return;
-  }
-
-  const membership =
-    deps.membershipService.findMembership(
-      user.id,
-      community.id
-    );
-
-  if (membership && membership.status === "active") {
+  if (membership?.status === "active") {
     deps.membershipService.leave(membership.id);
   }
+
+  const current = deps.membershipService.findMembership(user.id, community.id);
+  deps.logger.info("member.lifecycle.synced", {
+    platform: deps.platform,
+    event: "left",
+    userId: user.id,
+    userExternalId: member.user.externalId,
+    communityId: community.id,
+    communityExternalId: member.community.externalId,
+    previousStatus,
+    status: current?.status ?? "missing"
+  });
 
   deps.auditService?.record({
     communityId: community.id,
@@ -449,39 +487,53 @@ async function handleMemberBanned(
   deps: PlatformEventHandlerDeps,
   member: AdapterMemberEvent
 ): Promise<void> {
-  if (!deps.identityService || !deps.membershipService) {
+  deps.logger.debug("member.lifecycle.received", {
+    platform: deps.platform,
+    adapterId: deps.responder.id,
+    event: "banned",
+    userExternalId: member.user.externalId,
+    communityExternalId: member.community.externalId,
+    occurredAt: member.createdAt.toISOString(),
+    platformStatus: member.metadata?.status
+  });
+
+  const executionContext = buildExecutionContext(deps, {
+    correlationId: `${deps.platform}-member-banned-${member.externalId}`,
+    author: member.user,
+    community: member.community
+  });
+  const community = executionContext.community;
+  const user = executionContext.user;
+
+  if (!community || !deps.membershipService) {
+    deps.logger.warn("member.lifecycle.sync_skipped", {
+      platform: deps.platform,
+      event: "banned",
+      userId: user.id,
+      communityExternalId: member.community.externalId,
+      reason: !community ? "community_resolution_failed" : "membership_service_missing"
+    });
     return;
   }
 
-  const community =
-    deps.communityService?.findByIdentity(
-      deps.platform,
-      member.community.externalId
-    );
-
-  if (!community) {
-    return;
-  }
-
-  const user =
-    deps.identityService.findUserByIdentity(
-      deps.platform,
-      member.user.externalId
-    );
-
-  if (!user) {
-    return;
-  }
-
-  const membership =
-    deps.membershipService.findMembership(
-      user.id,
-      community.id
-    );
+  const membership = deps.membershipService.findMembership(user.id, community.id);
+  const previousStatus = membership?.status ?? "missing";
 
   if (membership && membership.status !== "banned") {
     deps.membershipService.ban(membership.id);
   }
+
+  const current = deps.membershipService.findMembership(user.id, community.id);
+  deps.logger.info("member.lifecycle.synced", {
+    platform: deps.platform,
+    event: "banned",
+    userId: user.id,
+    userExternalId: member.user.externalId,
+    communityId: community.id,
+    communityExternalId: member.community.externalId,
+    previousStatus,
+    status: current?.status ?? "missing"
+  });
 
   deps.auditService?.record({
     communityId: community.id,
