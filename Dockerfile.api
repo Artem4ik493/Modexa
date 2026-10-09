@@ -8,6 +8,7 @@ RUN corepack enable && corepack prepare pnpm@12.6.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 COPY packages ./packages
 COPY apps ./apps
+COPY localization ./localization
 
 RUN pnpm install --frozen-lockfile
 RUN pnpm build:core && pnpm build:api
