@@ -640,6 +640,13 @@ const server = createServer((req, res) => {
       return;
     }
 
+    // Until Discord-session requests are bound to a verified Modexa community
+    // role, only the server API key may perform mutations.
+    if (!["GET", "HEAD", "OPTIONS"].includes(req.method ?? "") && !authorized(req)) {
+      json(res, 403, { error: "api_key_required_for_mutations" });
+      return;
+    }
+
     if (url.pathname === "/api/runtime" && req.method === "GET") {
       json(res, 200, runnerStatus());
       return;
