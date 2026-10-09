@@ -91,6 +91,36 @@ export class AutomationService {
     return item;
   }
 
+  update(id: string, input: {
+    name?: string;
+    trigger?: AutomationTrigger;
+    action?: AutomationAction;
+  }, now = new Date()): Automation {
+    const item = this.require(id);
+    if (input.name !== undefined) {
+      if (!input.name.trim()) throw new Error("Automation name is required");
+      item.name = input.name.trim();
+    }
+    if (input.trigger !== undefined) {
+      if (input.trigger.type === "interval" && input.trigger.intervalSeconds < 60) {
+        throw new Error("Automation interval must be at least 60 seconds");
+      }
+      item.trigger = input.trigger;
+      item.nextRunAt = input.trigger.type === "interval"
+        ? new Date(now.getTime() + input.trigger.intervalSeconds * 1000)
+        : undefined;
+    }
+    if (input.action !== undefined) item.action = input.action;
+    item.updatedAt = now;
+    this.persist(now);
+    return item;
+  }
+
+  delete(id: string, now = new Date()): void {
+    if (!this.automations.delete(id)) throw new Error(`Automation "${id}" does not exist`);
+    this.persist(now);
+  }
+
   markRun(id: string, now = new Date()): Automation {
     const item = this.require(id);
     item.lastRunAt = now;
