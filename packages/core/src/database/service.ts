@@ -789,8 +789,18 @@ export class ModexaDatabase {
     this.database.prepare(`INSERT INTO community_roles (id, community_id, name) VALUES (?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET community_id = excluded.community_id, name = excluded.name`
     ).run(role.id, role.communityId, role.name);
-    const insert = this.database.prepare(`INSERT OR IGNORE INTO community_role_permissions (role_id, permission) VALUES (?, ?)`);
-    for (const permission of role.permissions) insert.run(role.id, permission);
+
+    // Role definitions are authoritative: remove permissions that are no
+    // longer present before writing the current set. INSERT OR IGNORE alone
+    // leaves revoked permissions in SQLite forever.
+    this.database.prepare(
+      "DELETE FROM community_role_permissions WHERE role_id = ?"
+    ).run(role.id);
+
+    const insert = this.database.prepare(`INSERT INTO community_role_permissions (role_id, permission) VALUES (?, ?)`);
+    for (const permission of new Set(role.permissions)) {
+      insert.run(role.id, permission);
+    }
   }
 
   getCommunityRoles(communityId: string): Array<{ id: string; communityId: string; name: string; permissions: Permission[] }> {
