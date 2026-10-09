@@ -198,9 +198,75 @@ describe("built-in commands", () => {
 
     const content = result?.content ?? "";
     expect(content).toContain("Путеводитель по Modexa");
-    expect(content).toContain("базу знаний Modexa");
+    expect(content).toContain("Выберите категорию");
     expect(content).not.toContain("/ping —");
     expect(result?.buttons?.some((button) => button.action.type === "command" && button.action.command === "/commands")).toBe(true);
+  });
+
+  it("opens a category with command rows and pagination metadata", async () => {
+    const registry = new CommandRegistry();
+    createBuiltinCommands(registry);
+
+    const result = await registry.execute("help", {
+      platform: "telegram",
+      user: {
+        id: "user-1",
+        platform: "telegram",
+        displayName: "Test User"
+      },
+      args: ["category", "information"],
+      rawText: "/help category information",
+      execution: {
+        type: "dm",
+        platform: "telegram",
+        correlationId: "test",
+        user: {
+          id: "user-1",
+          displayName: "Test User"
+        },
+        capabilities: ["commands", "account.manage", "identity.link", "billing"]
+      }
+    });
+
+    expect(result?.content).toContain("Информация");
+    expect(result?.content).toContain("/ping");
+    expect(result?.buttons?.some((button) =>
+      button.action.type === "command" &&
+      button.action.command === "/help" &&
+      button.action.args?.[0] === "command" &&
+      button.action.args?.[1] === "ping"
+    )).toBe(true);
+  });
+
+  it("opens detailed help for a specific command", async () => {
+    const registry = new CommandRegistry();
+    createBuiltinCommands(registry);
+
+    const result = await registry.execute("help", {
+      platform: "telegram",
+      user: {
+        id: "user-1",
+        platform: "telegram",
+        displayName: "Test User"
+      },
+      args: ["command", "ping"],
+      rawText: "/help command ping",
+      execution: {
+        type: "dm",
+        platform: "telegram",
+        correlationId: "test",
+        user: {
+          id: "user-1",
+          displayName: "Test User"
+        },
+        capabilities: ["commands", "account.manage", "identity.link", "billing"]
+      }
+    });
+
+    expect(result?.content).toContain("Команда /ping");
+    expect(result?.content).toContain("Использование");
+    expect(result?.content).toContain("/ping");
+    expect(result?.buttons?.some((button) => button.label === "Информация")).toBe(true);
   });
 
   it("renders a separate catalog in /commands", async () => {
