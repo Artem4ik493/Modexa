@@ -152,6 +152,15 @@ CREATE TABLE IF NOT EXISTS user_settings (
 
 CREATE INDEX IF NOT EXISTS idx_user_settings_user ON user_settings(user_id);
 
+CREATE TABLE IF NOT EXISTS community_settings (
+  community_id TEXT NOT NULL REFERENCES communities(id) ON DELETE CASCADE,
+  key TEXT NOT NULL,
+  value TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (community_id, key)
+);
+CREATE INDEX IF NOT EXISTS idx_community_settings_community ON community_settings(community_id);
+
 CREATE TABLE IF NOT EXISTS system_settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
