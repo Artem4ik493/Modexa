@@ -27,6 +27,7 @@ export function createModerationRestoreCommands(
       if (!arg) return { content: "Использование: /" + name + " @user" };
       let target = identities.findUserByIdentity(context.platform, context.args[0]!) ??
         identities.findUserByUsername(arg, context.platform) ??
+        identities.getUser(arg) ??
         memberships.getCommunityMemberships(context.community.id)
           .map((m) => identities.getUser(m.userId))
           .filter((u): u is NonNullable<typeof u> => Boolean(u))
