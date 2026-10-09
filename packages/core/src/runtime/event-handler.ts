@@ -208,6 +208,10 @@ export function createPlatformEventHandler(
           );
           return;
 
+        case "member.unbanned":
+          await handleMemberUnbanned(deps, event.member);
+          return;
+
         default:
           return;
       }
