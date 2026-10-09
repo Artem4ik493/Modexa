@@ -1116,6 +1116,11 @@ export function createBuiltinCommands(
           }
         } else {
           content = `# ${t("help.title")}\n\n${t("help.intro")}\n\n${t("help.select_category")}`;
+          buttons.push({
+            id: "help-menu",
+            label: t("menu.title"),
+            action: { type: "command", command: "/menu" }
+          });
           for (const category of categoryDefinitions) {
             const count = categoryCommands(category.id).length;
             if (count === 0) continue;
