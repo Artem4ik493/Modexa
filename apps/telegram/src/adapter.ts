@@ -1212,9 +1212,11 @@ export class TelegramAdapter
         const eventType =
           member.status === "kicked"
             ? "member.banned" as const
-            : active
-              ? "member.joined" as const
-              : "member.left" as const;
+            : update.old_chat_member.status === "kicked" && !active
+              ? "member.unbanned" as const
+              : active
+                ? "member.joined" as const
+                : "member.left" as const;
 
         await this.emitEvent({
           type: eventType,
