@@ -510,6 +510,8 @@ export class BridgeService {
         }
       })
     );
+
+    this.persistRelayedMessages();
   }
 
   async relayMessageUpdate(
@@ -593,6 +595,15 @@ export class BridgeService {
 
         this.relayedMessages.delete(key);
       })
+    );
+
+    this.persistRelayedMessages();
+  }
+
+  private persistRelayedMessages(): void {
+    this.database?.setRuntimeState(
+      "bridge.relayed_messages",
+      Object.fromEntries(this.relayedMessages)
     );
   }
 
