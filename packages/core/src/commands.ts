@@ -5,6 +5,7 @@ import type {
 } from "./types.js";
 
 import type { ExecutionCapability } from "./contexts/types.js";
+import type { Permission } from "./access/types.js";
 import type { CommandSettingsService } from "./commands/settings.js";
 
 export class CommandRegistry {
@@ -42,14 +43,28 @@ export class CommandRegistry {
   }
 
   listAvailable(
-    capabilities: readonly ExecutionCapability[]
+    capabilities: readonly ExecutionCapability[],
+    permissions: readonly Permission[] = []
   ): CommandDefinition[] {
-    const available = new Set(capabilities);
+    const availableCapabilities = new Set(capabilities);
+    const availablePermissions = new Set(permissions);
 
-    return this.list().filter((command) =>
-      (command.requiredCapabilities ?? []).every(
-        (capability) => available.has(capability)
-      )
-    );
+    return this.list().filter((command) => {
+      const capabilitiesAllowed =
+        (command.requiredCapabilities ?? []).every(
+          (capability) => availableCapabilities.has(capability)
+        );
+      const requiredPermissions = command.requiredPermissions;
+
+      // Context-dependent commands are shown when their broad capability
+      // is present; CommandService resolves the exact permission at runtime.
+      const permissionsAllowed =
+        typeof requiredPermissions === "function" ||
+        (requiredPermissions ?? []).every(
+          (permission) => availablePermissions.has(permission)
+        );
+
+      return capabilitiesAllowed && permissionsAllowed;
+    });
   }
 }
