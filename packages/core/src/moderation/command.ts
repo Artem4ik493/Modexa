@@ -290,7 +290,7 @@ export function createModerationCommands(
       name: "warns",
       aliases: ["warnings", "преды"],
       description: "Показать предупреждения участника",
-      requiredCapabilities: MODERATION_CAPABILITIES,
+      requiredPermissions: ["moderation.view"],
       handler: async (context) => {
         if (!context.community) return { content: "Команда доступна только в сообществе." };
         const target = context.args[0]
@@ -313,7 +313,7 @@ export function createModerationCommands(
       name: "remwarn",
       aliases: ["remwarning", "снятьпред"],
       description: "Снять предупреждение по Case ID или участнику",
-      requiredCapabilities: MODERATION_CAPABILITIES,
+      requiredPermissions: ["moderation.warn"],
       handler: async (context) => {
         const targetArg = context.args[0]?.trim();
         if (!targetArg || !context.community) {
@@ -374,7 +374,7 @@ export function createModerationCommands(
       name: "resetwarns",
       aliases: ["clearwarns", "сброспред"],
       description: "Снять все предупреждения участника",
-      requiredCapabilities: MODERATION_CAPABILITIES,
+      requiredPermissions: ["moderation.warn"],
       handler: async (context) => {
         if (!context.community || !context.args[0]) return { content: "Использование: /resetwarns @user" };
         const target = await resolveModerationTarget(context, context.args[0], identityService, membershipService, memberDirectory);
@@ -398,7 +398,7 @@ export function createModerationCommands(
       name: "case",
       aliases: ["modcase"],
       description: "Показать moderation case",
-      requiredCapabilities: MODERATION_CAPABILITIES,
+      requiredPermissions: ["moderation.view"],
       handler: async (context) => {
         const caseId = context.args[0];
         if (!caseId || !context.community) return { content: "Использование: /case <case_id>" };
@@ -420,7 +420,7 @@ export function createModerationCommands(
       name: "modhistory",
       aliases: ["history", "модистория"],
       description: "Полная история модерации участника",
-      requiredCapabilities: MODERATION_CAPABILITIES,
+      requiredPermissions: ["moderation.view"],
       handler: async (context) => {
         if (!context.community || !context.args[0]) return { content: "Использование: /modhistory @user" };
         const target = await resolveModerationTarget(context, context.args[0], identityService, membershipService, memberDirectory);
@@ -443,7 +443,7 @@ export function createModerationCommands(
     name: "unmute",
     aliases: ["размут", "снятьмут"],
     description: "Снять активный мут с участника",
-    requiredCapabilities: MODERATION_CAPABILITIES,
+    requiredPermissions: ["moderation.mute"],
     handler: async (context) => {
       if (!context.community) {
         return { content: "Команда доступна только в сообществе." };
