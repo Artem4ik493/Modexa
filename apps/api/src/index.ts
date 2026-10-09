@@ -284,6 +284,36 @@ async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknow
   }
 }
 
+function isAutomationTrigger(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const trigger = value as Record<string, unknown>;
+  if (trigger.type === "interval") return Number.isInteger(trigger.intervalSeconds) && Number(trigger.intervalSeconds) >= 60 && Number(trigger.intervalSeconds) <= 31_536_000;
+  if (trigger.type === "message") return typeof trigger.pattern === "string" && trigger.pattern.trim().length > 0 && trigger.pattern.length <= 500;
+  if (trigger.type === "command") return typeof trigger.command === "string" && /^[a-zA-Z0-9_-]{1,64}$/.test(trigger.command);
+  return false;
+}
+
+function isAutomationAction(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const action = value as Record<string, unknown>;
+  if (action.type === "command") {
+    return typeof action.command === "string" && /^[a-zA-Z0-9_-]{1,64}$/.test(action.command) &&
+      (action.args === undefined || (Array.isArray(action.args) && action.args.length <= 50 && action.args.every((arg) => typeof arg === "string" && arg.length <= 500)));
+  }
+  if (action.type === "webhook") {
+    if (typeof action.url !== "string" || action.url.length > 2000) return false;
+    try {
+      const parsed = new URL(action.url);
+      const host = parsed.hostname.toLowerCase();
+      return parsed.protocol === "https:" && !parsed.username && !parsed.password &&
+        host !== "localhost" && !host.endsWith(".local") && !host.endsWith(".internal") &&
+        !/^(127\\.|10\\.|192\\.168\\.|169\\.254\\.)/.test(host) &&
+        !/^172\\.(1[6-9]|2[0-9]|3[01])\\./.test(host) && host !== "::1";
+    } catch { return false; }
+  }
+  return false;
+}
+
 function startRunner(): void {
   if (runnerProcess && runnerProcess.exitCode === null && !runnerProcess.killed) return;
   runnerProcess = spawn(runnerCommand, runnerArgs, {
@@ -1511,8 +1541,9 @@ const server = createServer((req, res) => {
       const trigger = body.trigger;
       const action = body.action;
 
-      if (!communityId || !name || !trigger || typeof trigger !== "object" || !action || typeof action !== "object") {
-        json(res, 400, { error: "communityId, name, trigger and action are required" });
+      if (!communityId || !database.getCommunitiesSnapshot().some((item) => item.id === communityId) ||
+          !name.trim() || name.length > 120 || !isAutomationTrigger(trigger) || !isAutomationAction(action)) {
+        json(res, 400, { error: "invalid_automation_definition" });
         return;
       }
 
@@ -1559,10 +1590,16 @@ const server = createServer((req, res) => {
           json(res, 400, { error: "name_must_be_non_empty_string" });
           return;
         }
+        if (body.trigger !== undefined && !isAutomationTrigger(body.trigger)) {
+          json(res, 400, { error: "invalid_automation_trigger" }); return;
+        }
+        if (body.action !== undefined && !isAutomationAction(body.action)) {
+          json(res, 400, { error: "invalid_automation_action" }); return;
+        }
         json(res, 200, runtimeServices.automationService.update(id, {
           ...(typeof body.name === "string" ? { name: body.name } : {}),
-          ...(body.trigger && typeof body.trigger === "object" ? { trigger: body.trigger as never } : {}),
-          ...(body.action && typeof body.action === "object" ? { action: body.action as never } : {})
+          ...(body.trigger !== undefined ? { trigger: body.trigger as never } : {}),
+          ...(body.action !== undefined ? { action: body.action as never } : {})
         }));
       } catch (error) {
         json(res, 404, { error: error instanceof Error ? error.message : "automation_update_failed" });
