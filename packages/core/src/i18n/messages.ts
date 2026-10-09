@@ -195,6 +195,8 @@ const MESSAGE_KEYS = [
   "command.member.description",
   "member.community_only",
   "member.not_found",
+  "member.private_profile",
+  "members.private_list",
   "member.title",
   "member.name",
   "member.id",
