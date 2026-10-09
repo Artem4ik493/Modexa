@@ -484,7 +484,7 @@ describe("PlatformIdentityResolver", () => {
     );
   });
 
-  it("does not lift a ban automatically", () => {
+  it("reactivates a stale ban when the platform confirms the user is present", () => {
     const { resolver, membershipService } =
       createResolver();
 
@@ -501,10 +501,12 @@ describe("PlatformIdentityResolver", () => {
       first.membership!.id
     );
 
+    // Resolving a real message from this user proves they can currently
+    // participate on the platform, so the cached membership must recover.
     const second = resolver.resolve(input);
 
     expect(second.membership?.status).toBe(
-      "banned"
+      "active"
     );
   });
 
