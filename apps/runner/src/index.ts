@@ -427,6 +427,7 @@ async function processPendingApiActions(): Promise<void> {
   if (processingApiActions || stopping) return;
   processingApiActions = true;
   try {
+    services.bridgeService.refreshFromDatabase();
     const queue = database.getRuntimeState<QueuedApiAction[]>("api.action_queue") ?? [];
     for (const item of queue.filter((entry) => entry.status === "pending").slice(0, 20)) {
       updateQueuedAction(item.id, { status: "processing", startedAt: new Date().toISOString() });
