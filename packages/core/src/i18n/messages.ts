@@ -183,7 +183,26 @@ const MESSAGE_KEYS = [
   "members.page",
   "members.page_not_found",
   "members.previous",
-  "members.next"
+  "members.next",
+  "help.category.information",
+  "help.category.members",
+  "help.category.moderation",
+  "help.category.community",
+  "help.category.account",
+  "help.category.utilities",
+  "help.all_categories",
+  "help.category_heading",
+  "help.category_missing",
+  "help.command_missing",
+  "help.select_category",
+  "help.open_commands",
+  "help.page",
+  "help.command_title",
+  "help.command_description",
+  "help.usage",
+  "help.examples",
+  "help.example",
+  "help.dm_note"
 ] as const;
 
 export type MessageKey =
