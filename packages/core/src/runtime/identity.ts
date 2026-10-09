@@ -412,15 +412,15 @@ export class PlatformIdentityResolver {
       return membership;
     }
 
-    // The user is writing again, so they are back.
-    // A ban is never lifted automatically.
+    // A real message from this account proves that the platform
+    // currently allows the user in this community. This also repairs
+    // stale "banned" membership records left by a kick flow that bans
+    // and immediately unbans the user at the platform level.
     if (
-      existing.status ===
-      "left"
+      existing.status === "left" ||
+      existing.status === "banned"
     ) {
-      return membershipService.reactivate(
-        existing.id
-      );
+      return membershipService.reactivate(existing.id);
     }
 
     return existing;
