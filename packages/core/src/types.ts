@@ -58,7 +58,7 @@ export interface CommandDefinition {
   requiredCapabilities?: ExecutionCapability[];
 
   /** Exact community permissions checked centrally by CommandService. */
-  requiredPermissions?: Permission[];
+  requiredPermissions?: Permission[] | ((context: CommandContext) => Permission[]);
 
   handler: CommandHandler;
 }
