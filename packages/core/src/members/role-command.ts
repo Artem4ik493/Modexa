@@ -15,7 +15,7 @@ export function createRoleCommand(
   return {
     name: "role",
     descriptionKey: "command.role.description",
-    requiredCapabilities: ["member.view"],
+    requiredPermissions: (context) => context.args[1] ? ["member.manage"] : ["member.view"],
     handler: async (context: CommandContext): Promise<CommandResponse> => {
       if (!context.community) return { content: "Команду /role можно использовать только в сообществе." };
 
@@ -154,10 +154,6 @@ export function createRoleCommand(
 
       if (!["MEMBER", "MODERATOR"].includes(requestedRole)) {
         return { content: "Доступные роли: member, moderator." };
-      }
-
-      if (!context.execution.capabilities.includes("member.manage")) {
-        return { content: "Недостаточно прав: требуется member.manage." };
       }
 
       const targetRole = createBuiltinCommunityRoles(context.community.id)
