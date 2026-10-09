@@ -243,16 +243,18 @@ export class DiscordAdapter
       }
 
       case "member.warn": {
-        const user = await this.client.users.fetch(action.userExternalId);
+        const guild = await this.client.guilds.fetch(action.communityExternalId);
+        const target = await this.client.users.fetch(action.userExternalId);
         const targetName =
           typeof action.metadata?.targetDisplayName === "string"
             ? action.metadata.targetDisplayName
-            : user.username;
-        await user.send({
-          content: action.reason
-            ? `⚠️ Предупреждение для ${targetName}: ${action.reason}`
-            : "⚠️ Вы получили предупреждение на сервере. Причина не указана."
-        }).catch(() => undefined);
+            : target.globalName ?? target.username;
+        const reason = action.reason?.trim() || "Причина не указана.";
+        const channel = guild.systemChannel;
+        if (channel && channel.permissionsFor(guild.members.me ?? guild.roles.everyone)?.has(PermissionsBitField.Flags.SendMessages)) {
+          await channel.send(`⚠️ ${targetName} получил предупреждение. Причина: ${reason}`);
+        }
+        await target.send(`⚠️ Вы получили предупреждение на сервере **${guild.name}**. Причина: ${reason}`).catch(() => undefined);
         return;
       }
 
@@ -1294,67 +1296,7 @@ export class DiscordAdapter
           : undefined
       );
 
-    const args =
-      interaction.commandName === "member"
-        ? (() => {
-            const target =
-              interaction.options.getUser(
-                "user"
-              );
-
-            return target
-              ? [target.id]
-              : [];
-          })()
-        : interaction.commandName === "role"
-          ? (() => {
-              const target =
-                interaction.options.getUser("user");
-              const role =
-                interaction.options.getString("role");
-
-              return [
-                ...(target ? [target.id] : []),
-                ...(role ? [role] : [])
-              ];
-            })()
-          : ["unmute", "unban"].includes(interaction.commandName)
-            ? (() => {
-                const target = interaction.options.getUser("user");
-                return target ? [target.id] : [];
-              })()
-            : interaction.commandName === "command"
-            ? [
-                interaction.options.getString("command") ?? "",
-                interaction.options.getString("state") ?? ""
-              ].filter(Boolean)
-            : interaction.commandName === "clear"
-              ? [
-                  String(interaction.options.getInteger("count") ?? "")
-                ].filter(Boolean)
-            : interaction.commandName === "user"
-              ? (() => {
-                  const target = interaction.options.getUser("user");
-                  return target ? [target.id] : [];
-                })()
-              : ["warn", "mute", "kick", "ban"].includes(
-                  interaction.commandName
-                )
-            ? (() => {
-                const target =
-                  interaction.options.getUser("user");
-                const duration =
-                  interaction.options.getString("duration");
-                const reason =
-                  interaction.options.getString("reason");
-
-                return [
-                  ...(target ? [target.id] : []),
-                  ...(duration ? [duration] : []),
-                  ...(reason ? [reason] : [])
-                ];
-              })()
-            : [];
+    const args = this.readSlashCommandArguments(interaction);
 
     return {
       type: "command.invoked",
@@ -1385,6 +1327,65 @@ export class DiscordAdapter
           interaction.createdAt
       }
     };
+  }
+
+  private readSlashCommandArguments(
+    interaction: ChatInputCommandInteraction
+  ): string[] {
+    const command = interaction.commandName;
+    const options = interaction.options;
+
+    const userCommands = new Set([
+      "member", "user", "profile", "warn", "mute", "kick", "ban",
+      "unmute", "unban", "warnings", "warns", "mutes", "mute-list",
+      "modhistory", "resetwarns", "role"
+    ]);
+
+    if (userCommands.has(command)) {
+      const target = options.getUser("user");
+      const args = target ? [target.id] : [];
+
+      if (command === "mute") {
+        const duration = options.getString("duration");
+        if (duration) args.push(duration);
+      }
+
+      if (command === "role") {
+        const role = options.getString("role");
+        if (role) args.push(role);
+      }
+
+      if (["warn", "mute", "kick", "ban"].includes(command)) {
+        const reason = options.getString("reason");
+        if (reason) args.push(reason);
+      }
+
+      return args;
+    }
+
+    if (["remwarn", "remwarning", "case", "modcase"].includes(command)) {
+      const caseId = options.getString("case");
+      return caseId ? [caseId] : [];
+    }
+
+    if (command === "command") {
+      return [
+        options.getString("command"),
+        options.getString("state")
+      ].filter((value): value is string => Boolean(value));
+    }
+
+    if (command === "clear") {
+      const count = options.getInteger("count");
+      return count === null ? [] : [String(count)];
+    }
+
+    if (command === "members") {
+      const page = options.getInteger("page");
+      return page === null ? [] : [String(page)];
+    }
+
+    return [];
   }
 
   private async createInteractionEvent(
