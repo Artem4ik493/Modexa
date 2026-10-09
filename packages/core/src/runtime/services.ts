@@ -41,6 +41,7 @@ import {
 import {
   ModerationService
 } from "../moderation/service.js";
+import { AutoModService } from "../moderation/automod.js";
 
 import {
   BillingService,
@@ -81,6 +82,9 @@ export interface RuntimeServices
 
   moderationService:
     ModerationService;
+
+  autoModService:
+    AutoModService;
 
   billingService:
     BillingService;
@@ -197,6 +201,11 @@ export function createRuntimeServices(
       database
     );
 
+  const autoModService = new AutoModService();
+  for (const rule of database?.getRuntimeState<Array<Record<string, unknown>>>("api.automod_rules") ?? []) {
+    autoModService.upsertRule(rule as never);
+  }
+
   const identityResolver =
     new PlatformIdentityResolver(
       {
@@ -220,6 +229,7 @@ export function createRuntimeServices(
     communityAccessService,
     bridgeService,
     moderationService,
+    autoModService,
     billingService,
     automationService,
     commandSettingsService,
