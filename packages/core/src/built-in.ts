@@ -1087,7 +1087,25 @@ export function createBuiltinCommands(
           const description = command.descriptionKey ? t(command.descriptionKey) : command.description ?? t("help.no_description");
           const usage = detail?.usage ?? `/${command.name} [аргументы]`;
           const examples = detail?.examples ?? [`/${command.name}`];
-          content = `## ${t("help.command_title", { command: commandLabel(command.name) })\n\n**${description}**\n\n${t("help.command_description")}\n\n### ${t("help.usage")}\n\n\`\`\`${usage}\`\`\`\n\n### ${t("help.examples")}\n\n${examples.map((example, index) => `**${t("help.example", { number: String(index + 1) })}**\n\`\`\`${example}\`\`\``).join("\n\n")}${detail?.notes ? `\n\n${detail.notes}` : ""}`;
+          content = [
+            `## ${t("help.command_title", { command: commandLabel(command.name) })}`,
+            "",
+            `**${description}**`,
+            "",
+            t("help.command_description"),
+            "",
+            `### ${t("help.usage")}`,
+            "",
+            `\${usage}\`,
+            "",
+            `### ${t("help.examples")}`,
+            "",
+            ...examples.flatMap((example, index) => [
+              `**${t("help.example", { number: String(index + 1) })}**`,
+              `\${example}\`
+            ]),
+            ...(detail?.notes ? ["", detail.notes] : [])
+          ].join("\n");
           buttons.push(backToHome);
           if (category) {
             buttons.push({
