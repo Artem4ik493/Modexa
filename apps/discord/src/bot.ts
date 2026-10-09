@@ -277,7 +277,8 @@ export function createDiscordAdapter(
       membershipService,
       accessControlService,
       memberDirectoryProxy,
-      logger
+      logger,
+      options.database
     )
   );
 
@@ -286,7 +287,8 @@ export function createDiscordAdapter(
       identityService,
       membershipService,
       accessControlService,
-      memberDirectoryProxy
+      memberDirectoryProxy,
+      options.database
     )
   );
 
