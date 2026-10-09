@@ -461,9 +461,12 @@ export class PlatformIdentityResolver {
           community.id
         );
 
+    // OWNER / ADMIN / MEMBER are mirrored from verified platform roles.
+    // MODERATOR is a Modexa-managed role and is never overwritten here.
     const platformManagedRoles = new Set<string>([
-      COMMUNITY_ROLE_NAMES.MEMBER,
-      COMMUNITY_ROLE_NAMES.ADMIN
+      COMMUNITY_ROLE_NAMES.OWNER,
+      COMMUNITY_ROLE_NAMES.ADMIN,
+      COMMUNITY_ROLE_NAMES.MEMBER
     ]);
 
     if (
@@ -479,14 +482,30 @@ export class PlatformIdentityResolver {
         );
       }
     } else if (currentRoles.length > 0) {
+      this.logger?.debug(
+        "access.community_role.sync_skipped_custom",
+        {
+          correlationId: input.correlationId,
+          platform: input.platform,
+          userId: user.id,
+          communityId: community.id,
+          platformRole: input.author.platformRole ?? "unknown",
+          currentRoles: currentRoles.map((role) => role.name)
+        }
+      );
       return;
     }
 
+    // Initial role policy:
+    // - verified platform owner/creator -> Modexa OWNER
+    // - verified platform administrator -> Modexa ADMIN
+    // - everyone else -> Modexa MEMBER
     const roleName =
-      input.author.platformRole === "owner" ||
-      input.author.platformRole === "admin"
-        ? COMMUNITY_ROLE_NAMES.ADMIN
-        : COMMUNITY_ROLE_NAMES.MEMBER;
+      input.author.platformRole === "owner"
+        ? COMMUNITY_ROLE_NAMES.OWNER
+        : input.author.platformRole === "admin"
+          ? COMMUNITY_ROLE_NAMES.ADMIN
+          : COMMUNITY_ROLE_NAMES.MEMBER;
 
     const targetRole =
       createBuiltinCommunityRoles(
@@ -516,12 +535,12 @@ export class PlatformIdentityResolver {
           input.correlationId,
         platform:
           input.platform,
-        userId:
-          user.id,
-        communityId:
-          community.id,
-        role:
-          targetRole.name
+        userId: user.id,
+        communityId: community.id,
+        platformRole: input.author.platformRole ?? "unknown",
+        previousRoles: currentRoles.map((role) => role.name),
+        role: targetRole.name,
+        reason: "verified_platform_role_sync"
       }
     );
   }
