@@ -902,6 +902,20 @@ export class ModexaDatabase {
           sourceUserId
         );
 
+        // Preserve account preferences when identities are explicitly linked.
+        // Target values win; missing keys are copied from the source account.
+        this.database.prepare(
+          `INSERT OR IGNORE INTO user_settings
+           (user_id, key, value, updated_at)
+           SELECT ?, key, value, updated_at
+           FROM user_settings
+           WHERE user_id = ?`
+        ).run(targetUserId, sourceUserId);
+
+        this.database.prepare(
+          "DELETE FROM user_settings WHERE user_id = ?"
+        ).run(sourceUserId);
+
         this.database.prepare(
           "DELETE FROM user_system_roles WHERE user_id = ?"
         ).run(sourceUserId);
@@ -1001,6 +1015,36 @@ export class ModexaDatabase {
         );
 
     return row !== undefined;
+  }
+
+  getUserSetting(userId: string, key: string): string | undefined {
+    const row = this.database.prepare(
+      "SELECT value FROM user_settings WHERE user_id = ? AND key = ?"
+    ).get(userId, key) as { value: string } | undefined;
+    return row?.value;
+  }
+
+  getUserSettings(userId: string): Record<string, string> {
+    const rows = this.database.prepare(
+      "SELECT key, value FROM user_settings WHERE user_id = ? ORDER BY key"
+    ).all(userId) as Array<{ key: string; value: string }>;
+    return Object.fromEntries(rows.map((row) => [row.key, row.value]));
+  }
+
+  setUserSetting(userId: string, key: string, value: string, now = new Date()): void {
+    this.database.prepare(
+      `INSERT INTO user_settings (user_id, key, value, updated_at)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(user_id, key) DO UPDATE SET
+         value = excluded.value,
+         updated_at = excluded.updated_at`
+    ).run(userId, key, value, now.toISOString());
+  }
+
+  deleteUserSetting(userId: string, key: string): void {
+    this.database.prepare(
+      "DELETE FROM user_settings WHERE user_id = ? AND key = ?"
+    ).run(userId, key);
   }
 
   getSystemSetting(
