@@ -160,6 +160,27 @@ describe("buildDiscordSlashCommands", () => {
     });
   });
 
+  it("registers /commands as a separate catalog with knowledge-base /help", () => {
+    const commands = buildDiscordSlashCommands(builtinDescriptors());
+    const help = commands.find((command) => command.name === "help");
+    const catalog = commands.find((command) => command.name === "commands");
+
+    expect(help?.description).toBe("Открыть базу знаний Modexa");
+    expect(catalog?.description).toBe("Открыть каталог доступных команд");
+  });
+
+  it("adds localized options to moderation commands", () => {
+    const commands = buildDiscordSlashCommands(fullDescriptors());
+    const mute = commands.find((command) => command.name === "mute");
+    expect(mute?.options?.map((item) => [item.name, item.type, item.required])).toEqual([
+      ["user", 6, true],
+      ["duration", 3, true],
+      ["reason", 3, false]
+    ]);
+    expect(mute?.options?.[0]?.descriptionLocalizations?.ru).toBe("Участник");
+    expect(mute?.options?.[0]?.descriptionLocalizations?.["en-US"]).toBe("Member to target");
+  });
+
   it("adds a user option to /member", () => {
     const member =
       buildDiscordSlashCommands(
