@@ -59,6 +59,7 @@ export class CustomCommandService {
   upsert(command: CustomCommand): void {
     this.commands.set(command.id, {
       ...command,
+      updatedAt: command.updatedAt instanceof Date ? command.updatedAt : new Date(command.updatedAt as unknown as string),
       aliases: [...command.aliases],
       actions: [...command.actions],
       access: {
