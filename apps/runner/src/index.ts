@@ -27,6 +27,26 @@ import {
   renderDiscordInteraction
 } from "../../discord/src/interactions.js";
 
+function redactLogValue(value: unknown, key = ""): unknown {
+  if (/(token|secret|password|authorization|cookie|api.?key)/i.test(key)) {
+    return "[REDACTED]";
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => redactLogValue(item));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(
+        ([childKey, childValue]) => [
+          childKey,
+          redactLogValue(childValue, childKey)
+        ]
+      )
+    );
+  }
+  return value;
+}
+
 const logger =
   new CoreLogger("debug");
 
@@ -51,10 +71,19 @@ logger.addHandler(
       `[${timestamp}] ${level}${correlation} ${entry.message}`
     );
 
+    if (entry.context && Object.keys(entry.context).length > 0) {
+      console.log(
+        `        context: ${JSON.stringify(redactLogValue(entry.context))}`
+      );
+    }
+
     if (entry.error) {
       console.log(
-        `        ${entry.error.name}: ${entry.error.message}`
+        `        error: ${entry.error.name}: ${entry.error.message}`
       );
+      if (entry.error.stack) {
+        console.log(`        stack: ${entry.error.stack.replace(/\n/g, "\n        ")}`);
+      }
     }
   }
 );
