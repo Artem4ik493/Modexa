@@ -681,6 +681,45 @@ const server = createServer((req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/analytics" && req.method === "GET") {
+      const communityId = url.searchParams.get("communityId") ?? undefined;
+      const communities = database.getCommunitiesSnapshot();
+      if (communityId && !communities.some((item) => item.id === communityId)) {
+        json(res, 404, { error: "community_not_found" });
+        return;
+      }
+      const memberships = database.getMembershipsSnapshot(communityId);
+      const cases = (communityId
+        ? database.getModerationCases(communityId)
+        : database.getAllModerationCases());
+      const automations = runtimeServices.automationService.list(communityId);
+      const audit = communityId ? database.getAuditEntries(communityId, 500) : [];
+      const since = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      json(res, 200, {
+        generatedAt: new Date().toISOString(),
+        periodDays: 7,
+        communities: communityId ? 1 : communities.length,
+        members: {
+          total: memberships.length,
+          active: memberships.filter((item) => item.status === "active").length,
+          left: memberships.filter((item) => item.status === "left").length,
+          banned: memberships.filter((item) => item.status === "banned").length
+        },
+        moderation: {
+          total: cases.length,
+          active: cases.filter((item) => item.status === "active").length,
+          revoked: cases.filter((item) => item.status === "revoked").length,
+          last7Days: cases.filter((item) => item.createdAt.getTime() >= since).length
+        },
+        automations: {
+          total: automations.length,
+          enabled: automations.filter((item) => item.enabled).length
+        },
+        auditEventsLast7Days: audit.filter((item) => item.createdAt.getTime() >= since).length
+      });
+      return;
+    }
+
     if (url.pathname === "/api/billing" && req.method === "GET") {
       json(res, 200, database.getRuntimeState("billing") ?? {
         subscriptions: [],
