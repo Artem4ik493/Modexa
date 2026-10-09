@@ -15,6 +15,7 @@ export type Permission =
   | "community.manage"
   | "member.view"
   | "member.manage"
+  | "moderation.view"
   | "moderation.warn"
   | "moderation.mute"
   | "moderation.kick"
