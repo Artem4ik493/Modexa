@@ -810,7 +810,7 @@ const server = createServer((req, res) => {
       const body = await readJsonBody(req);
       const communityId = typeof body.communityId === "string" ? body.communityId : "";
       const code = typeof body.code === "string" ? body.code.trim().toUpperCase() : "";
-      if (!communityId || !/^[A-F0-9]{8}$/.test(code)) {
+      if (!communityId || !/^[A-F0-9]{16}$/.test(code)) {
         json(res, 400, { error: "communityId_and_valid_link_code_required" });
         return;
       }
