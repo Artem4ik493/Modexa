@@ -961,7 +961,10 @@ const server = createServer((req, res) => {
     const isCommunityModeMutation = url.pathname === "/api/community/mode" && req.method === "POST";
     const isCommunitySettingsMutation = /^\/api\/communities\/[^/]+\/settings$/.test(url.pathname) && req.method === "PATCH";
     const isCommandSettingsMutation = url.pathname === "/api/command-settings" && req.method === "POST";
-    if (!["GET", "HEAD", "OPTIONS"].includes(req.method ?? "") && !authorized(req) && !isCommunityModeMutation && !isCommunitySettingsMutation && !isCommandSettingsMutation) {
+    // This route performs its own Discord-guild permission check before redeeming
+    // a short-lived Telegram group link code.
+    const isTelegramGroupLinkMutation = url.pathname === "/api/telegram/groups/link" && req.method === "POST";
+    if (!["GET", "HEAD", "OPTIONS"].includes(req.method ?? "") && !authorized(req) && !isCommunityModeMutation && !isCommunitySettingsMutation && !isCommandSettingsMutation && !isTelegramGroupLinkMutation) {
       json(res, 403, { error: "api_key_required_for_mutations" });
       return;
     }
