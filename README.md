@@ -455,23 +455,24 @@ Endpoint требует авторизацию.
 
 ## Docker
 
-Запуск:
+Локальный тестовый запуск:
 
-~~~powershell
-docker compose up --build -d
+~~~bash
+docker-compose up --build -d
+docker-compose ps
+docker-compose logs -f modexa
 ~~~
 
-Остановка:
+Остановка без удаления данных:
 
-~~~powershell
-docker compose down
+~~~bash
+docker-compose down
 ~~~
 
-Логи:
+Полная инструкция для тестового сервера Ubuntu 22.04, Docker Compose v1 и aaPanel:
+[docs/DEPLOY_UBUNTU_22_04.md](docs/DEPLOY_UBUNTU_22_04.md).
 
-~~~powershell
-docker compose logs -f
-~~~
+В production контейнер слушает порт 3000, опубликованный только на `127.0.0.1`. Публикуйте Dashboard и API через HTTPS reverse proxy, не открывайте порт 3000 в интернет.
 
 ## Типичный цикл разработки
 
