@@ -505,6 +505,7 @@ const API='';
 const titles={overview:['Обзор','Состояние Modexa и выбранного сообщества.'],servers:['Сервера','Подключение и режимы сообществ.'],commands:['Команды','Настройка доступности зарегистрированных команд.'],members:['Участники','Участники и внешние identity выбранного сообщества.'],roles:['Роли и права','Роли сообщества и назначенные permissions.'],ranking:['Рейтинг','XP-настройки и таблица лидеров.'],welcome:['Приветствия','Сообщения при входе и выходе участников.'],custom:['Свои команды','Команды, созданные для выбранного сообщества.'],automod:['AutoMod','Правила автоматической модерации.'],moderation:['Модерация','Реальные moderation cases из SQLite.'],automations:['Автоматизации','Триггеры и действия AutomationService.'],bridge:['Bridge','Подключённые Telegram ↔ Discord каналы.'],audit:['Audit','История действий сообщества.'],system:['Система','Глобальные настройки и диагностика.'],runtime:['Bot Runtime','Управление реальным процессом Runner.']};
 let authKey='',discordUser=null,communities=[],selectedCommunity=localStorage.getItem('modexa_community')||'',maintenance=false,membersPage=1;
 const OWNER_COOKIE_SESSION='__http_only_cookie_session__';
+try{localStorage.removeItem('modexa_api_key')}catch{}
 
 function esc(v){return String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function toast(msg){const e=document.getElementById('toast');e.textContent=msg;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2600);}
