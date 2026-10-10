@@ -850,7 +850,7 @@ const server = createServer((req, res) => {
       const session = createOwnerSession();
       res.writeHead(200, {
         "content-type": "application/json; charset=utf-8",
-        "set-cookie": ownerSessionCookie(session.id),
+        "set-cookie": [ownerSessionCookie(session.id), clearOwnerCookies()[1]],
         "cache-control": "no-store"
       });
       res.end(JSON.stringify({ authenticated: true, role: "owner" }));
