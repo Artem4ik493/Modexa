@@ -593,7 +593,7 @@ async function loadPendingTelegramGroups(){
  try{
   const data=await get('/api/telegram/groups/pending');
   const items=data.items||[];
-  root.innerHTML=items.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.chatTitle)+'</div><div class="meta">ID: '+esc(x.chatId)+' · код '+esc(x.code)+' · до '+esc(new Date(x.expiresAt).toLocaleTimeString('ru-RU'))+'</div></div><button class="btn primary" onclick="linkTelegramGroup(\\''+esc(x.code)+'\\')">Привязать к выбранному серверу</button></div>').join('')||'<div class="empty">Нет ожидающих кодов. Выполните /dashboard_link в Telegram-группе.</div>';
+  root.innerHTML=items.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.chatTitle)+'</div><div class="meta">ID: '+esc(x.chatId)+' · код '+esc(x.code)+' · до '+esc(new Date(x.expiresAt).toLocaleTimeString('ru-RU'))+'</div></div><button class="btn primary" onclick="linkTelegramGroup(\''+esc(x.code)+'\')">Привязать к выбранному серверу</button></div>').join('')||'<div class="empty">Нет ожидающих кодов. Выполните /dashboard_link в Telegram-группе.</div>';
  }catch(e){root.innerHTML='<div class="empty">Не удалось загрузить коды. Войдите через Discord и обновите список.</div>';}
 }
 async function linkTelegramGroup(code){
