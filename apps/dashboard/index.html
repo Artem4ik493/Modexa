@@ -29,7 +29,7 @@ main{width:100%;max-width:1500px;margin:auto;padding:28px 30px}.top{display:flex
 .table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;font-size:12px}.table th,.table td{padding:11px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}.table th{font-size:10px;color:#74809a;text-transform:uppercase}.empty{text-align:center;padding:30px;color:var(--muted)}
 .command-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.command{padding:13px;border:1px solid var(--line);border-radius:13px;background:#0e1525;display:flex;align-items:center;gap:12px}.command-name{font-weight:700}.command-desc{font-size:11px;color:var(--muted);margin-top:3px}.command-cat{font-size:10px;color:#9ba8c1;margin-bottom:9px;text-transform:uppercase;letter-spacing:.1em}
 .form{display:grid;gap:10px}.input,.textarea,.select2{width:100%;border:1px solid var(--line);background:#0b1120;color:#fff;border-radius:10px;padding:10px 11px;outline:none}.textarea{min-height:90px;resize:vertical}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.toast{position:fixed;right:18px;bottom:18px;z-index:150;padding:12px 15px;border:1px solid #31415f;background:#11182a;border-radius:12px;box-shadow:var(--shadow);display:none;font-size:12px}.toast.show{display:block}.login{position:fixed;inset:0;z-index:100;background:#070912ee;backdrop-filter:blur(18px);display:grid;place-items:center}.login.hidden{display:none}.login-card{width:min(430px,calc(100% - 32px));padding:28px;border:1px solid var(--line);border-radius:22px;background:#0d1220;box-shadow:0 35px 100px #0009}.login-card h1{margin:0 0 8px}.login-card p{color:var(--muted);line-height:1.5;font-size:13px}.login-error{min-height:18px;color:#ff9aaa;font-size:12px;margin-top:10px}
+.toast{position:fixed;right:18px;bottom:18px;z-index:150;padding:12px 15px;border:1px solid #31415f;background:#11182a;border-radius:12px;box-shadow:var(--shadow);display:none;font-size:12px}.toast.show{display:block}.owner-mode .card.owner-only{display:block!important}.owner-mode .grid.owner-only{display:grid!important}.telegram-link-card{position:relative;overflow:hidden}.telegram-link-card:before{content:"";position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:.8}.telegram-link-help{display:flex;gap:12px;align-items:flex-start;padding:13px;border:1px solid var(--line);border-radius:12px;background:#ffffff03}.telegram-link-step{display:grid;place-items:center;flex:0 0 25px;height:25px;border-radius:8px;background:#a78bfa1c;color:#c4b5fd;font-weight:800;font-size:11px}.telegram-link-card .form{max-width:560px}.telegram-link-status{min-height:20px;font-size:11px;color:var(--muted)}.login{position:fixed;inset:0;z-index:100;background:#070912ee;backdrop-filter:blur(18px);display:grid;place-items:center}.login.hidden{display:none}.login-card{width:min(430px,calc(100% - 32px));padding:28px;border:1px solid var(--line);border-radius:22px;background:#0d1220;box-shadow:0 35px 100px #0009}.login-card h1{margin:0 0 8px}.login-card p{color:var(--muted);line-height:1.5;font-size:13px}.login-error{min-height:18px;color:#ff9aaa;font-size:12px;margin-top:10px}
 @media(max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}.grid3{grid-template-columns:1fr 1fr}}@media(max-width:780px){.app{display:block}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}nav{grid-template-columns:repeat(3,1fr)}.aside-bottom{display:none}main{padding:20px}.top{display:block}.top-actions{margin-top:14px;flex-wrap:wrap}.command-grid{grid-template-columns:1fr}}@media(max-width:560px){nav{grid-template-columns:repeat(2,1fr)}.grid,.grid3,.form-grid{grid-template-columns:1fr}.title{font-size:25px}.select{min-width:180px;width:100%}}
 
 /* Modexa dashboard refresh — JuniperBot-inspired information hierarchy */
@@ -350,6 +350,19 @@ nav{min-height:0;padding-bottom:18px}
 <section class="page" id="servers">
   <div class="card"><div class="section"><h2>Discord-сервера</h2><span class="muted" id="serverCount">—</span></div><div id="serverList"></div></div>
   <div class="card" style="margin-top:13px"><div class="section"><h2>Выбранное сообщество</h2><span class="pill" id="selectedMode">—</span></div><div id="serverDetails" class="muted">Выберите сервер.</div></div>
+  <div class="card telegram-link-card" style="margin-top:13px">
+    <div class="section"><div><h2>Подключить Telegram-группу</h2><div class="meta">Привяжите группу к выбранному сообществу Modexa без ручного ввода ID.</div></div><span class="pill">Telegram ↔ Modexa</span></div>
+    <div class="grid3" style="margin-bottom:14px">
+      <div class="telegram-link-help"><span class="telegram-link-step">1</span><div><b>Откройте Telegram</b><div class="meta">В нужной группе выполните <code>/dashboard_link</code>.</div></div></div>
+      <div class="telegram-link-help"><span class="telegram-link-step">2</span><div><b>Скопируйте код</b><div class="meta">Команда проверит права администратора у вас и у бота Modexa. Код действует 10 минут.</div></div></div>
+      <div class="telegram-link-help"><span class="telegram-link-step">3</span><div><b>Подтвердите связь</b><div class="meta">Введите код ниже — группа добавится к выбранному сообществу.</div></div></div>
+    </div>
+    <div class="form">
+      <label for="telegramAccountLinkCode">Код привязки из Telegram</label>
+      <div class="top-actions"><input id="telegramAccountLinkCode" class="input" placeholder="16 символов из Telegram" maxlength="16" autocomplete="off" autocapitalize="characters" spellcheck="false" onkeydown="if(event.key==='Enter')linkTelegramGroupFromAccount()"><button class="btn primary" id="telegramAccountLinkButton" onclick="linkTelegramGroupFromAccount()">Привязать группу</button><button class="btn" onclick="loadPendingTelegramGroups()">Обновить</button></div>
+      <div id="telegramAccountLinkStatus" class="telegram-link-status">Выберите Discord-сообщество, где установлен бот Modexa.</div>
+    </div>
+  </div>
 </section>
 
 <section class="page" id="commands">
@@ -447,7 +460,7 @@ nav{min-height:0;padding-bottom:18px}
 </section>
 
 <section class="page" id="bridge">
-  <div class="grid two">
+  <div class="grid two owner-only">
     <div class="card">
       <div class="section"><h2>Добавить endpoint</h2><span class="pill">Bridge</span></div>
       <div class="form">
@@ -472,11 +485,11 @@ nav{min-height:0;padding-bottom:18px}
   <div class="card">
     <div class="section"><h2>Привязка Telegram-группы</h2><button class="btn" onclick="loadPendingTelegramGroups()">↻ Проверить коды</button></div>
     <p class="muted">В Telegram-группе администратор должен выполнить <b>/dashboard_link</b>. Бот должен быть администратором. Код действует 10 минут. Сначала выберите Discord-сообщество сверху.</p>
-    <div class="form"><label>Код из Telegram-группы</label><input id="telegramLinkCode" class="input" placeholder="16 символов из Telegram" maxlength="16"><button class="btn primary" onclick="linkTelegramGroup()">Привязать код к выбранному серверу</button></div>
+    <div class="form"><label>Код из Telegram-группы</label><input id="telegramLinkCode" class="input" placeholder="16 символов из Telegram" maxlength="16" autocomplete="off" autocapitalize="characters" spellcheck="false" onkeydown="if(event.key==='Enter')linkTelegramGroup()"><button id="telegramBridgeLinkButton" class="btn primary" onclick="linkTelegramGroup()">Привязать код к выбранному серверу</button></div>
     <div id="telegramPendingGroups"><div class="empty">Загрузка ожидающих привязок…</div></div>
   </div>
-  <div class="card"><div class="section"><h2>Endpoints</h2><button class="btn" onclick="loadBridge()">↻ Обновить</button></div><div id="bridgeEndpoints"></div></div>
-  <div class="card"><div class="section"><h2>Активные связи</h2><span class="muted">Telegram ↔ Discord</span></div><div id="bridgeList"></div></div>
+  <div class="card owner-only"><div class="section"><h2>Endpoints</h2><button class="btn" onclick="loadBridge()">↻ Обновить</button></div><div id="bridgeEndpoints"></div></div>
+  <div class="card owner-only"><div class="section"><h2>Активные связи</h2><span class="muted">Telegram ↔ Discord</span></div><div id="bridgeList"></div></div>
 </section>
 
 <section class="page" id="audit">
@@ -507,11 +520,22 @@ let authKey='',discordUser=null,communities=[],selectedCommunity=localStorage.ge
 const OWNER_COOKIE_SESSION='__http_only_cookie_session__';
 try{localStorage.removeItem('modexa_api_key')}catch{}
 
-function esc(v){return String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-function toast(msg){const e=document.getElementById('toast');e.textContent=msg;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2600);}
+function esc(v){return String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));}
+function toast(msg){const e=document.getElementById('toast');e.textContent=msg;e.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>e.classList.remove('show'),3200);}
 function authHeaders(){return authKey&&authKey!==OWNER_COOKIE_SESSION?{Authorization:'Bearer '+authKey}:{}}
 function showLogin(msg=''){document.getElementById('login').classList.remove('hidden');document.getElementById('loginError').textContent=msg;}
-async function request(path,options={}){const r=await fetch(API+path,{...options,headers:{...authHeaders(),...(options.headers||{})},credentials:'same-origin',cache:'no-store'});if(r.status===401){authKey='';discordUser=null;document.body.classList.remove('owner-mode');showLogin('Сессия истекла. Войдите снова.');throw new Error('unauthorized')}if(!r.ok)throw new Error(await r.text());return r.status===204?null:r.json();}
+function friendlyApiError(code,status){
+ const messages={unauthorized:'Сессия истекла. Войдите снова.',discord_session_expired:'Сессия Discord истекла. Войдите через Discord повторно.',community_management_forbidden:'У вас нет прав управлять выбранным сообществом.',community_not_found:'Сообщество не найдено или бот ещё не подключён.',communityId_required:'Сначала выберите сообщество, где установлен бот Modexa.',communityId_and_valid_link_code_required:'Введите код привязки из 16 символов.',link_code_not_found_or_expired:'Код не найден или истёк. Выполните /dashboard_link в группе ещё раз.',telegram_group_already_linked:'Эта Telegram-группа уже привязана к другому сообществу.',owner_api_key_required:'Эта операция доступна только владельцу Modexa.',api_key_required_for_mutations:'Недостаточно прав для этого действия.'};
+ return messages[code]||((status?'Ошибка API ('+status+')':'Ошибка API')+(code?': '+code:''));
+}
+async function request(path,options={}){
+ let r;try{r=await fetch(API+path,{...options,headers:{...authHeaders(),...(options.headers||{})},credentials:'same-origin',cache:'no-store'})}catch{throw new Error('API недоступен. Проверьте, что локальный сервер Modexa запущен.')}
+ if(r.status===401){authKey='';discordUser=null;document.body.classList.remove('owner-mode');showLogin('Сессия истекла. Войдите снова.');throw new Error('unauthorized')}
+ if(r.status===204)return null;
+ const raw=await r.text();let data=null;if(raw){try{data=JSON.parse(raw)}catch{data=null}}
+ if(!r.ok)throw new Error(friendlyApiError(data?.error||raw,r.status));
+ if(!raw)return null;return data??raw;
+}
 async function get(path){return request(path)}
 async function post(path,body){return request(path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})}
 async function send(path,method,body){return request(path,{method,headers:{'content-type':'application/json'},body:JSON.stringify(body)})}
@@ -545,10 +569,10 @@ async function initAuth(){
 }
 async function logout(){try{await fetch('/api/auth/discord',{method:'DELETE',credentials:'same-origin'});await fetch('/api/auth',{method:'DELETE',credentials:'same-origin'})}catch{}authKey='';location.reload()}
 
-function showPage(id){document.querySelectorAll('.page').forEach(e=>e.classList.toggle('active',e.id===id));document.querySelectorAll('.nav').forEach(e=>e.classList.toggle('active',e.dataset.page===id));document.getElementById('pageTitle').textContent=titles[id][0];document.getElementById('pageSubtitle').textContent=titles[id][1];if(id==='commands')loadCommands();if(id==='members')loadMembers();if(id==='roles')loadRoles();if(id==='ranking')loadRanking();if(id==='welcome')loadWelcome();if(id==='custom')loadCustomCommands();if(id==='automod')loadAutoMod();if(id==='moderation')loadModeration();if(id==='automations')loadAutomations();if(id==='bridge')loadBridge();if(id==='audit')loadAudit();if(id==='system')loadSystem();if(id==='runtime')loadRuntime()}
+function showPage(id){if(['system','runtime'].includes(id)&&!authKey){toast('Этот раздел доступен только владельцу Modexa.');return}document.querySelectorAll('.page').forEach(e=>e.classList.toggle('active',e.id===id));document.querySelectorAll('.nav').forEach(e=>e.classList.toggle('active',e.dataset.page===id));document.getElementById('pageTitle').textContent=titles[id][0];document.getElementById('pageSubtitle').textContent=titles[id][1];if(id==='servers')loadPendingTelegramGroups();if(id==='commands')loadCommands();if(id==='members')loadMembers();if(id==='roles')loadRoles();if(id==='ranking')loadRanking();if(id==='welcome')loadWelcome();if(id==='custom')loadCustomCommands();if(id==='automod')loadAutoMod();if(id==='moderation')loadModeration();if(id==='automations')loadAutomations();if(id==='bridge')loadBridge();if(id==='audit')loadAudit();if(id==='system')loadSystem();if(id==='runtime')loadRuntime()}
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
 
-function changeCommunity(id){selectedCommunity=id;localStorage.setItem('modexa_community',id);membersPage=1;renderSelected();loadCommands();loadMembers();loadRoles();loadRanking();loadWelcome();loadCustomCommands();loadAutoMod();loadModeration();loadAudit();loadAutomations();}
+function changeCommunity(id){selectedCommunity=id;localStorage.setItem('modexa_community',id);membersPage=1;renderSelected();loadCommands();loadMembers();loadRoles();loadRanking();loadWelcome();loadCustomCommands();loadAutoMod();loadModeration();loadAudit();loadAutomations();loadPendingTelegramGroups();}
 
 function serverRank(x){if(x.botInstalled===true&&x.canManageBot===true)return 0;if(x.botInstalled!==true&&x.canInviteBot===true)return 1;return 2}
 function sortedCommunities(){return [...communities].sort((a,b)=>serverRank(a)-serverRank(b)||String(a.name||'').localeCompare(String(b.name||''),'ru'))}
@@ -596,34 +620,45 @@ async function toggleAutomation(id,enabled,button){try{await post('/api/automati
 async function createAutomation(){if(!selectedCommunity)return toast('Выберите сервер');const name=document.getElementById('autoName').value.trim(),tt=document.getElementById('autoTrigger').value,tv=document.getElementById('autoTriggerValue').value.trim(),at=document.getElementById('autoAction').value,av=document.getElementById('autoActionValue').value.trim();if(!name||!tv||!av)return toast('Заполните все поля');let trigger=tt==='interval'?{type:'interval',intervalSeconds:Number(tv)}:tt==='message'?{type:'message',pattern:tv}:{type:'command',command:tv};let action=at==='command'?{type:'command',command:av}:{type:'webhook',url:av};try{await post('/api/automations',{communityId:selectedCommunity,name,trigger,action});document.getElementById('autoName').value='';toast('Автоматизация создана');loadAutomations()}catch(e){toast(e.message)}}
 
 let bridgeCache={endpoints:[],links:[]};
+function selectedModexaCommunity(){return communities.find(c=>(c.communityId||c.id)===selectedCommunity)||null;}
+function setTelegramLinkStatus(message,isError=false){const status=document.getElementById('telegramAccountLinkStatus');if(status){status.textContent=message;status.style.color=isError?'var(--danger)':'var(--muted)';}}
 async function loadPendingTelegramGroups(){
  const root=document.getElementById('telegramPendingGroups');
- if(!root)return;
+ if(!root&&!document.getElementById('telegramAccountLinkStatus'))return;
+ const selected=selectedModexaCommunity();
+ if(!authKey&&(!selected||selected.canManageBot!==true||!selected.communityId)){
+  if(root)root.innerHTML='<div class="empty">Выберите Discord-сообщество, где уже установлен бот Modexa.</div>';
+  setTelegramLinkStatus('Сначала выберите сообщество с подключённым ботом Modexa.');return;
+ }
  try{
-  const data=await get('/api/telegram/groups/pending');
-  const items=data.items||[];
-  root.innerHTML=items.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.chatTitle)+'</div><div class="meta">ID: '+esc(x.chatId)+' · истекает '+esc(new Date(x.expiresAt).toLocaleTimeString('ru-RU'))+'</div></div></div>').join('')||'<div class="empty">Нет ожидающих привязок. Выполните /dashboard_link в Telegram-группе и введите код выше.</div>';
- }catch(e){root.innerHTML='<div class="empty">Не удалось загрузить коды. Войдите через Discord и обновите список.</div>';}
+  const query=!authKey&&selected?.communityId?'?communityId='+encodeURIComponent(selected.communityId):'';
+  const data=await get('/api/telegram/groups/pending'+query);const items=data.items||[];
+  if(root)root.innerHTML=items.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.chatTitle)+'</div><div class="meta">ID: '+esc(x.chatId)+' · запрос действует до '+esc(new Date(x.expiresAt).toLocaleTimeString('ru-RU'))+'</div></div></div>').join('')||'<div class="empty">Нет ожидающих запросов. Выполните /dashboard_link в нужной Telegram-группе.</div>';
+  setTelegramLinkStatus(items.length?'Есть ожидающие запросы. Введите код из целевой Telegram-группы.':'Ожидающих запросов пока нет. Сначала выполните /dashboard_link в Telegram-группе.');
+ }catch(e){if(root)root.innerHTML='<div class="empty">'+esc(e.message||'Не удалось загрузить ожидающие привязки.')+'</div>';setTelegramLinkStatus(e.message||'Не удалось проверить ожидающие привязки.',true);}
 }
-async function linkTelegramGroup(){
- const code=(document.getElementById('telegramLinkCode')?.value||'').trim().toUpperCase();
- if(!/^[A-F0-9]{16}$/.test(code)){toast('Введите 16-символьный код из Telegram');return;}
- if(!selectedCommunity){toast('Сначала выберите Discord-сообщество');return;}
- const selected=communities.find(c=>(c.communityId||c.id)===selectedCommunity);
- if(!selected||selected.canManageBot!==true||!selected.communityId){toast('Сначала установите бота Modexa на выбранный Discord-сервер');return;}
+async function redeemTelegramGroup(code,inputId,buttonId){
+ code=String(code||'').trim().toUpperCase();
+ if(!/^[A-F0-9]{16}$/.test(code)){toast('Введите 16-символьный код из Telegram');setTelegramLinkStatus('Проверьте код: нужно ровно 16 шестнадцатеричных символов.',true);return;}
+ if(!selectedCommunity){toast('Сначала выберите Discord-сообщество');setTelegramLinkStatus('Выберите сообщество перед привязкой.',true);return;}
+ const selected=selectedModexaCommunity();
+ if(!selected||selected.canManageBot!==true||!selected.communityId){toast('Сначала подключите бота Modexa к Discord-серверу');setTelegramLinkStatus('Для привязки сначала подключите бота Modexa к выбранному Discord-серверу.',true);return;}
+ const button=document.getElementById(buttonId);if(button){button.disabled=true;button.dataset.originalText=button.textContent;button.textContent='Проверяем код…';}
  try{
-  await post('/api/telegram/groups/link',{communityId:selected.communityId,code});
-  document.getElementById('telegramLinkCode').value='';
-  toast('Telegram-группа привязана');
-  await loadPendingTelegramGroups();
-  await loadBridge();
- }catch(e){toast(e.message)}
+  const result=await post('/api/telegram/groups/link',{communityId:selected.communityId,code});
+  const input=document.getElementById(inputId);if(input)input.value='';
+  const title=result?.telegram?.chatTitle||'Telegram-группа';toast(title+' успешно привязана');setTelegramLinkStatus(title+' привязана к выбранному сообществу.');
+  await loadPendingTelegramGroups();if(authKey)await loadBridge();
+ }catch(e){toast(e.message);setTelegramLinkStatus(e.message||'Не удалось привязать группу.',true)}
+ finally{if(button){button.disabled=false;button.textContent=button.dataset.originalText||'Привязать группу';delete button.dataset.originalText}}
 }
+async function linkTelegramGroup(){return redeemTelegramGroup(document.getElementById('telegramLinkCode')?.value,'telegramLinkCode','telegramBridgeLinkButton')}
+async function linkTelegramGroupFromAccount(){return redeemTelegramGroup(document.getElementById('telegramAccountLinkCode')?.value,'telegramAccountLinkCode','telegramAccountLinkButton')}
 
 async function loadBridge(){
  if(!authKey){
-  document.getElementById('bridgeEndpoints').innerHTML='<div class="empty">Список Bridge endpoints и связи доступны только владельцу с OWNER API-ключом.</div>';
-  document.getElementById('bridgeList').innerHTML='<div class="empty">Для управления Bridge введите OWNER API-ключ.</div>';
+  document.getElementById('bridgeEndpoints').innerHTML='<div class="empty">Ручное управление Bridge доступно владельцу Modexa. Привязать Telegram-группу к своему сообществу можно через форму привязки.</div>';
+  document.getElementById('bridgeList').innerHTML='<div class="empty">После привязки группы владелец сможет настроить межплатформенную связь Bridge.</div>';
   await loadPendingTelegramGroups();
   return;
  }
@@ -650,12 +685,12 @@ async function deleteBridgeLink(id){if(!confirm('Удалить связь Bridg
 
 async function loadSystem(){try{const [s,c,h]=await Promise.all([get('/api/system'),get('/api/config'),get('/health')]);maintenance=s.maintenanceMode;document.getElementById('maintenanceSwitch').classList.toggle('on',maintenance);document.getElementById('systemHealth').textContent=h.status;document.getElementById('systemOAuth').textContent=c.oauth?.discord?'configured':'not configured'}catch(e){toast(e.message)}}
 async function toggleMaintenance(){try{maintenance=!maintenance;await post('/api/system',{maintenanceMode:maintenance});document.getElementById('maintenanceSwitch').classList.toggle('on',maintenance);toast('Maintenance mode '+(maintenance?'включён':'выключен'));loadAll()}catch(e){maintenance=!maintenance;toast(e.message)}}
-async function downloadBackup(){try{const d=await get('/api/backup');const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='modexa-backup.json';a.click();URL.revokeObjectURL(url)}catch(e){toast(e.message)}}
+async function downloadBackup(){try{const d=await get('/api/backup');const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='modexa-backup.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}catch(e){toast(e.message)}}
 
 async function loadRuntime(){if(!authKey){document.getElementById('runtimeState').textContent='OWNER KEY REQUIRED';document.getElementById('runtimePid').textContent='—';document.getElementById('runtimeDiscord').textContent='—';document.getElementById('runtimeTelegram').textContent='—';document.getElementById('runtimeStarted').textContent='—';return;}try{const d=await get('/api/runtime');document.getElementById('runtimePill').textContent=d.state;document.getElementById('runtimeState').textContent=d.state.toUpperCase();document.getElementById('runtimeState').className=d.state==='running'?'ok':'danger-text';document.getElementById('runtimePid').textContent=d.pid??'—';document.getElementById('runtimeDiscord').textContent=d.adapters?.discord?'configured':'not configured';document.getElementById('runtimeTelegram').textContent=d.adapters?.telegram?'configured':'not configured';document.getElementById('runtimeStarted').textContent=d.startedAt?new Date(d.startedAt).toLocaleString('ru-RU'):'—';document.getElementById('mRunner').textContent=d.state==='running'?'ON':'OFF';document.getElementById('runnerText').textContent=d.state}catch(e){toast(e.message)}}
 async function runtimeAction(action){try{const d=await post('/api/runtime',{action});await loadRuntime();toast('Runner: '+d.state)}catch(e){toast(e.message)}}
-async function inviteGuild(guildId){try{const d=await get('/api/auth/discord/invite?guildId='+encodeURIComponent(guildId));window.open(d.url,'_blank','noopener');toast('Приглашение бота открыто')}catch(e){toast(e.message)}}
-async function inviteBot(){try{const d=await get('/api/auth/discord/invite'+(selectedCommunity?'?communityId='+encodeURIComponent(selectedCommunity):''));window.open(d.url,'_blank','noopener');document.getElementById('inviteStatus').textContent='Приглашение открыто.'}catch(e){toast(e.message)}}
+async function inviteGuild(guildId){const popup=window.open('about:blank','_blank');if(popup)popup.opener=null;try{const d=await get('/api/auth/discord/invite?guildId='+encodeURIComponent(guildId));if(popup)popup.location.href=d.url;else location.href=d.url;toast('Приглашение бота открыто')}catch(e){if(popup)popup.close();toast(e.message)}}
+async function inviteBot(){const popup=window.open('about:blank','_blank');if(popup)popup.opener=null;try{const d=await get('/api/auth/discord/invite'+(selectedCommunity?'?communityId='+encodeURIComponent(selectedCommunity):''));if(popup)popup.location.href=d.url;else location.href=d.url;document.getElementById('inviteStatus').textContent='Приглашение открыто.'}catch(e){if(popup)popup.close();toast(e.message)}}
 
 
 async function loadMembers(){
@@ -729,7 +764,7 @@ async function createAutoModRule(){
 async function deleteAutoModRule(id){if(!confirm('Удалить правило AutoMod?'))return;try{await send('/api/communities/'+encodeURIComponent(selectedCommunity)+'/automod/rules/'+encodeURIComponent(id),'DELETE');toast('Правило удалено');loadAutoMod()}catch(e){toast(e.message)}}
 
 let loadAllInFlight=false;
-async function loadAll(){if(loadAllInFlight)return;loadAllInFlight=true;try{document.body.classList.toggle('owner-mode',!!authKey);if(!authKey&&['system','runtime'].includes(document.querySelector('.page.active')?.id))showPage('overview');try{const [h,o,c]=await Promise.all([get('/health'),get('/api/overview'),get('/api/config')]);let r=null,s=null;if(authKey){[r,s]=await Promise.all([get('/api/runtime'),get('/api/system')]);}document.getElementById('apiDot').textContent='● online';document.getElementById('healthText').textContent=h.status;document.getElementById('mCommunities').textContent=o.communities;document.getElementById('mActive').textContent=o.activeCommunities;document.getElementById('mCases').textContent=o.moderationCases;document.getElementById('mRunner').textContent=r?(r.state==='running'?'ON':'OFF'):'—';document.getElementById('runnerText').textContent=r?r.state:'OWNER KEY REQUIRED';document.getElementById('maintenanceText').textContent=s?(s.maintenanceMode?'ON':'OFF'):'—';document.getElementById('oauthText').textContent=c.oauth?.discord?'OK':'OFF';document.getElementById('systemPill').textContent=r?(r.state==='running'?'Online':'Degraded'):'Restricted';if(s){maintenance=s.maintenanceMode;document.getElementById('maintenanceSwitch').classList.toggle('on',maintenance);}let g;try{g=await get('/api/auth/discord/guilds');communities=(g.items||[]).filter(c=>c.canManageBot===true||c.canInviteBot===true).sort((a,b)=>serverRank(a)-serverRank(b)||String(a.name||'').localeCompare(String(b.name||''),'ru')); }catch(e){communities=[];toast('Не удалось проверить доступ к Discord-серверам. Переподключи Discord.')}renderCommunitySelect();renderServers();await renderSelected();await loadRuntime();}catch(e){document.getElementById('apiDot').textContent='● offline';showLogin(e.message)}finally{loadAllInFlight=false}}
+async function loadAll(){if(loadAllInFlight)return;loadAllInFlight=true;try{document.body.classList.toggle('owner-mode',!!authKey);if(!authKey&&['system','runtime'].includes(document.querySelector('.page.active')?.id))showPage('overview');try{const [h,o,c]=await Promise.all([get('/health'),get('/api/overview'),get('/api/config')]);let r=null,s=null;if(authKey){[r,s]=await Promise.all([get('/api/runtime'),get('/api/system')]);}document.getElementById('apiDot').textContent='● online';document.getElementById('healthText').textContent=h.status;document.getElementById('mCommunities').textContent=o.communities;document.getElementById('mActive').textContent=o.activeCommunities;document.getElementById('mCases').textContent=o.moderationCases;document.getElementById('mRunner').textContent=r?(r.state==='running'?'ON':'OFF'):'—';document.getElementById('runnerText').textContent=r?r.state:'OWNER KEY REQUIRED';document.getElementById('maintenanceText').textContent=s?(s.maintenanceMode?'ON':'OFF'):'—';document.getElementById('oauthText').textContent=c.oauth?.discord?'OK':'OFF';document.getElementById('systemPill').textContent=r?(r.state==='running'?'Online':'Degraded'):'Restricted';if(s){maintenance=s.maintenanceMode;document.getElementById('maintenanceSwitch').classList.toggle('on',maintenance);}let g;try{g=await get('/api/auth/discord/guilds');communities=(g.items||[]).filter(c=>c.canManageBot===true||c.canInviteBot===true).sort((a,b)=>serverRank(a)-serverRank(b)||String(a.name||'').localeCompare(String(b.name||''),'ru')); }catch(e){communities=[];toast('Не удалось проверить доступ к Discord-серверам. Переподключи Discord.')}renderCommunitySelect();renderServers();await renderSelected();await loadRuntime();}catch(e){document.getElementById('apiDot').textContent='● offline';if(e.message!=='unauthorized')toast(e.message||'Не удалось обновить Dashboard')}finally{loadAllInFlight=false}}
 
 const mxProgress=document.getElementById('mxProgress');
 function mxUpdateProgress(){const root=document.documentElement,max=root.scrollHeight-root.clientHeight;mxProgress.style.transform='scaleX('+(max>0?root.scrollTop/max:0)+')'}
