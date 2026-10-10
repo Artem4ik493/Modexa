@@ -152,6 +152,63 @@ type DiscordSession = {
 
 const discordSessions = new Map<string, DiscordSession>();
 const sessionEncryptionKey = createHash("sha256").update(apiKey).digest();
+type OwnerSession = { id: string; expiresAt: number; createdAt: number };
+
+const ownerSessions = new Map<string, OwnerSession>();
+const OWNER_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const OWNER_SESSION_COOKIE = "modexa_owner_session";
+
+function persistOwnerSessions(): void {
+  const value = JSON.stringify([...ownerSessions.values()]);
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", sessionEncryptionKey, iv);
+  const encrypted = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  database.setRuntimeState("api.owner_sessions_encrypted", Buffer.concat([iv, tag, encrypted]).toString("base64"));
+}
+
+function restoreOwnerSessions(): void {
+  const stored = database.getRuntimeState<string>("api.owner_sessions_encrypted");
+  if (!stored) return;
+  try {
+    const bytes = Buffer.from(stored, "base64");
+    if (bytes.length < 29) throw new Error("Invalid encrypted owner session state");
+    const decipher = createDecipheriv("aes-256-gcm", sessionEncryptionKey, bytes.subarray(0, 12));
+    decipher.setAuthTag(bytes.subarray(12, 28));
+    const raw = Buffer.concat([decipher.update(bytes.subarray(28)), decipher.final()]).toString("utf8");
+    const sessions = JSON.parse(raw) as OwnerSession[];
+    for (const session of sessions) {
+      if (session.expiresAt > Date.now()) ownerSessions.set(session.id, session);
+    }
+    if (sessions.length !== ownerSessions.size) persistOwnerSessions();
+  } catch {
+    // Rotating MODEXA_API_KEY invalidates persisted owner sessions safely.
+    database.setRuntimeState("api.owner_sessions_encrypted", "");
+  }
+}
+
+function createOwnerSession(): OwnerSession {
+  const now = Date.now();
+  const session = { id: randomBytes(32).toString("hex"), createdAt: now, expiresAt: now + OWNER_SESSION_TTL_MS };
+  ownerSessions.set(session.id, session);
+  persistOwnerSessions();
+  return session;
+}
+
+function ownerSession(req: IncomingMessage): OwnerSession | undefined {
+  const id = cookieValue(req, OWNER_SESSION_COOKIE);
+  if (!id) return undefined;
+  const session = ownerSessions.get(id);
+  if (!session || session.expiresAt <= Date.now()) {
+    if (session) {
+      ownerSessions.delete(id);
+      persistOwnerSessions();
+    }
+    return undefined;
+  }
+  return session;
+}
+
 function persistDiscordSessions(): void {
   const value = JSON.stringify([...discordSessions.values()]);
   const iv = randomBytes(12);
@@ -179,6 +236,7 @@ function restoreDiscordSessions(): void {
     database.setRuntimeState("api.discord_sessions_encrypted", "");
   }
 }
+restoreOwnerSessions();
 restoreDiscordSessions();
 const oauthStates = new Map<string, number>();
 const oauthHandoffs = new Map<string, { sessionId: string; expiresAt: number }>();
@@ -329,17 +387,14 @@ function json(res: ServerResponse, status: number, value: unknown): void {
 function authorized(req: IncomingMessage): boolean {
   const supplied = req.headers.authorization?.replace(/^Bearer\s+/i, "");
   if (supplied === apiKey) return true;
+  if (ownerSession(req)) return true;
 
-  const cookie = req.headers.cookie ?? "";
-  const session = cookie
-    .split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith("modexa_api_key="))
-    ?.slice("modexa_api_key=".length);
-
-  let decodedSession = "";
-  try { decodedSession = session ? decodeURIComponent(session) : ""; } catch { return false; }
-  return decodedSession === apiKey;
+  // Migration path for old browser cookies: GET /api/auth rotates these to
+  // opaque server-side sessions instead of leaving the API key in the browser.
+  const legacyCookie = cookieValue(req, "modexa_api_key");
+  let decodedLegacyCookie = "";
+  try { decodedLegacyCookie = legacyCookie ? decodeURIComponent(legacyCookie) : ""; } catch { return false; }
+  return decodedLegacyCookie === apiKey;
 }
 
 async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
@@ -456,9 +511,16 @@ function runnerStatus() {
   };
 }
 
-function apiKeyCookie(apiKeyValue: string): string {
+function ownerSessionCookie(sessionId: string, maxAge = Math.floor(OWNER_SESSION_TTL_MS / 1000)): string {
+  return cookie(OWNER_SESSION_COOKIE, sessionId, maxAge);
+}
+
+function clearOwnerCookies(): string[] {
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  return `modexa_api_key=${encodeURIComponent(apiKeyValue)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400${secure}`;
+  return [
+    cookie(OWNER_SESSION_COOKIE, "", 0),
+    "modexa_api_key=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0" + secure
+  ];
 }
 
 const server = createServer((req, res) => {
@@ -605,10 +667,13 @@ const server = createServer((req, res) => {
         expiresAt: Date.now() + 60_000
       });
 
+      const dashboard = new URL("/", dashboardUrl);
+      dashboard.searchParams.set("discord_handoff", handoff);
       res.writeHead(302, {
-        location: "/?discord_handoff=" + encodeURIComponent(handoff),
+        location: dashboard.toString(),
         "set-cookie": cookie("modexa_session", sessionId, 7 * 24 * 60 * 60),
-        "cache-control": "no-store"
+        "cache-control": "no-store",
+        "referrer-policy": "no-referrer"
       });
       res.end();
       return;
@@ -701,7 +766,26 @@ const server = createServer((req, res) => {
     }
 
     if (url.pathname === "/api/auth" && req.method === "GET") {
-      json(res, 200, { authenticated: authorized(req) });
+      if (ownerSession(req)) {
+        json(res, 200, { authenticated: true, role: "owner" });
+        return;
+      }
+
+      const legacyCookie = cookieValue(req, "modexa_api_key");
+      let decodedLegacyCookie = "";
+      try { decodedLegacyCookie = legacyCookie ? decodeURIComponent(legacyCookie) : ""; } catch { decodedLegacyCookie = ""; }
+      if (decodedLegacyCookie === apiKey) {
+        const session = createOwnerSession();
+        res.writeHead(200, {
+          "content-type": "application/json; charset=utf-8",
+          "set-cookie": [ownerSessionCookie(session.id), clearOwnerCookies()[1]],
+          "cache-control": "no-store"
+        });
+        res.end(JSON.stringify({ authenticated: true, role: "owner" }));
+        return;
+      }
+
+      json(res, 200, { authenticated: false });
       return;
     }
 
@@ -726,12 +810,13 @@ const server = createServer((req, res) => {
         return;
       }
 
+      const session = createOwnerSession();
       res.writeHead(200, {
         "content-type": "application/json; charset=utf-8",
-        "set-cookie": apiKeyCookie(apiKey),
+        "set-cookie": ownerSessionCookie(session.id),
         "cache-control": "no-store"
       });
-      res.end(JSON.stringify({ authenticated: true }));
+      res.end(JSON.stringify({ authenticated: true, role: "owner" }));
       return;
     }
 
@@ -752,10 +837,18 @@ const server = createServer((req, res) => {
         return;
       }
 
-      json(res, 200, {
-        authenticated: true,
-        user: session.user
+      res.writeHead(200, {
+        "content-type": "application/json; charset=utf-8",
+        "set-cookie": cookie("modexa_session", session.id, Math.max(0, Math.floor((session.expiresAt - Date.now()) / 1000))),
+        "cache-control": "no-store",
+        "referrer-policy": "no-referrer",
+        "x-content-type-options": "nosniff"
       });
+      res.end(JSON.stringify({
+        authenticated: true,
+        role: "user",
+        user: session.user
+      }));
       return;
     }
 
@@ -986,9 +1079,12 @@ const server = createServer((req, res) => {
     }
 
     if (url.pathname === "/api/auth" && req.method === "DELETE") {
-      res.writeHead(204, {
-        "set-cookie": "modexa_api_key=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0"
-      });
+      const session = ownerSession(req);
+      if (session) {
+        ownerSessions.delete(session.id);
+        persistOwnerSessions();
+      }
+      res.writeHead(204, { "set-cookie": clearOwnerCookies() });
       res.end();
       return;
     }
