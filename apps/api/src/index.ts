@@ -385,9 +385,14 @@ type DiscordGuild = {
   name: string;
   icon: string | null;
   owner: boolean;
-  permissions: string;
+  permissions?: string;
   permissions_new?: string;
 };
+
+function discordGuildPermissions(guild: DiscordGuild): bigint {
+  const raw = guild.permissions_new ?? guild.permissions ?? "0";
+  try { return BigInt(raw); } catch { return 0n; }
+}
 
 function json(res: ServerResponse, status: number, value: unknown): void {
   const body = JSON.stringify(value);
@@ -452,7 +457,7 @@ async function canManageDiscordCommunity(req: IncomingMessage, communityId: stri
     const guilds = await discordApi<DiscordGuild[]>("/users/@me/guilds", session.accessToken);
     const guild = guilds.find((item) => item.id === identity.externalId);
     if (!guild) return false;
-    const permissions = BigInt(guild.permissions);
+    const permissions = discordGuildPermissions(guild);
     return guild.owner || (permissions & 0x8n) === 0x8n || (permissions & 0x20n) === 0x20n;
   } catch {
     return false;
@@ -1089,7 +1094,7 @@ const server = createServer((req, res) => {
           return;
         }
         const guild = guilds.find((item) => item.id === identity.externalId);
-        const permissions = guild ? BigInt(guild.permissions) : 0n;
+        const permissions = guild ? discordGuildPermissions(guild) : 0n;
         const canManage = Boolean(guild && (guild.owner ||
           (permissions & 0x8n) === 0x8n ||
           (permissions & 0x20n) === 0x20n));
@@ -1186,7 +1191,7 @@ const server = createServer((req, res) => {
           return;
         }
         const guild = guilds.find((item) => item.id === identity.externalId);
-        const permissions = guild ? BigInt(guild.permissions) : 0n;
+        const permissions = guild ? discordGuildPermissions(guild) : 0n;
         const canManage = Boolean(guild && (guild.owner ||
           (permissions & 0x8n) === 0x8n ||
           (permissions & 0x20n) === 0x20n));
@@ -1346,7 +1351,7 @@ const server = createServer((req, res) => {
           return;
         }
         const guild = guilds.find((item) => item.id === identity.externalId);
-        const permissions = guild ? BigInt(guild.permissions) : 0n;
+        const permissions = guild ? discordGuildPermissions(guild) : 0n;
         const canManage = Boolean(guild && (guild.owner ||
           (permissions & 0x8n) === 0x8n ||
           (permissions & 0x20n) === 0x20n));
@@ -1375,7 +1380,7 @@ const server = createServer((req, res) => {
           json(res, 401, { error: "discord_session_expired" }); return;
         }
         const manageableGuildIds = new Set(guilds.filter((guild) => {
-          const permissions = BigInt(guild.permissions);
+          const permissions = discordGuildPermissions(guild);
           return guild.owner || (permissions & 0x8n) === 0x8n || (permissions & 0x20n) === 0x20n;
         }).map((guild) => guild.id));
         const allowedCommunityIds = new Set(database.getCommunityIdentitiesSnapshot()
@@ -1894,7 +1899,7 @@ const server = createServer((req, res) => {
           json(res, 401, { error: "discord_session_expired" }); return;
         }
         const manageableGuildIds = new Set(guilds.filter((guild) => {
-          const permissions = BigInt(guild.permissions);
+          const permissions = discordGuildPermissions(guild);
           return guild.owner || (permissions & 0x8n) === 0x8n || (permissions & 0x20n) === 0x20n;
         }).map((guild) => guild.id));
         const allowedCommunityIds = new Set(database.getCommunityIdentitiesSnapshot()
@@ -2052,7 +2057,7 @@ const server = createServer((req, res) => {
           return;
         }
         const guild = guilds.find((item) => item.id === identity.externalId);
-        const permissions = guild ? BigInt(guild.permissions) : 0n;
+        const permissions = guild ? discordGuildPermissions(guild) : 0n;
         if (!guild || !(guild.owner || (permissions & 0x8n) === 0x8n || (permissions & 0x20n) === 0x20n)) {
           json(res, 403, { error: "community_management_forbidden" });
           return;
@@ -2308,7 +2313,7 @@ const server = createServer((req, res) => {
           const canManage = identities.some((identity) => {
             const guild = guilds.find((item) => item.id === identity.externalId);
             if (!guild) return false;
-            const permissions = BigInt(guild.permissions);
+            const permissions = discordGuildPermissions(guild);
             return guild.owner || (permissions & 0x8n) === 0x8n || (permissions & 0x20n) === 0x20n;
           });
           if (!canManage) { json(res, 403, { error: "community_management_forbidden" }); return; }
