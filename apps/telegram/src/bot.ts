@@ -140,7 +140,7 @@ export function createTelegramAdapter(
       pending.push({
         code,
         chatId: String(chat.id),
-        chatTitle: chat.title ?? String(chat.id),
+        chatTitle: chat.title,
         requestedBy: String(user.id),
         createdAt: new Date(now).toISOString(),
         expiresAt: new Date(now + 10 * 60_000).toISOString()
