@@ -303,7 +303,8 @@ function dashboardAuthorized(req: IncomingMessage): boolean {
 }
 
 function cookie(name: string, value: string, maxAge: number): string {
-  return `${name}=${encodeURIComponent(value)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}`;
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  return `${name}=${encodeURIComponent(value)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}${secure}`;
 }
 
 type DiscordGuild = {
@@ -336,7 +337,9 @@ function authorized(req: IncomingMessage): boolean {
     .find((part) => part.startsWith("modexa_api_key="))
     ?.slice("modexa_api_key=".length);
 
-  return session === apiKey;
+  let decodedSession = "";
+  try { decodedSession = session ? decodeURIComponent(session) : ""; } catch { return false; }
+  return decodedSession === apiKey;
 }
 
 async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
@@ -454,7 +457,8 @@ function runnerStatus() {
 }
 
 function apiKeyCookie(apiKeyValue: string): string {
-  return `modexa_api_key=${encodeURIComponent(apiKeyValue)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`;
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  return `modexa_api_key=${encodeURIComponent(apiKeyValue)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400${secure}`;
 }
 
 const server = createServer((req, res) => {
