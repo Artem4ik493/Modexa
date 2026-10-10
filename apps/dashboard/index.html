@@ -576,18 +576,22 @@ function changeCommunity(id){selectedCommunity=id;localStorage.setItem('modexa_c
 
 function serverRank(x){if(x.botInstalled===true&&x.canManageBot===true)return 0;if(x.botInstalled!==true&&x.canInviteBot===true)return 1;return 2}
 function sortedCommunities(){return [...communities].sort((a,b)=>serverRank(a)-serverRank(b)||String(a.name||'').localeCompare(String(b.name||''),'ru'))}
-function renderCommunitySelect(){const s=document.getElementById('communitySelect');const sorted=sortedCommunities();s.innerHTML='<option value="">Выберите сервер…</option>'+sorted.map(c=>'<option value="'+esc(c.communityId||c.id)+'">'+(serverRank(c)===0?'● ':'')+esc(c.name)+(serverRank(c)===1?' · можно пригласить':'')+'</option>').join('');if(selectedCommunity&&sorted.some(c=>(c.communityId||c.id)===selectedCommunity))s.value=selectedCommunity;else if(sorted[0]){selectedCommunity=sorted[0].communityId||sorted[0].id;s.value=selectedCommunity;localStorage.setItem('modexa_community',selectedCommunity)}}
+function renderCommunitySelect(){const s=document.getElementById('communitySelect');const manageable=sortedCommunities().filter(c=>c.botInstalled===true&&c.canManageBot===true);s.innerHTML='<option value="">Выберите сервер…</option>'+manageable.map(c=>'<option value="'+esc(c.communityId||c.id)+'">● '+esc(c.name)+'</option>').join('');if(selectedCommunity&&manageable.some(c=>(c.communityId||c.id)===selectedCommunity)){s.value=selectedCommunity}else if(manageable[0]){selectedCommunity=manageable[0].communityId||manageable[0].id;s.value=selectedCommunity;localStorage.setItem('modexa_community',selectedCommunity)}else{selectedCommunity='';s.value='';localStorage.removeItem('modexa_community')}}
 function renderServers(){
   const sorted=sortedCommunities();
-  const html=sorted.length?sorted.map(c=>{
-    const id=c.communityId||c.id,installed=!!c.botInstalled;
-    const action=installed&&c.canManageBot?`<button class="btn" onclick="changeCommunity('${esc(id)}');showPage('commands')">Управлять</button>`:(!installed&&c.canInviteBot?`<button class="btn primary" onclick="inviteGuild('${esc(c.id)}')">Пригласить бота</button>`:'');
-    const label=installed?(c.canManageBot?'Бот подключён · доступно управление':'Бот подключён · нет доступа'):(c.canInviteBot?'Можно пригласить бота':'Нет доступа');
-    return `<div class="row"><div class="avatar">${esc((c.name||'M')[0])}</div><div class="grow"><div class="name">${esc(c.name)}</div><div class="meta">${esc(c.id)} · ${label}</div></div><span class="pill">${installed?'<span class="dot"></span>Подключён':(c.canInviteBot?'Приглашение':'Недоступен')}</span>${action}</div>`;
-  }).join(''):'<div class="empty">Нет Discord-серверов, где у вас есть права управления Modexa или приглашения бота.</div>';
-  document.getElementById('serverList').innerHTML=html;
-  document.getElementById('overviewServers').innerHTML=html;
-  document.getElementById('serverCount').textContent=sorted.length+' серверов';
+  const manageable=sorted.filter(c=>c.botInstalled===true&&c.canManageBot===true);
+  const inviteable=sorted.filter(c=>c.botInstalled!==true&&c.canInviteBot===true);
+  const row=c=>{
+    const id=c.communityId||c.id,installed=c.botInstalled===true;
+    const action=installed?`<button class="btn" onclick="changeCommunity('${esc(id)}');showPage('commands')">Управлять</button>`:`<button class="btn primary" onclick="inviteGuild('${esc(c.id)}')">Пригласить бота</button>`;
+    const label=installed?'Бот подключён · доступно управление':'Можно пригласить бота';
+    return `<div class="row"><div class="avatar">${esc((c.name||'M')[0])}</div><div class="grow"><div class="name">${esc(c.name)}</div><div class="meta">${esc(c.id)} · ${label}</div></div><span class="pill">${installed?'<span class="dot"></span>Подключён':'Приглашение'}</span>${action}</div>`;
+  };
+  const manageableHtml=manageable.length?manageable.map(row).join(''):'<div class="empty">Нет подключённых серверов, которыми вы можете управлять. Пригласите бота в сервер из списка ниже.</div>';
+  const inviteableHtml=inviteable.length?inviteable.map(row).join(''):'<div class="empty">Нет других серверов, доступных для приглашения бота.</div>';
+  document.getElementById('serverList').innerHTML='<div class="section"><h3>Подключены и доступны для управления</h3><span class="muted">'+manageable.length+' серверов</span></div>'+manageableHtml+'<div class="section" style="margin-top:24px"><h3>Можно пригласить бота</h3><span class="muted">'+inviteable.length+' серверов</span></div>'+inviteableHtml;
+  document.getElementById('overviewServers').innerHTML=manageableHtml;
+  document.getElementById('serverCount').textContent=manageable.length+' управляемых · '+inviteable.length+' для приглашения';
 }
 async function renderSelected(){
   if(!selectedCommunity){
