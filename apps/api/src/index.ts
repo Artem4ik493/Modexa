@@ -754,8 +754,7 @@ const server = createServer((req, res) => {
 
       json(res, 200, {
         authenticated: true,
-        user: session.user,
-        sessionId: session.id
+        user: session.user
       });
       return;
     }
