@@ -360,8 +360,23 @@ function dashboardAuthorized(req: IncomingMessage): boolean {
   return Boolean(discordSession(req)) || authorized(req);
 }
 
-function cookie(name: string, value: string, maxAge: number): string {
-  const secure = dashboardUrl.startsWith("https://") ? "; Secure" : "";
+function requestIsSecure(req: IncomingMessage): boolean {
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const proxyProto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+  if (proxyProto) return proxyProto.split(",")[0].trim().toLowerCase() === "https";
+  if (Boolean((req.socket as typeof req.socket & { encrypted?: boolean }).encrypted)) return true;
+  const origin = req.headers.origin;
+  if (origin) {
+    try { return new URL(origin).protocol === "https:"; } catch { return false; }
+  }
+  const host = (req.headers.host ?? "").split(":")[0].toLowerCase();
+  let configuredHost = "";
+  try { configuredHost = new URL(dashboardUrl).hostname.toLowerCase(); } catch {}
+  return dashboardUrl.startsWith("https://") && Boolean(host) && host === configuredHost;
+}
+
+function cookie(name: string, value: string, maxAge: number, req?: IncomingMessage): string {
+  const secure = (req ? requestIsSecure(req) : dashboardUrl.startsWith("https://")) ? "; Secure" : "";
   return `${name}=${encodeURIComponent(value)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}${secure}`;
 }
 
@@ -558,14 +573,14 @@ function runnerStatus() {
   };
 }
 
-function ownerSessionCookie(sessionId: string, maxAge = Math.floor(OWNER_SESSION_TTL_MS / 1000)): string {
-  return cookie(OWNER_SESSION_COOKIE, sessionId, maxAge);
+function ownerSessionCookie(sessionId: string, req?: IncomingMessage, maxAge = Math.floor(OWNER_SESSION_TTL_MS / 1000)): string {
+  return cookie(OWNER_SESSION_COOKIE, sessionId, maxAge, req);
 }
 
-function clearOwnerCookies(): string[] {
-  const secure = dashboardUrl.startsWith("https://") ? "; Secure" : "";
+function clearOwnerCookies(req?: IncomingMessage): string[] {
+  const secure = (req ? requestIsSecure(req) : dashboardUrl.startsWith("https://")) ? "; Secure" : "";
   return [
-    cookie(OWNER_SESSION_COOKIE, "", 0),
+    cookie(OWNER_SESSION_COOKIE, "", 0, req),
     "modexa_api_key=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0" + secure
   ];
 }
@@ -718,7 +733,7 @@ const server = createServer((req, res) => {
       dashboard.searchParams.set("discord_handoff", handoff);
       res.writeHead(302, {
         location: dashboard.toString(),
-        "set-cookie": cookie("modexa_session", sessionId, 7 * 24 * 60 * 60),
+        "set-cookie": cookie("modexa_session", sessionId, 7 * 24 * 60 * 60, req),
         "cache-control": "no-store",
         "referrer-policy": "no-referrer"
       });
@@ -825,7 +840,7 @@ const server = createServer((req, res) => {
         const session = createOwnerSession();
         res.writeHead(200, {
           "content-type": "application/json; charset=utf-8",
-          "set-cookie": [ownerSessionCookie(session.id), clearOwnerCookies()[1]],
+          "set-cookie": [ownerSessionCookie(session.id, req), clearOwnerCookies(req)[1]],
           "cache-control": "no-store"
         });
         res.end(JSON.stringify({ authenticated: true, role: "owner" }));
@@ -860,7 +875,7 @@ const server = createServer((req, res) => {
       const session = createOwnerSession();
       res.writeHead(200, {
         "content-type": "application/json; charset=utf-8",
-        "set-cookie": [ownerSessionCookie(session.id), clearOwnerCookies()[1]],
+        "set-cookie": [ownerSessionCookie(session.id, req), clearOwnerCookies(req)[1]],
         "cache-control": "no-store"
       });
       res.end(JSON.stringify({ authenticated: true, role: "owner" }));
@@ -886,7 +901,7 @@ const server = createServer((req, res) => {
 
       res.writeHead(200, {
         "content-type": "application/json; charset=utf-8",
-        "set-cookie": cookie("modexa_session", session.id, Math.max(0, Math.floor((session.expiresAt - Date.now()) / 1000))),
+        "set-cookie": cookie("modexa_session", session.id, Math.max(0, Math.floor((session.expiresAt - Date.now()) / 1000)), req),
         "cache-control": "no-store",
         "referrer-policy": "no-referrer",
         "x-content-type-options": "nosniff"
@@ -940,7 +955,7 @@ const server = createServer((req, res) => {
         persistDiscordSessions();
       }
       res.writeHead(204, {
-        "set-cookie": cookie("modexa_session", "", 0)
+        "set-cookie": cookie("modexa_session", "", 0, req)
       });
       res.end();
       return;
@@ -1138,7 +1153,7 @@ const server = createServer((req, res) => {
         ownerSessions.delete(session.id);
         persistOwnerSessions();
       }
-      res.writeHead(204, { "set-cookie": clearOwnerCookies() });
+      res.writeHead(204, { "set-cookie": clearOwnerCookies(req) });
       res.end();
       return;
     }
