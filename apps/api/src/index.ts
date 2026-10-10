@@ -696,6 +696,11 @@ const server = createServer((req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/auth" && req.method === "GET") {
+      json(res, 200, { authenticated: authorized(req) });
+      return;
+    }
+
     if (url.pathname === "/api/auth" && req.method === "POST") {
       let body = "";
       for await (const chunk of req) {
