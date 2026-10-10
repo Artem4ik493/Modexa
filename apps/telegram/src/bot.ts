@@ -131,7 +131,7 @@ export function createTelegramAdapter(
       }
 
       const now = Date.now();
-      const code = randomBytes(4).toString("hex").toUpperCase();
+      const code = randomBytes(8).toString("hex").toUpperCase();
       const current = database.getRuntimeState<Array<{
         code: string; chatId: string; chatTitle: string; requestedBy: string;
         createdAt: string; expiresAt: string;
