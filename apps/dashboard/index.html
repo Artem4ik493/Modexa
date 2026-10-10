@@ -286,6 +286,14 @@ main{max-width:1650px;padding:0 32px 42px}
 @media(max-width:560px){nav{grid-template-columns:repeat(2,minmax(0,1fr))}.grid,.grid3,.form-grid{grid-template-columns:1fr}.title{font-size:25px}.select{min-width:0;width:100%}.card{padding:16px}.metric{min-height:120px}.top-actions .btn{flex:1}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
 
+
+/* Keep navigation usable on short screens and narrow viewports. */
+aside{position:sticky;top:0;height:100dvh;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#3a3452 transparent}
+nav{min-height:0;padding-bottom:18px}
+.aside-bottom{position:sticky;left:auto;right:auto;bottom:auto;margin-top:auto;flex-shrink:0;background:rgba(12,10,18,.96)}
+@media(max-height:760px){aside{padding-top:14px;padding-bottom:12px}.brand{padding-bottom:14px}.nav-label{padding-top:9px}.nav{min-height:35px;padding-top:6px;padding-bottom:6px}.profile{margin-bottom:10px;padding:9px}}
+@media(max-width:780px){aside{position:relative;top:auto;height:auto;max-height:none;overflow:visible}.aside-bottom{display:none}}
+
 </style>
 </head>
 <body>
@@ -530,16 +538,20 @@ function changeCommunity(id){selectedCommunity=id;localStorage.setItem('modexa_c
 
 function renderCommunitySelect(){const s=document.getElementById('communitySelect');s.innerHTML='<option value="">Выберите сервер…</option>'+communities.map(c=>'<option value="'+esc(c.communityId||c.id)+'">'+esc(c.name)+'</option>').join('');if(selectedCommunity&&communities.some(c=>(c.communityId||c.id)===selectedCommunity))s.value=selectedCommunity;else if(communities[0]){selectedCommunity=communities[0].communityId||communities[0].id;s.value=selectedCommunity;localStorage.setItem('modexa_community',selectedCommunity)}}
 function renderServers(){
-  const html=communities.length?communities.map(c=>{
-    const id=c.communityId||c.id;
-    const installed=!!c.botInstalled;
-    return `<div class="row"><div class="avatar">${esc((c.name||'M')[0])}</div><div class="grow"><div class="name">${esc(c.name)}</div><div class="meta">${esc(c.id)} · ${installed?'бот подключён':'бот не подключён'}</div></div><span class="pill">${installed?'<span class="dot"></span>Connected':'Можно пригласить'}</span>${installed&&c.canManageBot?`<button class="btn" onclick="changeCommunity('${esc(id)}');showPage('commands')">Управлять</button>`:(!installed&&c.canInviteBot?`<button class="btn primary" onclick="inviteGuild('${esc(c.id)}')">Пригласить бота</button>`:'')}</div>`;
-  }).join(''):'<div class="empty">Discord-сервера с правами управления не найдены.</div>';
+  const sorted=[...communities].sort((a,b)=>{
+    const rank=x=>x.botInstalled&&x.canManageBot?0:!x.botInstalled&&x.canInviteBot?1:2;
+    return rank(a)-rank(b)||String(a.name||'').localeCompare(String(b.name||''),'ru');
+  });
+  const html=sorted.length?sorted.map(c=>{
+    const id=c.communityId||c.id,installed=!!c.botInstalled;
+    const action=installed&&c.canManageBot?`<button class="btn" onclick="changeCommunity('${esc(id)}');showPage('commands')">Управлять</button>`:(!installed&&c.canInviteBot?`<button class="btn primary" onclick="inviteGuild('${esc(c.id)}')">Пригласить бота</button>`:'');
+    const label=installed?(c.canManageBot?'Бот подключён · доступно управление':'Бот подключён · нет доступа'):(c.canInviteBot?'Можно пригласить бота':'Нет доступа');
+    return `<div class="row"><div class="avatar">${esc((c.name||'M')[0])}</div><div class="grow"><div class="name">${esc(c.name)}</div><div class="meta">${esc(c.id)} · ${label}</div></div><span class="pill">${installed?'<span class="dot"></span>Подключён':(c.canInviteBot?'Приглашение':'Недоступен')}</span>${action}</div>`;
+  }).join(''):'<div class="empty">Нет Discord-серверов, где у вас есть права управления Modexa или приглашения бота.</div>';
   document.getElementById('serverList').innerHTML=html;
   document.getElementById('overviewServers').innerHTML=html;
-  document.getElementById('serverCount').textContent=communities.length+' серверов';
+  document.getElementById('serverCount').textContent=sorted.length+' серверов';
 }
-
 async function renderSelected(){
   if(!selectedCommunity){
     document.getElementById('selectedMode').textContent='—';
