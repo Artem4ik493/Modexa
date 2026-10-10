@@ -361,6 +361,7 @@ nav{min-height:0;padding-bottom:18px}
       <label for="telegramAccountLinkCode">Код привязки из Telegram</label>
       <div class="top-actions"><input id="telegramAccountLinkCode" class="input" placeholder="16 символов из Telegram" maxlength="16" autocomplete="off" autocapitalize="characters" spellcheck="false" onkeydown="if(event.key==='Enter')linkTelegramGroupFromAccount()"><button class="btn primary" id="telegramAccountLinkButton" onclick="linkTelegramGroupFromAccount()">Привязать группу</button><button class="btn" onclick="loadPendingTelegramGroups()">Обновить</button></div>
       <div id="telegramAccountLinkStatus" class="telegram-link-status">Выберите Discord-сообщество, где установлен бот Modexa.</div>
+      <div id="telegramAccountLinkedGroups"></div>
     </div>
   </div>
 </section>
@@ -621,7 +622,8 @@ function selectedModexaCommunity(){return communities.find(c=>(c.communityId||c.
 function setTelegramLinkStatus(message,isError=false){const status=document.getElementById('telegramAccountLinkStatus');if(status){status.textContent=message;status.style.color=isError?'var(--danger)':'var(--muted)';}}
 async function loadPendingTelegramGroups(){
  const root=document.getElementById('telegramPendingGroups');
- if(!root&&!document.getElementById('telegramAccountLinkStatus'))return;
+ const accountLinkedRoot=document.getElementById('telegramAccountLinkedGroups');
+ if(!root&&!accountLinkedRoot&&!document.getElementById('telegramAccountLinkStatus'))return;
  const selected=selectedModexaCommunity();
  if(!authKey&&(!selected||selected.canManageBot!==true||!selected.communityId)){
   if(root)root.innerHTML='<div class="empty">Выберите Discord-сообщество, где уже установлен бот Modexa.</div>';
@@ -640,7 +642,18 @@ async function loadPendingTelegramGroups(){
      linkedHtml='<div class="section" style="margin-top:18px"><h3>Привязанные Telegram-группы</h3><span class="muted">'+groups.length+'</span></div>'+(groups.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.chatTitle)+'</div><div class="meta">ID: '+esc(x.chatId)+'</div></div><button class="btn danger" onclick="unlinkTelegramGroup(\\''+esc(x.chatId)+'\\')">Отвязать</button></div>').join('')||'<div class="empty">К этому сообществу Telegram-группы не привязаны.</div>');
     }
    }catch(e){linkedHtml='<div class="empty">Не удалось загрузить привязанные группы: '+esc(e.message||'ошибка API')+'</div>'}
-   root.innerHTML=pendingHtml+linkedHtml;
+   if(root)root.innerHTML=pendingHtml+linkedHtml;
+   if(accountLinkedRoot)accountLinkedRoot.innerHTML=linkedHtml;
+  } else if(accountLinkedRoot) {
+   let linkedHtml='';
+   try{
+    if(selected?.communityId){
+     const linked=await get('/api/telegram/groups/linked?communityId='+encodeURIComponent(selected.communityId));
+     const groups=linked.items||[];
+     linkedHtml='<div class="section" style="margin-top:18px"><h3>Привязанные Telegram-группы</h3><span class="muted">'+groups.length+'</span></div>'+(groups.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.chatTitle)+'</div><div class="meta">ID: '+esc(x.chatId)+'</div></div><button class="btn danger" onclick="unlinkTelegramGroup(\\''+esc(x.chatId)+'\\')">Отвязать</button></div>').join('')||'<div class="empty">К этому сообществу Telegram-группы не привязаны.</div>');
+    }
+   }catch(e){linkedHtml='<div class="empty">Не удалось загрузить привязанные группы: '+esc(e.message||'ошибка API')+'</div>'}
+   accountLinkedRoot.innerHTML=linkedHtml;
   }
   setTelegramLinkStatus(items.length?'Есть ожидающие запросы. Введите код из целевой Telegram-группы.':'Ожидающих запросов пока нет. Сначала выполните /dashboard_link в Telegram-группе.');
  }catch(e){if(root)root.innerHTML='<div class="empty">'+esc(e.message||'Не удалось загрузить ожидающие привязки.')+'</div>';setTelegramLinkStatus(e.message||'Не удалось проверить ожидающие привязки.',true);}
