@@ -800,9 +800,11 @@ const server = createServer((req, res) => {
       return;
     }
 
-    // Until Discord-session requests are bound to a verified Modexa community
-    // role, only the server API key may perform mutations.
-    if (!["GET", "HEAD", "OPTIONS"].includes(req.method ?? "") && !authorized(req)) {
+    // Mutations normally require the server API key. Community-scoped settings
+    // also accept a Discord OAuth session, but only after the handler verifies
+    // that the signed-in user can manage the corresponding Discord guild.
+    const isCommunityModeMutation = url.pathname === "/api/community/mode" && req.method === "POST";
+    if (!["GET", "HEAD", "OPTIONS"].includes(req.method ?? "") && !authorized(req) && !isCommunityModeMutation) {
       json(res, 403, { error: "api_key_required_for_mutations" });
       return;
     }
@@ -839,6 +841,33 @@ const server = createServer((req, res) => {
       if (!communityId || !mode) { json(res, 400, { error: "communityId and mode are required" }); return; }
       const community = database.getCommunitiesSnapshot().find((item) => item.id === communityId);
       if (!community) { json(res, 404, { error: "community_not_found" }); return; }
+
+      if (!authorized(req)) {
+        const session = discordSession(req);
+        const identity = database.getCommunityIdentitiesSnapshot(communityId)
+          .find((item) => item.platform === "discord");
+        if (!session || !identity) {
+          json(res, 403, { error: "community_management_forbidden" });
+          return;
+        }
+        let guilds: DiscordGuild[];
+        try {
+          guilds = await discordApi<DiscordGuild[]>("/users/@me/guilds", session.accessToken);
+        } catch {
+          json(res, 401, { error: "discord_session_expired" });
+          return;
+        }
+        const guild = guilds.find((item) => item.id === identity.externalId);
+        const permissions = guild ? BigInt(guild.permissions) : 0n;
+        const canManage = Boolean(guild && (guild.owner ||
+          (permissions & 0x8n) === 0x8n ||
+          (permissions & 0x20n) === 0x20n));
+        if (!canManage) {
+          json(res, 403, { error: "community_management_forbidden" });
+          return;
+        }
+      }
+
       database.upsertCommunity({ ...community, mode, updatedAt: new Date() });
       json(res, 200, { updated: true, communityId, mode });
       return;
