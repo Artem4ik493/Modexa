@@ -469,6 +469,11 @@ nav{min-height:0;padding-bottom:18px}
       </div>
     </div>
   </div>
+  <div class="card">
+    <div class="section"><h2>Привязка Telegram-группы</h2><button class="btn" onclick="loadPendingTelegramGroups()">↻ Проверить коды</button></div>
+    <p class="muted">В Telegram-группе администратор должен выполнить <b>/dashboard_link</b>. Бот должен быть администратором. Код действует 10 минут. Сначала выберите Discord-сообщество сверху.</p>
+    <div id="telegramPendingGroups"><div class="empty">Загрузка ожидающих привязок…</div></div>
+  </div>
   <div class="card"><div class="section"><h2>Endpoints</h2><button class="btn" onclick="loadBridge()">↻ Обновить</button></div><div id="bridgeEndpoints"></div></div>
   <div class="card"><div class="section"><h2>Активные связи</h2><span class="muted">Telegram ↔ Discord</span></div><div id="bridgeList"></div></div>
 </section>
@@ -582,6 +587,25 @@ async function toggleAutomation(id,enabled,button){try{await post('/api/automati
 async function createAutomation(){if(!selectedCommunity)return toast('Выберите сервер');const name=document.getElementById('autoName').value.trim(),tt=document.getElementById('autoTrigger').value,tv=document.getElementById('autoTriggerValue').value.trim(),at=document.getElementById('autoAction').value,av=document.getElementById('autoActionValue').value.trim();if(!name||!tv||!av)return toast('Заполните все поля');let trigger=tt==='interval'?{type:'interval',intervalSeconds:Number(tv)}:tt==='message'?{type:'message',pattern:tv}:{type:'command',command:tv};let action=at==='command'?{type:'command',command:av}:{type:'webhook',url:av};try{await post('/api/automations',{communityId:selectedCommunity,name,trigger,action});document.getElementById('autoName').value='';toast('Автоматизация создана');loadAutomations()}catch(e){toast(e.message)}}
 
 let bridgeCache={endpoints:[],links:[]};
+async function loadPendingTelegramGroups(){
+ const root=document.getElementById('telegramPendingGroups');
+ if(!root)return;
+ try{
+  const data=await get('/api/telegram/groups/pending');
+  const items=data.items||[];
+  root.innerHTML=items.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.chatTitle)+'</div><div class="meta">ID: '+esc(x.chatId)+' · код '+esc(x.code)+' · до '+esc(new Date(x.expiresAt).toLocaleTimeString('ru-RU'))+'</div></div><button class="btn primary" onclick="linkTelegramGroup(\\''+esc(x.code)+'\\')">Привязать к выбранному серверу</button></div>').join('')||'<div class="empty">Нет ожидающих кодов. Выполните /dashboard_link в Telegram-группе.</div>';
+ }catch(e){root.innerHTML='<div class="empty">Не удалось загрузить коды. Войдите через Discord и обновите список.</div>';}
+}
+async function linkTelegramGroup(code){
+ if(!selectedCommunity){toast('Сначала выберите Discord-сообщество');return;}
+ try{
+  await post('/api/telegram/groups/link',{communityId:selectedCommunity,code});
+  toast('Telegram-группа привязана');
+  await loadPendingTelegramGroups();
+  await loadBridge();
+ }catch(e){toast(e.message)}
+}
+
 async function loadBridge(){
  try{
   bridgeCache=await get('/api/bridge');
@@ -592,6 +616,7 @@ async function loadBridge(){
   document.getElementById('bridgeEndpoints').innerHTML=endpoints.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.communityName)+' · '+esc(x.channelName)+'</div><div class="meta">'+esc(x.platform.toUpperCase())+' · '+esc(x.communityExternalId)+' / '+esc(x.channelExternalId)+'</div></div><button class="btn" onclick="editBridgeEndpoint(\''+esc(x.id)+'\')">Изменить</button><button class="btn danger" onclick="deleteBridgeEndpoint(\''+esc(x.id)+'\')">Удалить</button></div>').join('')||'<div class="empty">Нет endpoint. Добавьте Telegram-группу или Discord-канал выше.</div>';
   const validLinks=links.filter(x=>endpoints.some(e=>e.id===x.sourceEndpointId)&&endpoints.some(e=>e.id===x.targetEndpointId));
   document.getElementById('bridgeList').innerHTML=validLinks.map(x=>{const a=endpoints.find(e=>e.id===x.sourceEndpointId),b=endpoints.find(e=>e.id===x.targetEndpointId);return '<div class="row"><div class="grow"><div class="name">'+esc(a.communityName)+' · '+esc(a.channelName)+' ↔ '+esc(b.communityName)+' · '+esc(b.channelName)+'</div><div class="meta">'+esc(a.platform.toUpperCase())+' ↔ '+esc(b.platform.toUpperCase())+'</div></div><button class="btn danger" onclick="deleteBridgeLink(\''+esc(x.id)+'\')">Удалить связь</button></div>'}).join('')||'<div class="empty">Активных связей нет. Неподключённые чаты отображаются только в списке endpoints.</div>';
+  await loadPendingTelegramGroups();
  }catch(e){toast(e.message)}
 }
 async function saveBridgeEndpoint(existing){
