@@ -148,7 +148,7 @@ export function createTelegramAdapter(
       database.setRuntimeState("telegram.pending_group_links", pending.slice(-100));
       await ctx.reply(
         "Код привязки к Modexa: " + code +
-        "\\nОн действует 10 минут. Откройте Dashboard, выберите Discord-сообщество и подтвердите привязку Telegram-группы."
+        "\nОн действует 10 минут. Откройте Dashboard, выберите Discord-сообщество и подтвердите привязку Telegram-группы."
       );
     } catch (error) {
       logger.error("telegram.group_link.request_failed", {
