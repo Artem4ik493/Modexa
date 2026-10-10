@@ -2453,7 +2453,7 @@ const server = createServer((req, res) => {
   })().catch((error) => {
     const message = error instanceof Error ? error.message : "internal_error";
     // Keep detailed failures in the local API terminal without exposing internals to browser clients.
-    console.error("[Modexa API]", req.method ?? "UNKNOWN", url.pathname, error);
+    console.error("[Modexa API]", req.method ?? "UNKNOWN", req.url ?? "/", error);
     if (message === "request_body_too_large") {
       json(res, 413, { error: message });
       return;
