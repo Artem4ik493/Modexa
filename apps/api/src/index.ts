@@ -397,13 +397,21 @@ function authorized(req: IncomingMessage): boolean {
   return decodedLegacyCookie === apiKey;
 }
 
+const parsedRequestBodies = new WeakMap<IncomingMessage, Record<string, unknown>>();
+
 async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+  const cached = parsedRequestBodies.get(req);
+  if (cached) return cached;
   let body = "";
   for await (const chunk of req) {
     body += chunk;
     if (Buffer.byteLength(body) > 1_048_576) throw new Error("request_body_too_large");
   }
-  if (!body.trim()) return {};
+  if (!body.trim()) {
+    const empty: Record<string, unknown> = {};
+    parsedRequestBodies.set(req, empty);
+    return empty;
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(body);
@@ -413,7 +421,36 @@ async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknow
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error("json_object_required");
   }
-  return parsed as Record<string, unknown>;
+  const result = parsed as Record<string, unknown>;
+  parsedRequestBodies.set(req, result);
+  return result;
+}
+
+async function canManageDiscordCommunity(req: IncomingMessage, communityId: string): Promise<boolean> {
+  const session = discordSession(req);
+  if (!session) return false;
+  const identity = database.getCommunityIdentitiesSnapshot(communityId)
+    .find((item) => item.platform === "discord");
+  if (!identity) return false;
+  try {
+    const guilds = await discordApi<DiscordGuild[]>("/users/@me/guilds", session.accessToken);
+    const guild = guilds.find((item) => item.id === identity.externalId);
+    if (!guild) return false;
+    const permissions = BigInt(guild.permissions);
+    return guild.owner || (permissions & 0x8n) === 0x8n || (permissions & 0x20n) === 0x20n;
+  } catch {
+    return false;
+  }
+}
+
+function isCommunityScopedMutationPath(path: string, method: string): boolean {
+  if (method === "POST" && ["/api/automations", "/api/custom-commands", "/api/moderation/cases"].includes(path)) return true;
+  if (method === "PUT" && path === "/api/command-settings") return true;
+  if (/^\/api\/automations\/[^/]+$/.test(path) && ["POST", "PATCH", "DELETE"].includes(method)) return true;
+  if (/^\/api\/custom-commands\/[^/]+$/.test(path) && method === "DELETE") return true;
+  if (/^\/api\/communities\/[^/]+\/(roles(?:\/[^/]+)?|members\/[^/]+\/roles|ranking|welcome(?:\/preview)?|automod\/rules(?:\/[^/]+)?)$/.test(path) &&
+      ["POST", "PUT", "PATCH", "DELETE"].includes(method)) return true;
+  return false;
 }
 
 function isAutomationTrigger(value: unknown): boolean {
@@ -1141,16 +1178,60 @@ const server = createServer((req, res) => {
       return;
     }
 
-    // Mutations normally require the server API key. Community-scoped settings
-    // also accept a Discord OAuth session, but only after the handler verifies
-    // that the signed-in user can manage the corresponding Discord guild.
+    // Community mutations are allowed for Discord users only when the target
+    // community is linked to a guild they can manage. Owner API-key sessions
+    // remain the separate installation-wide control plane.
+    const isCommunityScopedMutation = isCommunityScopedMutationPath(url.pathname, req.method ?? "");
+    if (isCommunityScopedMutation && !authorized(req)) {
+      let body: Record<string, unknown>;
+      try {
+        body = await readJsonBody(req);
+      } catch (error) {
+        json(res, 400, { error: error instanceof Error ? error.message : "invalid_request_body" });
+        return;
+      }
+
+      let communityId = typeof body.communityId === "string" ? body.communityId : "";
+      const communityPath = url.pathname.match(/^\/api\/communities\/([^/]+)/);
+      if (!communityId && communityPath) {
+        try { communityId = decodeURIComponent(communityPath[1]!); } catch { communityId = ""; }
+      }
+
+      const automationMatch = url.pathname.match(/^\/api\/automations\/([^/]+)$/);
+      if (!communityId && automationMatch) {
+        const id = decodeURIComponent(automationMatch[1]!);
+        const automation = runtimeServices.automationService.list().find((item) => item.id === id);
+        communityId = automation?.communityId ?? "";
+      }
+
+      const customCommandMatch = url.pathname.match(/^\/api\/custom-commands\/([^/]+)$/);
+      if (!communityId && customCommandMatch) {
+        const id = decodeURIComponent(customCommandMatch[1]!);
+        const commands = database.getRuntimeState<Array<Record<string, unknown>>>("api.custom_commands") ?? [];
+        const command = commands.find((item) => item.id === id);
+        communityId = typeof command?.communityId === "string" ? command.communityId : "";
+      }
+
+      if (!communityId) {
+        json(res, 400, { error: "communityId_required" });
+        return;
+      }
+      if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) {
+        json(res, 404, { error: "community_not_found" });
+        return;
+      }
+      if (!await canManageDiscordCommunity(req, communityId)) {
+        json(res, 403, { error: "community_management_forbidden" });
+        return;
+      }
+    }
+
+    // These existing routes perform their own scoped permission checks.
     const isCommunityModeMutation = url.pathname === "/api/community/mode" && req.method === "POST";
     const isCommunitySettingsMutation = /^\/api\/communities\/[^/]+\/settings$/.test(url.pathname) && req.method === "PATCH";
     const isCommandSettingsMutation = url.pathname === "/api/command-settings" && req.method === "POST";
-    // This route performs its own Discord-guild permission check before redeeming
-    // a short-lived Telegram group link code.
     const isTelegramGroupLinkMutation = url.pathname === "/api/telegram/groups/link" && req.method === "POST";
-    if (!["GET", "HEAD", "OPTIONS"].includes(req.method ?? "") && !authorized(req) && !isCommunityModeMutation && !isCommunitySettingsMutation && !isCommandSettingsMutation && !isTelegramGroupLinkMutation) {
+    if (!["GET", "HEAD", "OPTIONS"].includes(req.method ?? "") && !authorized(req) && !isCommunityScopedMutation && !isCommunityModeMutation && !isCommunitySettingsMutation && !isCommandSettingsMutation && !isTelegramGroupLinkMutation) {
       json(res, 403, { error: "api_key_required_for_mutations" });
       return;
     }
