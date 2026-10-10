@@ -1106,6 +1106,47 @@ const server = createServer((req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/telegram/groups/linked" && req.method === "GET") {
+      const communityId = url.searchParams.get("communityId") ?? "";
+      if (!communityId || !database.getCommunitiesSnapshot().some((item) => item.id === communityId)) {
+        json(res, 400, { error: "communityId_required" });
+        return;
+      }
+      if (!authorized(req) && !await canManageDiscordCommunity(req, communityId)) {
+        json(res, 403, { error: "community_management_forbidden" });
+        return;
+      }
+      const items = database.getCommunityIdentitiesSnapshot(communityId)
+        .filter((item) => item.platform === "telegram")
+        .map((item) => ({ chatId: item.externalId, chatTitle: item.name ?? item.externalId, communityId: item.communityId }));
+      json(res, 200, { items });
+      return;
+    }
+
+    if (url.pathname === "/api/telegram/groups/unlink" && req.method === "POST") {
+      const body = await readJsonBody(req);
+      const communityId = typeof body.communityId === "string" ? body.communityId : "";
+      const chatId = typeof body.chatId === "string" ? body.chatId.trim() : "";
+      if (!communityId || !chatId) { json(res, 400, { error: "communityId_and_chatId_required" }); return; }
+      if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) {
+        json(res, 404, { error: "community_not_found" }); return;
+      }
+      if (!authorized(req) && !await canManageDiscordCommunity(req, communityId)) {
+        json(res, 403, { error: "community_management_forbidden" }); return;
+      }
+      const identity = database.getCommunityIdentitiesSnapshot(communityId)
+        .find((item) => item.platform === "telegram" && item.externalId === chatId);
+      if (!identity) { json(res, 404, { error: "telegram_group_not_linked" }); return; }
+      database.deleteCommunityIdentity(communityId, "telegram", chatId);
+      const endpoints = database.getBridgeEndpoints().filter((item) =>
+        item.platform === "telegram" && item.communityId === communityId &&
+        (item.communityExternalId === chatId || item.channelExternalId === chatId)
+      );
+      for (const endpoint of endpoints) database.deleteBridgeEndpoint(endpoint.id);
+      json(res, 200, { unlinked: true, chatId });
+      return;
+    }
+
     if (url.pathname === "/api/telegram/groups/link" && req.method === "POST") {
       const body = await readJsonBody(req);
       const communityId = typeof body.communityId === "string" ? body.communityId : "";
@@ -1159,7 +1200,12 @@ const server = createServer((req, res) => {
       const existing = database.getCommunityIdentitiesSnapshot()
         .find((item) => item.platform === "telegram" && item.externalId === claim.chatId);
       if (existing && existing.communityId !== communityId) {
-        json(res, 409, { error: "telegram_group_already_linked" });
+        const linkedCommunity = database.getCommunitiesSnapshot().find((item) => item.id === existing.communityId);
+        json(res, 409, {
+          error: "telegram_group_already_linked",
+          linkedCommunityId: existing.communityId,
+          linkedCommunityName: linkedCommunity?.name ?? existing.communityId
+        });
         return;
       }
 
