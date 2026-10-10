@@ -804,7 +804,8 @@ const server = createServer((req, res) => {
     // also accept a Discord OAuth session, but only after the handler verifies
     // that the signed-in user can manage the corresponding Discord guild.
     const isCommunityModeMutation = url.pathname === "/api/community/mode" && req.method === "POST";
-    if (!["GET", "HEAD", "OPTIONS"].includes(req.method ?? "") && !authorized(req) && !isCommunityModeMutation) {
+    const isCommunitySettingsMutation = /^\/api\/communities\/[^/]+\/settings$/.test(url.pathname) && req.method === "PATCH";
+    if (!["GET", "HEAD", "OPTIONS"].includes(req.method ?? "") && !authorized(req) && !isCommunityModeMutation && !isCommunitySettingsMutation) {
       json(res, 403, { error: "api_key_required_for_mutations" });
       return;
     }
@@ -1497,6 +1498,28 @@ const server = createServer((req, res) => {
       if (req.method === "GET") {
         json(res, 200, { items: database.getCommunitySettings(communityId) });
         return;
+      }
+      if (req.method === "PATCH" && !authorized(req)) {
+        const session = discordSession(req);
+        const identity = database.getCommunityIdentitiesSnapshot(communityId)
+          .find((item) => item.platform === "discord");
+        if (!session || !identity) {
+          json(res, 403, { error: "community_management_forbidden" });
+          return;
+        }
+        let guilds: DiscordGuild[];
+        try {
+          guilds = await discordApi<DiscordGuild[]>("/users/@me/guilds", session.accessToken);
+        } catch {
+          json(res, 401, { error: "discord_session_expired" });
+          return;
+        }
+        const guild = guilds.find((item) => item.id === identity.externalId);
+        const permissions = guild ? BigInt(guild.permissions) : 0n;
+        if (!guild || !(guild.owner || (permissions & 0x8n) === 0x8n || (permissions & 0x20n) === 0x20n)) {
+          json(res, 403, { error: "community_management_forbidden" });
+          return;
+        }
       }
       const body = await readJsonBody(req);
       const allowedKeys = new Set([
