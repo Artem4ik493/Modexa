@@ -159,6 +159,73 @@ export function createTelegramAdapter(
     }
   });
 
+  // A Telegram group administrator can remove this group's Modexa links
+  // directly from Telegram, without opening the Dashboard.
+  bot.command("dashboard_unlink", async (ctx) => {
+    const chat = ctx.chat;
+    const user = ctx.from;
+    const database = options.database;
+    if (!database || !user || (chat.type !== "group" && chat.type !== "supergroup")) {
+      await ctx.reply("Эта команда доступна только в Telegram-группе, где подключена Modexa.");
+      return;
+    }
+
+    try {
+      const requester = await bot.api.getChatMember(chat.id, user.id);
+      const isAdmin = requester.status === "creator" || requester.status === "administrator";
+      if (!isAdmin) {
+        await ctx.reply("Отвязать группу может только её администратор.");
+        return;
+      }
+
+      const chatId = String(chat.id);
+      const identities = database.getCommunityIdentitiesSnapshot()
+        .filter((identity) => identity.platform === "telegram" && identity.externalId === chatId);
+      if (identities.length === 0) {
+        await ctx.reply("Эта Telegram-группа не привязана к сообществу Modexa.");
+        return;
+      }
+
+      const communityIds = new Set(identities.map((identity) => identity.communityId));
+      const communityNames = database.getCommunitiesSnapshot()
+        .filter((community) => communityIds.has(community.id))
+        .map((community) => community.name);
+
+      for (const identity of identities) {
+        database.deleteCommunityIdentity(identity.communityId, "telegram", chatId);
+      }
+
+      const endpoints = database.getBridgeEndpoints().filter((endpoint) =>
+        endpoint.platform === "telegram" &&
+        communityIds.has(endpoint.communityId ?? "") &&
+        (endpoint.communityExternalId === chatId || endpoint.channelExternalId === chatId)
+      );
+      for (const endpoint of endpoints) database.deleteBridgeEndpoint(endpoint.id);
+
+      const pending = database.getRuntimeState<Array<{
+        code: string; chatId: string; chatTitle: string; requestedBy: string;
+        createdAt: string; expiresAt: string;
+      }>>("telegram.pending_group_links") ?? [];
+      database.setRuntimeState(
+        "telegram.pending_group_links",
+        pending.filter((item) => item.chatId !== chatId)
+      );
+
+      await ctx.reply(
+        "Telegram-группа «" + (chat.title ?? chatId) + "» отвязана от Modexa." +
+        (communityNames.length ? "\nСообщество: " + communityNames.join(", ") : "") +
+        (endpoints.length ? "\nУдалено связанных Bridge endpoint: " + endpoints.length : "") +
+        "\nЧтобы привязать группу снова, выполните /dashboard_link."
+      );
+    } catch (error) {
+      logger.error("telegram.group_unlink.failed", {
+        chatId: String(chat.id),
+        requesterId: String(user.id)
+      }, error);
+      await ctx.reply("Не удалось отвязать группу. Попробуйте позже или обратитесь к владельцу Modexa.");
+    }
+  });
+
   const registry =
     new CommandRegistry();
 
