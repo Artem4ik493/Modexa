@@ -576,8 +576,8 @@ export function createBridgeTestCommand(
   membershipService?: MembershipService
 ): CommandDefinition {
   return {
-    name: "bridge-test",
-    aliases: ["bridgetest"],
+    name: "bridge-link",
+    aliases: ["bridgelink"],
     requiredPermissions: ["bridge.manage"],
     descriptionKey:
       "command.bridge_test.description",
