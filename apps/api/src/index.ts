@@ -787,6 +787,101 @@ const server = createServer((req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/telegram/groups/pending" && req.method === "GET") {
+      const session = discordSession(req);
+      if (!session && !authorized(req)) {
+        json(res, 401, { error: "unauthorized" });
+        return;
+      }
+      const now = Date.now();
+      const pending = (database.getRuntimeState<Array<{
+        code: string; chatId: string; chatTitle: string; requestedBy: string;
+        createdAt: string; expiresAt: string;
+      }>>("telegram.pending_group_links") ?? []).filter((item) => Date.parse(item.expiresAt) > now);
+      database.setRuntimeState("telegram.pending_group_links", pending);
+      json(res, 200, { items: pending.map((item) => ({
+        code: item.code, chatId: item.chatId, chatTitle: item.chatTitle,
+        createdAt: item.createdAt, expiresAt: item.expiresAt
+      })) });
+      return;
+    }
+
+    if (url.pathname === "/api/telegram/groups/link" && req.method === "POST") {
+      const body = await readJsonBody(req);
+      const communityId = typeof body.communityId === "string" ? body.communityId : "";
+      const code = typeof body.code === "string" ? body.code.trim().toUpperCase() : "";
+      if (!communityId || !/^[A-F0-9]{8}$/.test(code)) {
+        json(res, 400, { error: "communityId_and_valid_link_code_required" });
+        return;
+      }
+      const community = database.getCommunitiesSnapshot().find((item) => item.id === communityId);
+      if (!community) {
+        json(res, 404, { error: "community_not_found" });
+        return;
+      }
+
+      if (!authorized(req)) {
+        const session = discordSession(req);
+        const identity = database.getCommunityIdentitiesSnapshot(communityId)
+          .find((item) => item.platform === "discord");
+        if (!session || !identity) {
+          json(res, 403, { error: "community_management_forbidden" });
+          return;
+        }
+        let guilds: DiscordGuild[];
+        try {
+          guilds = await discordApi<DiscordGuild[]>("/users/@me/guilds", session.accessToken);
+        } catch {
+          json(res, 401, { error: "discord_session_expired" });
+          return;
+        }
+        const guild = guilds.find((item) => item.id === identity.externalId);
+        const permissions = guild ? BigInt(guild.permissions) : 0n;
+        const canManage = Boolean(guild && (guild.owner ||
+          (permissions & 0x8n) === 0x8n ||
+          (permissions & 0x20n) === 0x20n));
+        if (!canManage) {
+          json(res, 403, { error: "community_management_forbidden" });
+          return;
+        }
+      }
+
+      const now = Date.now();
+      const pending = database.getRuntimeState<Array<{
+        code: string; chatId: string; chatTitle: string; requestedBy: string;
+        createdAt: string; expiresAt: string;
+      }>>("telegram.pending_group_links") ?? [];
+      const claim = pending.find((item) => item.code === code && Date.parse(item.expiresAt) > now);
+      if (!claim) {
+        json(res, 404, { error: "link_code_not_found_or_expired" });
+        return;
+      }
+      const existing = database.getCommunityIdentitiesSnapshot()
+        .find((item) => item.platform === "telegram" && item.externalId === claim.chatId);
+      if (existing && existing.communityId !== communityId) {
+        json(res, 409, { error: "telegram_group_already_linked" });
+        return;
+      }
+
+      const timestamp = new Date();
+      database.upsertCommunityIdentity({
+        id: existing?.id ?? `community-identity-${randomUUID()}`,
+        communityId,
+        platform: "telegram",
+        externalId: claim.chatId,
+        name: claim.chatTitle,
+        createdAt: existing?.createdAt ?? timestamp,
+        updatedAt: timestamp
+      });
+      database.setRuntimeState("telegram.pending_group_links", pending.filter((item) => item.code !== code));
+      json(res, 200, {
+        linked: true,
+        communityId,
+        telegram: { chatId: claim.chatId, chatTitle: claim.chatTitle }
+      });
+      return;
+    }
+
     if (url.pathname === "/api/auth" && req.method === "DELETE") {
       res.writeHead(204, {
         "set-cookie": "modexa_api_key=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0"
