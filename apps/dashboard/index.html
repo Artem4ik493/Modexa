@@ -569,10 +569,10 @@ async function initAuth(){
 }
 async function logout(){try{await fetch('/api/auth/discord',{method:'DELETE',credentials:'same-origin'});await fetch('/api/auth',{method:'DELETE',credentials:'same-origin'})}catch{}authKey='';location.reload()}
 
-function showPage(id){document.querySelectorAll('.page').forEach(e=>e.classList.toggle('active',e.id===id));document.querySelectorAll('.nav').forEach(e=>e.classList.toggle('active',e.dataset.page===id));document.getElementById('pageTitle').textContent=titles[id][0];document.getElementById('pageSubtitle').textContent=titles[id][1];if(id==='commands')loadCommands();if(id==='members')loadMembers();if(id==='roles')loadRoles();if(id==='ranking')loadRanking();if(id==='welcome')loadWelcome();if(id==='custom')loadCustomCommands();if(id==='automod')loadAutoMod();if(id==='moderation')loadModeration();if(id==='automations')loadAutomations();if(id==='bridge')loadBridge();if(id==='audit')loadAudit();if(id==='system')loadSystem();if(id==='runtime')loadRuntime()}
+function showPage(id){document.querySelectorAll('.page').forEach(e=>e.classList.toggle('active',e.id===id));document.querySelectorAll('.nav').forEach(e=>e.classList.toggle('active',e.dataset.page===id));document.getElementById('pageTitle').textContent=titles[id][0];document.getElementById('pageSubtitle').textContent=titles[id][1];if(id==='servers')loadPendingTelegramGroups();if(id==='commands')loadCommands();if(id==='members')loadMembers();if(id==='roles')loadRoles();if(id==='ranking')loadRanking();if(id==='welcome')loadWelcome();if(id==='custom')loadCustomCommands();if(id==='automod')loadAutoMod();if(id==='moderation')loadModeration();if(id==='automations')loadAutomations();if(id==='bridge')loadBridge();if(id==='audit')loadAudit();if(id==='system')loadSystem();if(id==='runtime')loadRuntime()}
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
 
-function changeCommunity(id){selectedCommunity=id;localStorage.setItem('modexa_community',id);membersPage=1;renderSelected();loadCommands();loadMembers();loadRoles();loadRanking();loadWelcome();loadCustomCommands();loadAutoMod();loadModeration();loadAudit();loadAutomations();}
+function changeCommunity(id){selectedCommunity=id;localStorage.setItem('modexa_community',id);membersPage=1;renderSelected();loadCommands();loadMembers();loadRoles();loadRanking();loadWelcome();loadCustomCommands();loadAutoMod();loadModeration();loadAudit();loadAutomations();loadPendingTelegramGroups();}
 
 function serverRank(x){if(x.botInstalled===true&&x.canManageBot===true)return 0;if(x.botInstalled!==true&&x.canInviteBot===true)return 1;return 2}
 function sortedCommunities(){return [...communities].sort((a,b)=>serverRank(a)-serverRank(b)||String(a.name||'').localeCompare(String(b.name||''),'ru'))}
@@ -648,7 +648,7 @@ async function redeemTelegramGroup(code,inputId,buttonId){
   const result=await post('/api/telegram/groups/link',{communityId:selected.communityId,code});
   const input=document.getElementById(inputId);if(input)input.value='';
   const title=result?.telegram?.chatTitle||'Telegram-группа';toast(title+' успешно привязана');setTelegramLinkStatus(title+' привязана к выбранному сообществу.');
-  await Promise.all([loadPendingTelegramGroups(),loadBridge()]);
+  await loadPendingTelegramGroups();if(authKey)await loadBridge();
  }catch(e){toast(e.message);setTelegramLinkStatus(e.message||'Не удалось привязать группу.',true)}
  finally{if(button){button.disabled=false;button.textContent=button.dataset.originalText||'Привязать группу';delete button.dataset.originalText}}
 }
