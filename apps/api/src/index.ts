@@ -800,6 +800,19 @@ const server = createServer((req, res) => {
       return;
     }
 
+    // Owner-only control plane. OAuth proves a Discord identity, not ownership
+    // of this Modexa installation. Never expose process controls or diagnostics
+    // to ordinary community managers, even for read-only requests.
+    const ownerOnlyPath =
+      url.pathname === "/api/system" ||
+      url.pathname === "/api/runtime" ||
+      url.pathname === "/api/runtime/logs" ||
+      url.pathname === "/api/backup";
+    if (ownerOnlyPath && !authorized(req)) {
+      json(res, 403, { error: "owner_api_key_required" });
+      return;
+    }
+
     // Mutations normally require the server API key. Community-scoped settings
     // also accept a Discord OAuth session, but only after the handler verifies
     // that the signed-in user can manage the corresponding Discord guild.
