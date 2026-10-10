@@ -1010,8 +1010,15 @@ const server = createServer((req, res) => {
 
     if (url.pathname === "/api/telegram/groups/pending" && req.method === "GET") {
       if (!authorized(req)) {
-        json(res, 403, { error: "owner_api_key_required" });
-        return;
+        const communityId = url.searchParams.get("communityId") ?? "";
+        if (!communityId || !database.getCommunitiesSnapshot().some((item) => item.id === communityId)) {
+          json(res, 400, { error: "communityId_required" });
+          return;
+        }
+        if (!await canManageDiscordCommunity(req, communityId)) {
+          json(res, 403, { error: "community_management_forbidden" });
+          return;
+        }
       }
       const now = Date.now();
       const pending = (database.getRuntimeState<Array<{
