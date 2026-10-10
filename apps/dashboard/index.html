@@ -613,6 +613,12 @@ async function linkTelegramGroup(){
 }
 
 async function loadBridge(){
+ if(!authKey){
+  document.getElementById('bridgeEndpoints').innerHTML='<div class="empty">Список Bridge endpoints и связи доступны только владельцу с OWNER API-ключом.</div>';
+  document.getElementById('bridgeList').innerHTML='<div class="empty">Для управления Bridge введите OWNER API-ключ.</div>';
+  await loadPendingTelegramGroups();
+  return;
+ }
  try{
   bridgeCache=await get('/api/bridge');
   const endpoints=bridgeCache.endpoints||[],links=bridgeCache.links||[];
