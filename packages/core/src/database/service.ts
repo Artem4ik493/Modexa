@@ -732,6 +732,12 @@ export class ModexaDatabase {
     );
   }
 
+  deleteCommunityIdentity(communityId: string, platform: "telegram" | "discord", externalId: string): void {
+    this.database.prepare(
+      "DELETE FROM community_identities WHERE community_id = ? AND platform = ? AND external_id = ?"
+    ).run(communityId, platform, externalId);
+  }
+
   upsertCommunityIdentity(identity: {
     id: string;
     communityId: string;
