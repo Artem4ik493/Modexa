@@ -349,7 +349,7 @@ nav{min-height:0;padding-bottom:18px}
 
 <section class="page" id="servers">
   <div class="card"><div class="section"><h2>Discord-сервера</h2><span class="muted" id="serverCount">—</span></div><div id="serverList"></div></div>
-  <div class="card" style="margin-top:13px"><div class="section"><h2>Выбранное сообщество</h2><span class="pill" id="selectedMode">—</span></div><div id="serverDetails" class="muted">Выберите сервер.</div></div>
+  
   <div class="card telegram-link-card" style="margin-top:13px">
     <div class="section"><div><h2>Подключить Telegram-группу</h2><div class="meta">Привяжите группу к выбранному сообществу Modexa без ручного ввода ID.</div></div><span class="pill">Telegram ↔ Modexa</span></div>
     <div class="grid3" style="margin-bottom:14px">
@@ -525,7 +525,7 @@ function toast(msg){const e=document.getElementById('toast');e.textContent=msg;e
 function authHeaders(){return authKey&&authKey!==OWNER_COOKIE_SESSION?{Authorization:'Bearer '+authKey}:{}}
 function showLogin(msg=''){document.getElementById('login').classList.remove('hidden');document.getElementById('loginError').textContent=msg;}
 function friendlyApiError(code,status){
- const messages={unauthorized:'Сессия истекла. Войдите снова.',discord_session_expired:'Сессия Discord истекла. Войдите через Discord повторно.',discord_rate_limited:'Discord временно ограничил частоту запросов. Подождите немного и повторите попытку.',discord_api_error:'Discord API временно не смог обработать запрос.',community_management_forbidden:'У вас нет прав управлять выбранным сообществом.',community_not_found:'Сообщество не найдено или бот ещё не подключён.',communityId_required:'Сначала выберите сообщество, где установлен бот Modexa.',communityId_and_valid_link_code_required:'Введите код привязки из 16 символов.',link_code_not_found_or_expired:'Код не найден или истёк. Выполните /dashboard_link в группе ещё раз.',telegram_group_already_linked:'Эта Telegram-группа уже привязана к другому сообществу.',owner_api_key_required:'Эта операция доступна только владельцу Modexa.',api_key_required_for_mutations:'Недостаточно прав для этого действия.'};
+ const messages={unauthorized:'Сессия истекла. Войдите снова.',discord_session_expired:'Сессия Discord истекла. Войдите через Discord повторно.',discord_rate_limited:'Discord временно ограничил частоту запросов. Подождите немного и повторите попытку.',discord_api_error:'Discord API временно не смог обработать запрос.',telegram_group_not_linked:'Эта Telegram-группа уже не привязана к выбранному сообществу.',community_management_forbidden:'У вас нет прав управлять выбранным сообществом.',community_not_found:'Сообщество не найдено или бот ещё не подключён.',communityId_required:'Сначала выберите сообщество, где установлен бот Modexa.',communityId_and_valid_link_code_required:'Введите код привязки из 16 символов.',link_code_not_found_or_expired:'Код не найден или истёк. Выполните /dashboard_link в группе ещё раз.',telegram_group_already_linked:'Эта Telegram-группа уже привязана к другому сообществу.',owner_api_key_required:'Эта операция доступна только владельцу Modexa.',api_key_required_for_mutations:'Недостаточно прав для этого действия.'};
  return messages[code]||((status?'Ошибка API ('+status+')':'Ошибка API')+(code?': '+code:''));
 }
 async function request(path,options={}){
@@ -533,7 +533,7 @@ async function request(path,options={}){
  if(r.status===401){const endpoint=path.split('?')[0];if(authKey===OWNER_COOKIE_SESSION&&endpoint.startsWith('/api/auth/discord'))throw new Error('Discord-сессия недоступна для текущего входа владельца.');if(endpoint==='/api/auth/discord'){authKey='';discordUser=null;document.body.classList.remove('owner-mode');showLogin('Сессия Discord истекла. Войдите снова.');throw new Error('unauthorized')}throw new Error('Доступ к этому запросу не подтверждён (401). Сессия сохранена; проверьте права и ответ API.')}
  if(r.status===204)return null;
  const raw=await r.text();let data=null;if(raw){try{data=JSON.parse(raw)}catch{data=null}}
- if(!r.ok)throw new Error(friendlyApiError(data?.error||raw,r.status));
+ if(!r.ok){if(data?.error==='telegram_group_already_linked'){const where=data.linkedCommunityName||data.linkedCommunityId||'другое сообщество';throw new Error('Эта Telegram-группа уже привязана к сообществу «'+where+'». Откройте это сообщество и отвяжите группу перед повторной привязкой.')}throw new Error(friendlyApiError(data?.error||raw,r.status))}
  if(!raw)return null;return data??raw;
 }
 async function get(path){return request(path)}
@@ -602,23 +602,7 @@ function renderServers(){
   document.getElementById('overviewServers').innerHTML=manageableHtml;
   document.getElementById('serverCount').textContent=manageable.length+' управляемых · '+inviteable.length+' для приглашения';
 }
-async function renderSelected(){
-  if(!selectedCommunity){
-    document.getElementById('selectedMode').textContent='—';
-    document.getElementById('serverDetails').textContent='Выберите сервер.';
-    return;
-  }
-  try{
-    const cs=await get('/api/communities');
-    const c=cs.items.find(x=>x.id===selectedCommunity);
-    if(!c){
-      document.getElementById('serverDetails').textContent='Сообщество ещё не зарегистрировано локально. Добавьте бота и дождитесь GuildCreate.';
-      return;
-    }
-    document.getElementById('selectedMode').textContent=c.mode||'public';
-    document.getElementById('serverDetails').innerHTML='<div class="setting"><span>Название</span><b>'+esc(c.name)+'</b></div><div class="setting"><span>Community ID</span><code>'+esc(c.id)+'</code></div><div class="setting"><span>Режим</span><div><button class="btn '+(c.mode==='public'?'primary':'')+'" onclick="setMode(\'public\')">Public</button> <button class="btn '+(c.mode==='private'?'primary':'')+'" onclick="setMode(\'private\')">Private</button></div></div>';
-  }catch{}
-}
+async function renderSelected(){return;}
 
 async function setMode(mode){if(!selectedCommunity)return toast('Сначала выберите сервер');try{await post('/api/community/mode',{communityId:selectedCommunity,mode});toast('Режим сообщества изменён');await loadAll()}catch(e){toast(e.message)}}
 
@@ -646,7 +630,18 @@ async function loadPendingTelegramGroups(){
  try{
   const query=!authKey&&selected?.communityId?'?communityId='+encodeURIComponent(selected.communityId):'';
   const data=await get('/api/telegram/groups/pending'+query);const items=data.items||[];
-  if(root)root.innerHTML=items.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.chatTitle)+'</div><div class="meta">ID: '+esc(x.chatId)+' · запрос действует до '+esc(new Date(x.expiresAt).toLocaleTimeString('ru-RU'))+'</div></div></div>').join('')||'<div class="empty">Нет ожидающих запросов. Выполните /dashboard_link в нужной Telegram-группе.</div>';
+  if(root){
+   const pendingHtml=items.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.chatTitle)+'</div><div class="meta">ID: '+esc(x.chatId)+' · запрос действует до '+esc(new Date(x.expiresAt).toLocaleTimeString('ru-RU'))+'</div></div></div>').join('')||'<div class="empty">Нет ожидающих запросов. Выполните /dashboard_link в нужной Telegram-группе.</div>';
+   let linkedHtml='';
+   try{
+    if(selected?.communityId){
+     const linked=await get('/api/telegram/groups/linked?communityId='+encodeURIComponent(selected.communityId));
+     const groups=linked.items||[];
+     linkedHtml='<div class="section" style="margin-top:18px"><h3>Привязанные Telegram-группы</h3><span class="muted">'+groups.length+'</span></div>'+(groups.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.chatTitle)+'</div><div class="meta">ID: '+esc(x.chatId)+'</div></div><button class="btn danger" onclick="unlinkTelegramGroup(\\''+esc(x.chatId)+'\\')">Отвязать</button></div>').join('')||'<div class="empty">К этому сообществу Telegram-группы не привязаны.</div>');
+    }
+   }catch(e){linkedHtml='<div class="empty">Не удалось загрузить привязанные группы: '+esc(e.message||'ошибка API')+'</div>'}
+   root.innerHTML=pendingHtml+linkedHtml;
+  }
   setTelegramLinkStatus(items.length?'Есть ожидающие запросы. Введите код из целевой Telegram-группы.':'Ожидающих запросов пока нет. Сначала выполните /dashboard_link в Telegram-группе.');
  }catch(e){if(root)root.innerHTML='<div class="empty">'+esc(e.message||'Не удалось загрузить ожидающие привязки.')+'</div>';setTelegramLinkStatus(e.message||'Не удалось проверить ожидающие привязки.',true);}
 }
@@ -667,6 +662,17 @@ async function redeemTelegramGroup(code,inputId,buttonId){
 }
 async function linkTelegramGroup(){return redeemTelegramGroup(document.getElementById('telegramLinkCode')?.value,'telegramLinkCode','telegramBridgeLinkButton')}
 async function linkTelegramGroupFromAccount(){return redeemTelegramGroup(document.getElementById('telegramAccountLinkCode')?.value,'telegramAccountLinkCode','telegramAccountLinkButton')}
+async function unlinkTelegramGroup(chatId){
+ const selected=selectedModexaCommunity();
+ if(!selected?.communityId)return toast('Сначала выберите сообщество');
+ if(!confirm('Отвязать Telegram-группу с ID '+chatId+' от этого сообщества?'))return;
+ try{
+  await post('/api/telegram/groups/unlink',{communityId:selected.communityId,chatId});
+  toast('Telegram-группа отвязана');
+  await loadPendingTelegramGroups();
+  if(authKey)await loadBridge();
+ }catch(e){toast(e.message||'Не удалось отвязать Telegram-группу')}
+}
 
 async function loadBridge(){
  if(!authKey){
