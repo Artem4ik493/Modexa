@@ -1,6 +1,6 @@
 import { createServer } from "http";
 import { spawn, type ChildProcess } from "node:child_process";
-import { randomBytes, randomUUID } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { IncomingMessage, ServerResponse } from "http";
@@ -141,6 +141,7 @@ type DiscordSession = {
   accessToken: string;
   refreshToken?: string;
   expiresAt: number;
+  accessTokenExpiresAt: number;
   user: {
     id: string;
     username: string;
@@ -150,6 +151,35 @@ type DiscordSession = {
 };
 
 const discordSessions = new Map<string, DiscordSession>();
+const sessionEncryptionKey = createHash("sha256").update(apiKey).digest();
+function persistDiscordSessions(): void {
+  const value = JSON.stringify([...discordSessions.values()]);
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", sessionEncryptionKey, iv);
+  const encrypted = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  database.setRuntimeState("api.discord_sessions_encrypted", Buffer.concat([iv, tag, encrypted]).toString("base64"));
+}
+function restoreDiscordSessions(): void {
+  const stored = database.getRuntimeState<string>("api.discord_sessions_encrypted");
+  if (!stored) return;
+  try {
+    const bytes = Buffer.from(stored, "base64");
+    if (bytes.length < 29) throw new Error("Invalid encrypted session state");
+    const decipher = createDecipheriv("aes-256-gcm", sessionEncryptionKey, bytes.subarray(0, 12));
+    decipher.setAuthTag(bytes.subarray(12, 28));
+    const raw = Buffer.concat([decipher.update(bytes.subarray(28)), decipher.final()]).toString("utf8");
+    const sessions = JSON.parse(raw) as DiscordSession[];
+    for (const session of sessions) {
+      if (session.expiresAt > Date.now()) discordSessions.set(session.id, session);
+    }
+    if (sessions.length !== discordSessions.size) persistDiscordSessions();
+  } catch {
+    // A changed API key invalidates encrypted sessions safely; users can sign in again.
+    database.setRuntimeState("api.discord_sessions_encrypted", "");
+  }
+}
+restoreDiscordSessions();
 const oauthStates = new Map<string, number>();
 const oauthHandoffs = new Map<string, { sessionId: string; expiresAt: number }>();
 
@@ -189,16 +219,60 @@ async function discordApi<T>(
   path: string,
   accessToken: string
 ): Promise<T> {
-  const response = await fetch(`https://discord.com/api/v10${path}`, {
-    headers: {
-      authorization: `Bearer ${accessToken}`
+  let token = accessToken;
+  let session = [...discordSessions.values()].find((item) => item.accessToken === accessToken);
+  if (session && session.accessTokenExpiresAt <= Date.now() + 60_000 && session.refreshToken) {
+    const body = new URLSearchParams({
+      client_id: discordClientId,
+      client_secret: discordClientSecret,
+      grant_type: "refresh_token",
+      refresh_token: session.refreshToken
+    });
+    const refreshed = await fetch("https://discord.com/api/oauth2/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body
+    });
+    if (refreshed.ok) {
+      const result = await refreshed.json() as { access_token: string; refresh_token?: string; expires_in: number };
+      session.accessToken = result.access_token;
+      session.refreshToken = result.refresh_token ?? session.refreshToken;
+      session.accessTokenExpiresAt = Date.now() + result.expires_in * 1000;
+      token = session.accessToken;
+      persistDiscordSessions();
+    } else if (refreshed.status === 400 || refreshed.status === 401) {
+      discordSessions.delete(session.id);
+      persistDiscordSessions();
+      throw new Error("Discord session expired; sign in again");
     }
-  });
-
-  if (!response.ok) {
-    throw new Error(`Discord API failed: ${response.status}`);
   }
-
+  let response = await fetch(`https://discord.com/api/v10${path}`, {
+    headers: { authorization: `Bearer ${token}` }
+  });
+  if (response.status === 401 && session?.refreshToken) {
+    const body = new URLSearchParams({
+      client_id: discordClientId,
+      client_secret: discordClientSecret,
+      grant_type: "refresh_token",
+      refresh_token: session.refreshToken
+    });
+    const refreshed = await fetch("https://discord.com/api/oauth2/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body
+    });
+    if (refreshed.ok) {
+      const result = await refreshed.json() as { access_token: string; refresh_token?: string; expires_in: number };
+      session.accessToken = result.access_token;
+      session.refreshToken = result.refresh_token ?? session.refreshToken;
+      session.accessTokenExpiresAt = Date.now() + result.expires_in * 1000;
+      persistDiscordSessions();
+      response = await fetch(`https://discord.com/api/v10${path}`, {
+        headers: { authorization: `Bearer ${session.accessToken}` }
+      });
+    }
+  }
+  if (!response.ok) throw new Error(`Discord API failed: ${response.status}`);
   return response.json() as Promise<T>;
 }
 
@@ -215,7 +289,10 @@ function discordSession(req: IncomingMessage): DiscordSession | undefined {
   if (!id) return undefined;
   const session = discordSessions.get(id);
   if (!session || session.expiresAt <= Date.now()) {
-    discordSessions.delete(id);
+    if (session) {
+      discordSessions.delete(id);
+      persistDiscordSessions();
+    }
     return undefined;
   }
   return session;
@@ -510,9 +587,11 @@ const server = createServer((req, res) => {
         id: sessionId,
         accessToken: token.access_token,
         refreshToken: token.refresh_token,
-        expiresAt: Date.now() + token.expires_in * 1000,
+        expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
+        accessTokenExpiresAt: Date.now() + token.expires_in * 1000,
         user
       });
+      persistDiscordSessions();
 
       // Also create a short-lived one-time handoff. This makes OAuth work
       // even when the dashboard is opened as localhost vs 127.0.0.1.
@@ -707,7 +786,10 @@ const server = createServer((req, res) => {
 
     if (url.pathname === "/api/auth/discord" && req.method === "DELETE") {
       const sessionId = cookieValue(req, "modexa_session");
-      if (sessionId) discordSessions.delete(sessionId);
+      if (sessionId) {
+        discordSessions.delete(sessionId);
+        persistDiscordSessions();
+      }
       res.writeHead(204, {
         "set-cookie": cookie("modexa_session", "", 0)
       });
