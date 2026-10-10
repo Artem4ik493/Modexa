@@ -304,6 +304,12 @@ async function discordApi<T>(
       throw new Error("Discord session expired; sign in again");
     }
   }
+  if (path === "/users/@me/guilds" && session) {
+    const cached = discordGuildCache.get(session.id);
+    if (cached && cached.expiresAt > Date.now()) return cached.guilds as T;
+    if (cached) discordGuildCache.delete(session.id);
+  }
+
   let response = await fetch(`https://discord.com/api/v10${path}`, {
     headers: { authorization: `Bearer ${token}` }
   });
@@ -330,8 +336,29 @@ async function discordApi<T>(
       });
     }
   }
-  if (!response.ok) throw new Error(`Discord API failed: ${response.status}`);
-  return response.json() as Promise<T>;
+  if (!response.ok) {
+    if (response.status === 429) {
+      let retryAfterSeconds = Number(response.headers.get("retry-after"));
+      try {
+        const body = await response.clone().json() as { retry_after?: number };
+        if (!Number.isFinite(retryAfterSeconds) || retryAfterSeconds <= 0) {
+          retryAfterSeconds = Number(body.retry_after);
+        }
+      } catch {}
+      if (!Number.isFinite(retryAfterSeconds) || retryAfterSeconds < 0) retryAfterSeconds = 1;
+      throw new DiscordApiError(429, Math.ceil(retryAfterSeconds));
+    }
+    throw new DiscordApiError(response.status);
+  }
+
+  const data = await response.json() as T;
+  if (path === "/users/@me/guilds" && session && Array.isArray(data)) {
+    discordGuildCache.set(session.id, {
+      expiresAt: Date.now() + DISCORD_GUILD_CACHE_TTL_MS,
+      guilds: data as DiscordGuild[]
+    });
+  }
+  return data;
 }
 
 function cookieValue(req: IncomingMessage, name: string): string | undefined {
@@ -388,6 +415,21 @@ type DiscordGuild = {
   permissions?: string;
   permissions_new?: string;
 };
+
+class DiscordApiError extends Error {
+  readonly status: number;
+  readonly retryAfterSeconds?: number;
+
+  constructor(status: number, retryAfterSeconds?: number) {
+    super(status === 429 ? "Discord API rate limited the request" : `Discord API failed: ${status}`);
+    this.name = "DiscordApiError";
+    this.status = status;
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
+const discordGuildCache = new Map<string, { expiresAt: number; guilds: DiscordGuild[] }>();
+const DISCORD_GUILD_CACHE_TTL_MS = 60_000;
 
 function discordGuildPermissions(guild: DiscordGuild): bigint {
   const raw = guild.permissions_new ?? guild.permissions ?? "0";
@@ -2460,6 +2502,20 @@ const server = createServer((req, res) => {
     }
     if (message === "invalid_json" || message === "json_object_required") {
       json(res, 400, { error: message });
+      return;
+    }
+    if (error instanceof DiscordApiError && error.status === 429) {
+      json(res, 429, {
+        error: "discord_rate_limited",
+        retryAfterSeconds: error.retryAfterSeconds ?? 1
+      });
+      return;
+    }
+    if (error instanceof DiscordApiError) {
+      json(res, error.status >= 400 && error.status < 500 ? error.status : 502, {
+        error: "discord_api_error",
+        status: error.status
+      });
       return;
     }
     json(res, 500, { error: "internal_error" });
