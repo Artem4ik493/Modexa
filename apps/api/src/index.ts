@@ -910,6 +910,7 @@ const server = createServer((req, res) => {
 
       json(res, 200, {
         authenticated: true,
+        role: "user",
         user: session.user,
         modexa: modexaUser
           ? {
