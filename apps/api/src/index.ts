@@ -908,6 +908,39 @@ const server = createServer((req, res) => {
       return;
     }
 
+    // Discord OAuth sessions may read community-scoped data only for a
+    // Discord guild they can manage. API-key sessions remain the installation
+    // owner's trusted access path.
+    if (req.method === "GET" && !authorized(req)) {
+      const communityPath = url.pathname.match(/^\\/api\\/communities\\/([^/]+)/);
+      const communityId = communityPath?.[1] ?? url.searchParams.get("communityId") ?? "";
+      if (communityId) {
+        const session = discordSession(req);
+        const identity = database.getCommunityIdentitiesSnapshot(communityId)
+          .find((item) => item.platform === "discord");
+        if (!session || !identity) {
+          json(res, 403, { error: "community_read_forbidden" });
+          return;
+        }
+        let guilds: DiscordGuild[];
+        try {
+          guilds = await discordApi<DiscordGuild[]>("/users/@me/guilds", session.accessToken);
+        } catch {
+          json(res, 401, { error: "discord_session_expired" });
+          return;
+        }
+        const guild = guilds.find((item) => item.id === identity.externalId);
+        const permissions = guild ? BigInt(guild.permissions) : 0n;
+        const canManage = Boolean(guild && (guild.owner ||
+          (permissions & 0x8n) === 0x8n ||
+          (permissions & 0x20n) === 0x20n));
+        if (!canManage) {
+          json(res, 403, { error: "community_read_forbidden" });
+          return;
+        }
+      }
+    }
+
     // Owner-only control plane. OAuth proves a Discord identity, not ownership
     // of this Modexa installation. Never expose process controls or diagnostics
     // to ordinary community managers, even for read-only requests.
