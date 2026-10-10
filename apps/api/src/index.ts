@@ -1112,7 +1112,7 @@ const server = createServer((req, res) => {
         json(res, 400, { error: "communityId_required" });
         return;
       }
-      if (!authorized(req) && !await canManageDiscordCommunity(req, communityId)) {
+      if (!authorized(req) && !ownerSession(req) && !await canManageDiscordCommunity(req, communityId)) {
         json(res, 403, { error: "community_management_forbidden" });
         return;
       }
@@ -1131,7 +1131,7 @@ const server = createServer((req, res) => {
       if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) {
         json(res, 404, { error: "community_not_found" }); return;
       }
-      if (!authorized(req) && !await canManageDiscordCommunity(req, communityId)) {
+      if (!authorized(req) && !ownerSession(req) && !await canManageDiscordCommunity(req, communityId)) {
         json(res, 403, { error: "community_management_forbidden" }); return;
       }
       const identity = database.getCommunityIdentitiesSnapshot(communityId)
@@ -1161,7 +1161,7 @@ const server = createServer((req, res) => {
         return;
       }
 
-      if (!authorized(req)) {
+      if (!authorized(req) && !ownerSession(req)) {
         const session = discordSession(req);
         const identity = database.getCommunityIdentitiesSnapshot(communityId)
           .find((item) => item.platform === "discord");
