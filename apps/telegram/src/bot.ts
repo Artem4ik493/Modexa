@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+
 import {
   CommandParser,
   CommandRegistry,
@@ -101,6 +103,61 @@ export function createTelegramAdapter(
 ): TelegramAdapter {
   const bot =
     new Bot(token);
+
+  // A Telegram group administrator can generate a short-lived code that
+  // a Discord community manager redeems in the Dashboard to link the group.
+  // Register before the generic message handler so this command is handled
+  // by this focused workflow first.
+  bot.command("dashboard_link", async (ctx) => {
+    const chat = ctx.chat;
+    const user = ctx.from;
+    const database = options.database;
+    if (!database || !user || (chat.type !== "group" && chat.type !== "supergroup")) {
+      await ctx.reply("Эта команда доступна только в Telegram-группе, где подключена Modexa.");
+      return;
+    }
+
+    try {
+      const [requester, me] = await Promise.all([
+        bot.api.getChatMember(chat.id, user.id),
+        bot.api.getMe()
+      ]);
+      const botMember = await bot.api.getChatMember(chat.id, me.id);
+      const isAdmin = requester.status === "creator" || requester.status === "administrator";
+      const botIsAdmin = botMember.status === "creator" || botMember.status === "administrator";
+      if (!isAdmin || !botIsAdmin) {
+        await ctx.reply("Для привязки нужны права администратора группы у вас и у бота Modexa.");
+        return;
+      }
+
+      const now = Date.now();
+      const code = randomBytes(4).toString("hex").toUpperCase();
+      const current = database.getRuntimeState<Array<{
+        code: string; chatId: string; chatTitle: string; requestedBy: string;
+        createdAt: string; expiresAt: string;
+      }>>("telegram.pending_group_links") ?? [];
+      const pending = current.filter((item) => Date.parse(item.expiresAt) > now && item.chatId !== String(chat.id));
+      pending.push({
+        code,
+        chatId: String(chat.id),
+        chatTitle: chat.title ?? String(chat.id),
+        requestedBy: String(user.id),
+        createdAt: new Date(now).toISOString(),
+        expiresAt: new Date(now + 10 * 60_000).toISOString()
+      });
+      database.setRuntimeState("telegram.pending_group_links", pending.slice(-100));
+      await ctx.reply(
+        "Код привязки к Modexa: " + code +
+        "\\nОн действует 10 минут. Откройте Dashboard, выберите Discord-сообщество и подтвердите привязку Telegram-группы."
+      );
+    } catch (error) {
+      logger.error("telegram.group_link.request_failed", {
+        chatId: String(chat.id),
+        requesterId: String(user.id)
+      }, error);
+      await ctx.reply("Не удалось проверить права. Убедитесь, что бот является администратором группы, и повторите попытку.");
+    }
+  });
 
   const registry =
     new CommandRegistry();
