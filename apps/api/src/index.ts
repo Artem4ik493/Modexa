@@ -1008,9 +1008,8 @@ const server = createServer((req, res) => {
     }
 
     if (url.pathname === "/api/telegram/groups/pending" && req.method === "GET") {
-      const session = discordSession(req);
-      if (!session && !authorized(req)) {
-        json(res, 401, { error: "unauthorized" });
+      if (!authorized(req)) {
+        json(res, 403, { error: "owner_api_key_required" });
         return;
       }
       const now = Date.now();
@@ -1172,7 +1171,10 @@ const server = createServer((req, res) => {
       url.pathname === "/api/runtime" ||
       url.pathname === "/api/runtime/logs" ||
       url.pathname === "/api/backup" ||
-      url.pathname === "/api/bridge";
+      url.pathname === "/api/bridge" ||
+      url.pathname === "/api/telegram/groups/pending" ||
+      url.pathname === "/api/actions" ||
+      url.pathname.startsWith("/api/actions/");
     if (ownerOnlyPath && !authorized(req)) {
       json(res, 403, { error: "owner_api_key_required" });
       return;
