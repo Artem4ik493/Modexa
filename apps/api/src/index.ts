@@ -805,7 +805,7 @@ const server = createServer((req, res) => {
     // that the signed-in user can manage the corresponding Discord guild.
     const isCommunityModeMutation = url.pathname === "/api/community/mode" && req.method === "POST";
     const isCommunitySettingsMutation = /^\/api\/communities\/[^/]+\/settings$/.test(url.pathname) && req.method === "PATCH";
-    const isCommandSettingsMutation = url.pathname === "/api/command-settings" && ["POST", "PUT"].includes(req.method ?? "");
+    const isCommandSettingsMutation = url.pathname === "/api/command-settings" && req.method === "POST";
     if (!["GET", "HEAD", "OPTIONS"].includes(req.method ?? "") && !authorized(req) && !isCommunityModeMutation && !isCommunitySettingsMutation && !isCommandSettingsMutation) {
       json(res, 403, { error: "api_key_required_for_mutations" });
       return;
@@ -1753,7 +1753,7 @@ const server = createServer((req, res) => {
       json(res, 200, { updated: items.length, items: database.getCommandSettings(communityId) }); return;
     }
 
-    if (url.pathname === "/api/command-settings" && ["POST", "PUT"].includes(req.method ?? "") && !authorized(req)) {
+    if (url.pathname === "/api/command-settings" && req.method === "POST" && !authorized(req)) {
       const body = await readJsonBody(req);
       const communityId = typeof body.communityId === "string" ? body.communityId : "";
       const session = discordSession(req);
