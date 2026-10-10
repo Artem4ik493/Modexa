@@ -472,7 +472,7 @@ nav{min-height:0;padding-bottom:18px}
   <div class="card">
     <div class="section"><h2>Привязка Telegram-группы</h2><button class="btn" onclick="loadPendingTelegramGroups()">↻ Проверить коды</button></div>
     <p class="muted">В Telegram-группе администратор должен выполнить <b>/dashboard_link</b>. Бот должен быть администратором. Код действует 10 минут. Сначала выберите Discord-сообщество сверху.</p>
-    <div class="form"><label>Код из Telegram-группы</label><input id="telegramLinkCode" class="input" placeholder="Например, A1B2C3D4" maxlength="8"><button class="btn primary" onclick="linkTelegramGroup()">Привязать код к выбранному серверу</button></div>
+    <div class="form"><label>Код из Telegram-группы</label><input id="telegramLinkCode" class="input" placeholder="16 символов из Telegram" maxlength="16"><button class="btn primary" onclick="linkTelegramGroup()">Привязать код к выбранному серверу</button></div>
     <div id="telegramPendingGroups"><div class="empty">Загрузка ожидающих привязок…</div></div>
   </div>
   <div class="card"><div class="section"><h2>Endpoints</h2><button class="btn" onclick="loadBridge()">↻ Обновить</button></div><div id="bridgeEndpoints"></div></div>
@@ -599,7 +599,7 @@ async function loadPendingTelegramGroups(){
 }
 async function linkTelegramGroup(){
  const code=(document.getElementById('telegramLinkCode')?.value||'').trim().toUpperCase();
- if(!/^[A-F0-9]{8}$/.test(code)){toast('Введите 8-символьный код из Telegram');return;}
+ if(!/^[A-F0-9]{16}$/.test(code)){toast('Введите 16-символьный код из Telegram');return;}
  if(!selectedCommunity){toast('Сначала выберите Discord-сообщество');return;}
  const selected=communities.find(c=>(c.communityId||c.id)===selectedCommunity);
  if(!selected||selected.canManageBot!==true||!selected.communityId){toast('Сначала установите бота Modexa на выбранный Discord-сервер');return;}
