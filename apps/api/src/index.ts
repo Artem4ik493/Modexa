@@ -1220,8 +1220,29 @@ const server = createServer((req, res) => {
     }
 
     if (url.pathname === "/api/overview" && req.method === "GET") {
-      const communities = database.getCommunitiesSnapshot();
-      const cases = database.getAllModerationCases();
+      let communities = database.getCommunitiesSnapshot();
+      let cases = database.getAllModerationCases();
+
+      if (!authorized(req)) {
+        const session = discordSession(req);
+        if (!session) { json(res, 401, { error: "unauthorized" }); return; }
+        let guilds: DiscordGuild[];
+        try {
+          guilds = await discordApi<DiscordGuild[]>("/users/@me/guilds", session.accessToken);
+        } catch {
+          json(res, 401, { error: "discord_session_expired" }); return;
+        }
+        const manageableGuildIds = new Set(guilds.filter((guild) => {
+          const permissions = BigInt(guild.permissions);
+          return guild.owner || (permissions & 0x8n) === 0x8n || (permissions & 0x20n) === 0x20n;
+        }).map((guild) => guild.id));
+        const allowedCommunityIds = new Set(database.getCommunityIdentitiesSnapshot()
+          .filter((identity) => identity.platform === "discord" && manageableGuildIds.has(identity.externalId))
+          .map((identity) => identity.communityId));
+        communities = communities.filter((community) => allowedCommunityIds.has(community.id));
+        cases = cases.filter((item) => allowedCommunityIds.has(item.communityId));
+      }
+
       json(res, 200, {
         communities: communities.length,
         activeCommunities: communities.filter((item) => item.mode === "public").length,
@@ -1234,6 +1255,10 @@ const server = createServer((req, res) => {
 
     if (url.pathname === "/api/analytics" && req.method === "GET") {
       const communityId = url.searchParams.get("communityId") ?? undefined;
+      if (!authorized(req) && !communityId) {
+        json(res, 400, { error: "communityId_required_for_user_session" });
+        return;
+      }
       const communities = database.getCommunitiesSnapshot();
       if (communityId && !communities.some((item) => item.id === communityId)) {
         json(res, 404, { error: "community_not_found" });
@@ -1359,6 +1384,10 @@ const server = createServer((req, res) => {
 
     if (url.pathname === "/api/automations" && req.method === "GET") {
       const communityId = url.searchParams.get("communityId") ?? undefined;
+      if (!authorized(req) && !communityId) {
+        json(res, 400, { error: "communityId_required_for_user_session" });
+        return;
+      }
       json(res, 200, {
         items: runtimeServices.automationService.list(communityId)
       });
@@ -1709,7 +1738,28 @@ const server = createServer((req, res) => {
 
     if (url.pathname === "/api/communities" && ["GET", "POST"].includes(req.method ?? "")) {
       if (req.method === "GET") {
-        json(res, 200, { items: database.getCommunitiesSnapshot() }); return;
+        if (authorized(req)) {
+          json(res, 200, { items: database.getCommunitiesSnapshot() });
+          return;
+        }
+
+        const session = discordSession(req);
+        if (!session) { json(res, 401, { error: "unauthorized" }); return; }
+        let guilds: DiscordGuild[];
+        try {
+          guilds = await discordApi<DiscordGuild[]>("/users/@me/guilds", session.accessToken);
+        } catch {
+          json(res, 401, { error: "discord_session_expired" }); return;
+        }
+        const manageableGuildIds = new Set(guilds.filter((guild) => {
+          const permissions = BigInt(guild.permissions);
+          return guild.owner || (permissions & 0x8n) === 0x8n || (permissions & 0x20n) === 0x20n;
+        }).map((guild) => guild.id));
+        const allowedCommunityIds = new Set(database.getCommunityIdentitiesSnapshot()
+          .filter((identity) => identity.platform === "discord" && manageableGuildIds.has(identity.externalId))
+          .map((identity) => identity.communityId));
+        json(res, 200, { items: database.getCommunitiesSnapshot().filter((community) => allowedCommunityIds.has(community.id)) });
+        return;
       }
       const body = await readJsonBody(req);
       const name = typeof body.name === "string" ? body.name.trim() : "";
