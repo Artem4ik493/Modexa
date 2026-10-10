@@ -7,6 +7,7 @@ services:
       context: .
       dockerfile: Dockerfile.api
     restart: unless-stopped
+    init: true
     env_file:
       - .env
     environment:
@@ -15,9 +16,12 @@ services:
       PORT: 3000
       MODEXA_DATABASE_PATH: /app/data/modexa.sqlite
     ports:
+      # aaPanel/Nginx proxies HTTPS traffic to this loopback-only port.
+      # Do not expose port 3000 publicly.
       - "127.0.0.1:3000:3000"
     volumes:
       - ./data:/app/data
+      # Runner uses Node's --env-file=.env when it is started by the API.
       - ./.env:/app/.env:ro
     healthcheck:
       test:
@@ -29,3 +33,8 @@ services:
       timeout: 5s
       retries: 3
       start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
