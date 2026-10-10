@@ -485,7 +485,7 @@ nav{min-height:0;padding-bottom:18px}
   <div class="card">
     <div class="section"><h2>Привязка Telegram-группы</h2><button class="btn" onclick="loadPendingTelegramGroups()">↻ Проверить коды</button></div>
     <p class="muted">В Telegram-группе администратор должен выполнить <b>/dashboard_link</b>. Бот должен быть администратором. Код действует 10 минут. Сначала выберите Discord-сообщество сверху.</p>
-    <div class="form"><label>Код из Telegram-группы</label><input id="telegramLinkCode" class="input" placeholder="16 символов из Telegram" maxlength="16"><button class="btn primary" onclick="linkTelegramGroup()">Привязать код к выбранному серверу</button></div>
+    <div class="form"><label>Код из Telegram-группы</label><input id="telegramLinkCode" class="input" placeholder="16 символов из Telegram" maxlength="16" autocomplete="off" autocapitalize="characters" spellcheck="false"><button id="telegramBridgeLinkButton" class="btn primary" onclick="linkTelegramGroup()">Привязать код к выбранному серверу</button></div>
     <div id="telegramPendingGroups"><div class="empty">Загрузка ожидающих привязок…</div></div>
   </div>
   <div class="card"><div class="section"><h2>Endpoints</h2><button class="btn" onclick="loadBridge()">↻ Обновить</button></div><div id="bridgeEndpoints"></div></div>
@@ -620,29 +620,40 @@ async function toggleAutomation(id,enabled,button){try{await post('/api/automati
 async function createAutomation(){if(!selectedCommunity)return toast('Выберите сервер');const name=document.getElementById('autoName').value.trim(),tt=document.getElementById('autoTrigger').value,tv=document.getElementById('autoTriggerValue').value.trim(),at=document.getElementById('autoAction').value,av=document.getElementById('autoActionValue').value.trim();if(!name||!tv||!av)return toast('Заполните все поля');let trigger=tt==='interval'?{type:'interval',intervalSeconds:Number(tv)}:tt==='message'?{type:'message',pattern:tv}:{type:'command',command:tv};let action=at==='command'?{type:'command',command:av}:{type:'webhook',url:av};try{await post('/api/automations',{communityId:selectedCommunity,name,trigger,action});document.getElementById('autoName').value='';toast('Автоматизация создана');loadAutomations()}catch(e){toast(e.message)}}
 
 let bridgeCache={endpoints:[],links:[]};
+function selectedModexaCommunity(){return communities.find(c=>(c.communityId||c.id)===selectedCommunity)||null;}
+function setTelegramLinkStatus(message,isError=false){const status=document.getElementById('telegramAccountLinkStatus');if(status){status.textContent=message;status.style.color=isError?'var(--danger)':'var(--muted)';}}
 async function loadPendingTelegramGroups(){
  const root=document.getElementById('telegramPendingGroups');
- if(!root)return;
+ if(!root&&!document.getElementById('telegramAccountLinkStatus'))return;
+ const selected=selectedModexaCommunity();
+ if(!authKey&&(!selected||selected.canManageBot!==true||!selected.communityId)){
+  if(root)root.innerHTML='<div class="empty">Выберите Discord-сообщество, где уже установлен бот Modexa.</div>';
+  setTelegramLinkStatus('Сначала выберите сообщество с подключённым ботом Modexa.');return;
+ }
  try{
-  const data=await get('/api/telegram/groups/pending');
-  const items=data.items||[];
-  root.innerHTML=items.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.chatTitle)+'</div><div class="meta">ID: '+esc(x.chatId)+' · истекает '+esc(new Date(x.expiresAt).toLocaleTimeString('ru-RU'))+'</div></div></div>').join('')||'<div class="empty">Нет ожидающих привязок. Выполните /dashboard_link в Telegram-группе и введите код выше.</div>';
- }catch(e){root.innerHTML='<div class="empty">Не удалось загрузить коды. Войдите через Discord и обновите список.</div>';}
+  const query=!authKey&&selected?.communityId?'?communityId='+encodeURIComponent(selected.communityId):'';
+  const data=await get('/api/telegram/groups/pending'+query);const items=data.items||[];
+  if(root)root.innerHTML=items.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.chatTitle)+'</div><div class="meta">ID: '+esc(x.chatId)+' · запрос действует до '+esc(new Date(x.expiresAt).toLocaleTimeString('ru-RU'))+'</div></div></div>').join('')||'<div class="empty">Нет ожидающих запросов. Выполните /dashboard_link в нужной Telegram-группе.</div>';
+  setTelegramLinkStatus(items.length?'Есть ожидающие запросы. Введите код из целевой Telegram-группы.':'Ожидающих запросов пока нет. Сначала выполните /dashboard_link в Telegram-группе.');
+ }catch(e){if(root)root.innerHTML='<div class="empty">'+esc(e.message||'Не удалось загрузить ожидающие привязки.')+'</div>';setTelegramLinkStatus(e.message||'Не удалось проверить ожидающие привязки.',true);}
 }
-async function linkTelegramGroup(){
- const code=(document.getElementById('telegramLinkCode')?.value||'').trim().toUpperCase();
- if(!/^[A-F0-9]{16}$/.test(code)){toast('Введите 16-символьный код из Telegram');return;}
- if(!selectedCommunity){toast('Сначала выберите Discord-сообщество');return;}
- const selected=communities.find(c=>(c.communityId||c.id)===selectedCommunity);
- if(!selected||selected.canManageBot!==true||!selected.communityId){toast('Сначала установите бота Modexa на выбранный Discord-сервер');return;}
+async function redeemTelegramGroup(code,inputId,buttonId){
+ code=String(code||'').trim().toUpperCase();
+ if(!/^[A-F0-9]{16}$/.test(code)){toast('Введите 16-символьный код из Telegram');setTelegramLinkStatus('Проверьте код: нужно ровно 16 шестнадцатеричных символов.',true);return;}
+ if(!selectedCommunity){toast('Сначала выберите Discord-сообщество');setTelegramLinkStatus('Выберите сообщество перед привязкой.',true);return;}
+ const selected=selectedModexaCommunity();
+ if(!selected||selected.canManageBot!==true||!selected.communityId){toast('Сначала подключите бота Modexa к Discord-серверу');setTelegramLinkStatus('Для привязки сначала подключите бота Modexa к выбранному Discord-серверу.',true);return;}
+ const button=document.getElementById(buttonId);if(button){button.disabled=true;button.dataset.originalText=button.textContent;button.textContent='Проверяем код…';}
  try{
-  await post('/api/telegram/groups/link',{communityId:selected.communityId,code});
-  document.getElementById('telegramLinkCode').value='';
-  toast('Telegram-группа привязана');
-  await loadPendingTelegramGroups();
-  await loadBridge();
- }catch(e){toast(e.message)}
+  const result=await post('/api/telegram/groups/link',{communityId:selected.communityId,code});
+  const input=document.getElementById(inputId);if(input)input.value='';
+  const title=result?.telegram?.chatTitle||'Telegram-группа';toast(title+' успешно привязана');setTelegramLinkStatus(title+' привязана к выбранному сообществу.');
+  await Promise.all([loadPendingTelegramGroups(),loadBridge()]);
+ }catch(e){toast(e.message);setTelegramLinkStatus(e.message||'Не удалось привязать группу.',true)}
+ finally{if(button){button.disabled=false;button.textContent=button.dataset.originalText||'Привязать группу';delete button.dataset.originalText}}
 }
+async function linkTelegramGroup(){return redeemTelegramGroup(document.getElementById('telegramLinkCode')?.value,'telegramLinkCode','telegramBridgeLinkButton')}
+async function linkTelegramGroupFromAccount(){return redeemTelegramGroup(document.getElementById('telegramAccountLinkCode')?.value,'telegramAccountLinkCode','telegramAccountLinkButton')}
 
 async function loadBridge(){
  if(!authKey){
