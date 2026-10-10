@@ -912,7 +912,7 @@ const server = createServer((req, res) => {
     // Discord guild they can manage. API-key sessions remain the installation
     // owner's trusted access path.
     if (req.method === "GET" && !authorized(req)) {
-      const communityPath = url.pathname.match(/^\\/api\\/communities\\/([^/]+)/);
+      const communityPath = url.pathname.match(new RegExp("^/api/communities/([^/]+)"));
       const communityId = communityPath?.[1] ?? url.searchParams.get("communityId") ?? "";
       if (communityId) {
         const session = discordSession(req);
