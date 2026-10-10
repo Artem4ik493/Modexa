@@ -873,6 +873,19 @@ const server = createServer((req, res) => {
         createdAt: existing?.createdAt ?? timestamp,
         updatedAt: timestamp
       });
+      // Register the group as a Bridge endpoint immediately so the owner
+      // does not have to re-enter its platform IDs by hand.
+      database.upsertBridgeEndpoint({
+        id: `telegram:${claim.chatId}:${claim.chatId}`,
+        platform: "telegram",
+        communityExternalId: claim.chatId,
+        communityName: claim.chatTitle,
+        channelExternalId: claim.chatId,
+        channelName: claim.chatTitle,
+        communityId,
+        channelId: claim.chatId,
+        updatedAt: timestamp
+      });
       database.setRuntimeState("telegram.pending_group_links", pending.filter((item) => item.code !== code));
       json(res, 200, {
         linked: true,
