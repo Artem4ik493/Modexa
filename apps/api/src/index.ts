@@ -443,6 +443,16 @@ async function canManageDiscordCommunity(req: IncomingMessage, communityId: stri
   }
 }
 
+function isCommunityScopedReadPath(path: string, method: string): boolean {
+  if (method !== "GET" && method !== "HEAD") return false;
+  if (path === "/api/commands" || path === "/api/command-settings" ||
+      path === "/api/analytics" || path === "/api/audit" ||
+      path === "/api/moderation" || path === "/api/custom-commands" ||
+      path === "/api/automations") return true;
+  if (/^\/api\/communities\/[^/]+(?:\/.*)?$/.test(path)) return true;
+  return false;
+}
+
 function isCommunityScopedMutationPath(path: string, method: string): boolean {
   if (method === "POST" && ["/api/automations", "/api/custom-commands", "/api/moderation/cases", "/api/moderation/revoke"].includes(path)) return true;
   if (method === "PUT" && path === "/api/command-settings") return true;
@@ -1186,6 +1196,24 @@ const server = createServer((req, res) => {
     if (ownerOnlyPath && !authorized(req)) {
       json(res, 403, { error: "owner_api_key_required" });
       return;
+    }
+
+    // Every community-scoped read is checked on the server too. Hiding a
+    // community in the selector is not an authorization boundary.
+    if (isCommunityScopedReadPath(url.pathname, req.method ?? "") && !authorized(req)) {
+      let communityId = url.searchParams.get("communityId") ?? "";
+      const communityPath = url.pathname.match(/^\/api\/communities\/([^/]+)/);
+      if (communityPath) {
+        try { communityId = decodeURIComponent(communityPath[1]!); } catch { communityId = ""; }
+      }
+      if (!communityId) {
+        json(res, 400, { error: "communityId_required" });
+        return;
+      }
+      if (!await canManageDiscordCommunity(req, communityId)) {
+        json(res, 403, { error: "community_management_forbidden" });
+        return;
+      }
     }
 
     // Community mutations are allowed for Discord users only when the target
