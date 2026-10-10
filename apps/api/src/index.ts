@@ -361,7 +361,7 @@ function dashboardAuthorized(req: IncomingMessage): boolean {
 }
 
 function cookie(name: string, value: string, maxAge: number): string {
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  const secure = dashboardUrl.startsWith("https://") ? "; Secure" : "";
   return `${name}=${encodeURIComponent(value)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}${secure}`;
 }
 
@@ -563,7 +563,7 @@ function ownerSessionCookie(sessionId: string, maxAge = Math.floor(OWNER_SESSION
 }
 
 function clearOwnerCookies(): string[] {
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  const secure = dashboardUrl.startsWith("https://") ? "; Secure" : "";
   return [
     cookie(OWNER_SESSION_COOKIE, "", 0),
     "modexa_api_key=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0" + secure
