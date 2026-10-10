@@ -152,6 +152,63 @@ type DiscordSession = {
 
 const discordSessions = new Map<string, DiscordSession>();
 const sessionEncryptionKey = createHash("sha256").update(apiKey).digest();
+type OwnerSession = { id: string; expiresAt: number; createdAt: number };
+
+const ownerSessions = new Map<string, OwnerSession>();
+const OWNER_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const OWNER_SESSION_COOKIE = "modexa_owner_session";
+
+function persistOwnerSessions(): void {
+  const value = JSON.stringify([...ownerSessions.values()]);
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", sessionEncryptionKey, iv);
+  const encrypted = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  database.setRuntimeState("api.owner_sessions_encrypted", Buffer.concat([iv, tag, encrypted]).toString("base64"));
+}
+
+function restoreOwnerSessions(): void {
+  const stored = database.getRuntimeState<string>("api.owner_sessions_encrypted");
+  if (!stored) return;
+  try {
+    const bytes = Buffer.from(stored, "base64");
+    if (bytes.length < 29) throw new Error("Invalid encrypted owner session state");
+    const decipher = createDecipheriv("aes-256-gcm", sessionEncryptionKey, bytes.subarray(0, 12));
+    decipher.setAuthTag(bytes.subarray(12, 28));
+    const raw = Buffer.concat([decipher.update(bytes.subarray(28)), decipher.final()]).toString("utf8");
+    const sessions = JSON.parse(raw) as OwnerSession[];
+    for (const session of sessions) {
+      if (session.expiresAt > Date.now()) ownerSessions.set(session.id, session);
+    }
+    if (sessions.length !== ownerSessions.size) persistOwnerSessions();
+  } catch {
+    // Rotating MODEXA_API_KEY invalidates persisted owner sessions safely.
+    database.setRuntimeState("api.owner_sessions_encrypted", "");
+  }
+}
+
+function createOwnerSession(): OwnerSession {
+  const now = Date.now();
+  const session = { id: randomBytes(32).toString("hex"), createdAt: now, expiresAt: now + OWNER_SESSION_TTL_MS };
+  ownerSessions.set(session.id, session);
+  persistOwnerSessions();
+  return session;
+}
+
+function ownerSession(req: IncomingMessage): OwnerSession | undefined {
+  const id = cookieValue(req, OWNER_SESSION_COOKIE);
+  if (!id) return undefined;
+  const session = ownerSessions.get(id);
+  if (!session || session.expiresAt <= Date.now()) {
+    if (session) {
+      ownerSessions.delete(id);
+      persistOwnerSessions();
+    }
+    return undefined;
+  }
+  return session;
+}
+
 function persistDiscordSessions(): void {
   const value = JSON.stringify([...discordSessions.values()]);
   const iv = randomBytes(12);
@@ -179,6 +236,7 @@ function restoreDiscordSessions(): void {
     database.setRuntimeState("api.discord_sessions_encrypted", "");
   }
 }
+restoreOwnerSessions();
 restoreDiscordSessions();
 const oauthStates = new Map<string, number>();
 const oauthHandoffs = new Map<string, { sessionId: string; expiresAt: number }>();
@@ -329,26 +387,31 @@ function json(res: ServerResponse, status: number, value: unknown): void {
 function authorized(req: IncomingMessage): boolean {
   const supplied = req.headers.authorization?.replace(/^Bearer\s+/i, "");
   if (supplied === apiKey) return true;
+  if (ownerSession(req)) return true;
 
-  const cookie = req.headers.cookie ?? "";
-  const session = cookie
-    .split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith("modexa_api_key="))
-    ?.slice("modexa_api_key=".length);
-
-  let decodedSession = "";
-  try { decodedSession = session ? decodeURIComponent(session) : ""; } catch { return false; }
-  return decodedSession === apiKey;
+  // Migration path for old browser cookies: GET /api/auth rotates these to
+  // opaque server-side sessions instead of leaving the API key in the browser.
+  const legacyCookie = cookieValue(req, "modexa_api_key");
+  let decodedLegacyCookie = "";
+  try { decodedLegacyCookie = legacyCookie ? decodeURIComponent(legacyCookie) : ""; } catch { return false; }
+  return decodedLegacyCookie === apiKey;
 }
 
+const parsedRequestBodies = new WeakMap<IncomingMessage, Record<string, unknown>>();
+
 async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+  const cached = parsedRequestBodies.get(req);
+  if (cached) return cached;
   let body = "";
   for await (const chunk of req) {
     body += chunk;
     if (Buffer.byteLength(body) > 1_048_576) throw new Error("request_body_too_large");
   }
-  if (!body.trim()) return {};
+  if (!body.trim()) {
+    const empty: Record<string, unknown> = {};
+    parsedRequestBodies.set(req, empty);
+    return empty;
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(body);
@@ -358,7 +421,36 @@ async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknow
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error("json_object_required");
   }
-  return parsed as Record<string, unknown>;
+  const result = parsed as Record<string, unknown>;
+  parsedRequestBodies.set(req, result);
+  return result;
+}
+
+async function canManageDiscordCommunity(req: IncomingMessage, communityId: string): Promise<boolean> {
+  const session = discordSession(req);
+  if (!session) return false;
+  const identity = database.getCommunityIdentitiesSnapshot(communityId)
+    .find((item) => item.platform === "discord");
+  if (!identity) return false;
+  try {
+    const guilds = await discordApi<DiscordGuild[]>("/users/@me/guilds", session.accessToken);
+    const guild = guilds.find((item) => item.id === identity.externalId);
+    if (!guild) return false;
+    const permissions = BigInt(guild.permissions);
+    return guild.owner || (permissions & 0x8n) === 0x8n || (permissions & 0x20n) === 0x20n;
+  } catch {
+    return false;
+  }
+}
+
+function isCommunityScopedMutationPath(path: string, method: string): boolean {
+  if (method === "POST" && ["/api/automations", "/api/custom-commands", "/api/moderation/cases", "/api/moderation/revoke"].includes(path)) return true;
+  if (method === "PUT" && path === "/api/command-settings") return true;
+  if (/^\/api\/automations\/[^/]+$/.test(path) && ["POST", "PUT", "PATCH", "DELETE"].includes(method)) return true;
+  if (/^\/api\/custom-commands\/[^/]+$/.test(path) && ["PUT", "PATCH", "DELETE"].includes(method)) return true;
+  if (/^\/api\/communities\/[^/]+\/(roles(?:\/[^/]+)?|members\/[^/]+(?:\/roles)?|ranking|welcome(?:\/preview)?|automod\/rules(?:\/[^/]+)?)$/.test(path) &&
+      ["POST", "PUT", "PATCH", "DELETE"].includes(method)) return true;
+  return false;
 }
 
 function isAutomationTrigger(value: unknown): boolean {
@@ -456,9 +548,16 @@ function runnerStatus() {
   };
 }
 
-function apiKeyCookie(apiKeyValue: string): string {
+function ownerSessionCookie(sessionId: string, maxAge = Math.floor(OWNER_SESSION_TTL_MS / 1000)): string {
+  return cookie(OWNER_SESSION_COOKIE, sessionId, maxAge);
+}
+
+function clearOwnerCookies(): string[] {
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  return `modexa_api_key=${encodeURIComponent(apiKeyValue)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400${secure}`;
+  return [
+    cookie(OWNER_SESSION_COOKIE, "", 0),
+    "modexa_api_key=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0" + secure
+  ];
 }
 
 const server = createServer((req, res) => {
@@ -605,10 +704,13 @@ const server = createServer((req, res) => {
         expiresAt: Date.now() + 60_000
       });
 
+      const dashboard = new URL("/", dashboardUrl);
+      dashboard.searchParams.set("discord_handoff", handoff);
       res.writeHead(302, {
-        location: "/?discord_handoff=" + encodeURIComponent(handoff),
+        location: dashboard.toString(),
         "set-cookie": cookie("modexa_session", sessionId, 7 * 24 * 60 * 60),
-        "cache-control": "no-store"
+        "cache-control": "no-store",
+        "referrer-policy": "no-referrer"
       });
       res.end();
       return;
@@ -701,7 +803,26 @@ const server = createServer((req, res) => {
     }
 
     if (url.pathname === "/api/auth" && req.method === "GET") {
-      json(res, 200, { authenticated: authorized(req) });
+      if (ownerSession(req)) {
+        json(res, 200, { authenticated: true, role: "owner" });
+        return;
+      }
+
+      const legacyCookie = cookieValue(req, "modexa_api_key");
+      let decodedLegacyCookie = "";
+      try { decodedLegacyCookie = legacyCookie ? decodeURIComponent(legacyCookie) : ""; } catch { decodedLegacyCookie = ""; }
+      if (decodedLegacyCookie === apiKey) {
+        const session = createOwnerSession();
+        res.writeHead(200, {
+          "content-type": "application/json; charset=utf-8",
+          "set-cookie": [ownerSessionCookie(session.id), clearOwnerCookies()[1]],
+          "cache-control": "no-store"
+        });
+        res.end(JSON.stringify({ authenticated: true, role: "owner" }));
+        return;
+      }
+
+      json(res, 200, { authenticated: false });
       return;
     }
 
@@ -726,12 +847,13 @@ const server = createServer((req, res) => {
         return;
       }
 
+      const session = createOwnerSession();
       res.writeHead(200, {
         "content-type": "application/json; charset=utf-8",
-        "set-cookie": apiKeyCookie(apiKey),
+        "set-cookie": [ownerSessionCookie(session.id), clearOwnerCookies()[1]],
         "cache-control": "no-store"
       });
-      res.end(JSON.stringify({ authenticated: true }));
+      res.end(JSON.stringify({ authenticated: true, role: "owner" }));
       return;
     }
 
@@ -752,10 +874,18 @@ const server = createServer((req, res) => {
         return;
       }
 
-      json(res, 200, {
-        authenticated: true,
-        user: session.user
+      res.writeHead(200, {
+        "content-type": "application/json; charset=utf-8",
+        "set-cookie": cookie("modexa_session", session.id, Math.max(0, Math.floor((session.expiresAt - Date.now()) / 1000))),
+        "cache-control": "no-store",
+        "referrer-policy": "no-referrer",
+        "x-content-type-options": "nosniff"
       });
+      res.end(JSON.stringify({
+        authenticated: true,
+        role: "user",
+        user: session.user
+      }));
       return;
     }
 
@@ -780,6 +910,7 @@ const server = createServer((req, res) => {
 
       json(res, 200, {
         authenticated: true,
+        role: "user",
         user: session.user,
         modexa: modexaUser
           ? {
@@ -878,9 +1009,8 @@ const server = createServer((req, res) => {
     }
 
     if (url.pathname === "/api/telegram/groups/pending" && req.method === "GET") {
-      const session = discordSession(req);
-      if (!session && !authorized(req)) {
-        json(res, 401, { error: "unauthorized" });
+      if (!authorized(req)) {
+        json(res, 403, { error: "owner_api_key_required" });
         return;
       }
       const now = Date.now();
@@ -986,9 +1116,12 @@ const server = createServer((req, res) => {
     }
 
     if (url.pathname === "/api/auth" && req.method === "DELETE") {
-      res.writeHead(204, {
-        "set-cookie": "modexa_api_key=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0"
-      });
+      const session = ownerSession(req);
+      if (session) {
+        ownerSessions.delete(session.id);
+        persistOwnerSessions();
+      }
+      res.writeHead(204, { "set-cookie": clearOwnerCookies() });
       res.end();
       return;
     }
@@ -1039,22 +1172,76 @@ const server = createServer((req, res) => {
       url.pathname === "/api/runtime" ||
       url.pathname === "/api/runtime/logs" ||
       url.pathname === "/api/backup" ||
-      url.pathname === "/api/bridge";
+      url.pathname === "/api/bridge" ||
+      url.pathname === "/api/telegram/groups/pending" ||
+      url.pathname === "/api/actions" ||
+      url.pathname.startsWith("/api/actions/");
     if (ownerOnlyPath && !authorized(req)) {
       json(res, 403, { error: "owner_api_key_required" });
       return;
     }
 
-    // Mutations normally require the server API key. Community-scoped settings
-    // also accept a Discord OAuth session, but only after the handler verifies
-    // that the signed-in user can manage the corresponding Discord guild.
+    // Community mutations are allowed for Discord users only when the target
+    // community is linked to a guild they can manage. Owner API-key sessions
+    // remain the separate installation-wide control plane.
+    const isCommunityScopedMutation = isCommunityScopedMutationPath(url.pathname, req.method ?? "");
+    if (isCommunityScopedMutation && !authorized(req)) {
+      let body: Record<string, unknown>;
+      try {
+        body = await readJsonBody(req);
+      } catch (error) {
+        json(res, 400, { error: error instanceof Error ? error.message : "invalid_request_body" });
+        return;
+      }
+
+      let communityId = typeof body.communityId === "string" ? body.communityId : "";
+      const communityPath = url.pathname.match(/^\/api\/communities\/([^/]+)/);
+      if (communityPath) {
+        // The route's community is authoritative; never trust a body override.
+        try { communityId = decodeURIComponent(communityPath[1]!); } catch { communityId = ""; }
+      }
+
+      const automationMatch = url.pathname.match(/^\/api\/automations\/([^/]+)$/);
+      if (automationMatch) {
+        const id = decodeURIComponent(automationMatch[1]!);
+        const automation = runtimeServices.automationService.list().find((item) => item.id === id);
+        communityId = automation?.communityId ?? "";
+      }
+
+      const customCommandMatch = url.pathname.match(/^\/api\/custom-commands\/([^/]+)$/);
+      if (customCommandMatch) {
+        const id = decodeURIComponent(customCommandMatch[1]!);
+        const commands = database.getRuntimeState<Array<Record<string, unknown>>>("api.custom_commands") ?? [];
+        const command = commands.find((item) => item.id === id);
+        communityId = typeof command?.communityId === "string" ? command.communityId : "";
+      }
+
+      if (url.pathname === "/api/moderation/revoke") {
+        const caseId = typeof body.caseId === "string" ? body.caseId : "";
+        const moderationCase = database.getAllModerationCases().find((item) => item.id === caseId);
+        communityId = moderationCase?.communityId ?? "";
+      }
+
+      if (!communityId) {
+        json(res, 400, { error: "communityId_required" });
+        return;
+      }
+      if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) {
+        json(res, 404, { error: "community_not_found" });
+        return;
+      }
+      if (!await canManageDiscordCommunity(req, communityId)) {
+        json(res, 403, { error: "community_management_forbidden" });
+        return;
+      }
+    }
+
+    // These existing routes perform their own scoped permission checks.
     const isCommunityModeMutation = url.pathname === "/api/community/mode" && req.method === "POST";
     const isCommunitySettingsMutation = /^\/api\/communities\/[^/]+\/settings$/.test(url.pathname) && req.method === "PATCH";
     const isCommandSettingsMutation = url.pathname === "/api/command-settings" && req.method === "POST";
-    // This route performs its own Discord-guild permission check before redeeming
-    // a short-lived Telegram group link code.
     const isTelegramGroupLinkMutation = url.pathname === "/api/telegram/groups/link" && req.method === "POST";
-    if (!["GET", "HEAD", "OPTIONS"].includes(req.method ?? "") && !authorized(req) && !isCommunityModeMutation && !isCommunitySettingsMutation && !isCommandSettingsMutation && !isTelegramGroupLinkMutation) {
+    if (!["GET", "HEAD", "OPTIONS"].includes(req.method ?? "") && !authorized(req) && !isCommunityScopedMutation && !isCommunityModeMutation && !isCommunitySettingsMutation && !isCommandSettingsMutation && !isTelegramGroupLinkMutation) {
       json(res, 403, { error: "api_key_required_for_mutations" });
       return;
     }
@@ -1124,8 +1311,29 @@ const server = createServer((req, res) => {
     }
 
     if (url.pathname === "/api/overview" && req.method === "GET") {
-      const communities = database.getCommunitiesSnapshot();
-      const cases = database.getAllModerationCases();
+      let communities = database.getCommunitiesSnapshot();
+      let cases = database.getAllModerationCases();
+
+      if (!authorized(req)) {
+        const session = discordSession(req);
+        if (!session) { json(res, 401, { error: "unauthorized" }); return; }
+        let guilds: DiscordGuild[];
+        try {
+          guilds = await discordApi<DiscordGuild[]>("/users/@me/guilds", session.accessToken);
+        } catch {
+          json(res, 401, { error: "discord_session_expired" }); return;
+        }
+        const manageableGuildIds = new Set(guilds.filter((guild) => {
+          const permissions = BigInt(guild.permissions);
+          return guild.owner || (permissions & 0x8n) === 0x8n || (permissions & 0x20n) === 0x20n;
+        }).map((guild) => guild.id));
+        const allowedCommunityIds = new Set(database.getCommunityIdentitiesSnapshot()
+          .filter((identity) => identity.platform === "discord" && manageableGuildIds.has(identity.externalId))
+          .map((identity) => identity.communityId));
+        communities = communities.filter((community) => allowedCommunityIds.has(community.id));
+        cases = cases.filter((item) => allowedCommunityIds.has(item.communityId));
+      }
+
       json(res, 200, {
         communities: communities.length,
         activeCommunities: communities.filter((item) => item.mode === "public").length,
@@ -1138,6 +1346,10 @@ const server = createServer((req, res) => {
 
     if (url.pathname === "/api/analytics" && req.method === "GET") {
       const communityId = url.searchParams.get("communityId") ?? undefined;
+      if (!authorized(req) && !communityId) {
+        json(res, 400, { error: "communityId_required_for_user_session" });
+        return;
+      }
       const communities = database.getCommunitiesSnapshot();
       if (communityId && !communities.some((item) => item.id === communityId)) {
         json(res, 404, { error: "community_not_found" });
@@ -1263,6 +1475,10 @@ const server = createServer((req, res) => {
 
     if (url.pathname === "/api/automations" && req.method === "GET") {
       const communityId = url.searchParams.get("communityId") ?? undefined;
+      if (!authorized(req) && !communityId) {
+        json(res, 400, { error: "communityId_required_for_user_session" });
+        return;
+      }
       json(res, 200, {
         items: runtimeServices.automationService.list(communityId)
       });
@@ -1613,7 +1829,28 @@ const server = createServer((req, res) => {
 
     if (url.pathname === "/api/communities" && ["GET", "POST"].includes(req.method ?? "")) {
       if (req.method === "GET") {
-        json(res, 200, { items: database.getCommunitiesSnapshot() }); return;
+        if (authorized(req)) {
+          json(res, 200, { items: database.getCommunitiesSnapshot() });
+          return;
+        }
+
+        const session = discordSession(req);
+        if (!session) { json(res, 401, { error: "unauthorized" }); return; }
+        let guilds: DiscordGuild[];
+        try {
+          guilds = await discordApi<DiscordGuild[]>("/users/@me/guilds", session.accessToken);
+        } catch {
+          json(res, 401, { error: "discord_session_expired" }); return;
+        }
+        const manageableGuildIds = new Set(guilds.filter((guild) => {
+          const permissions = BigInt(guild.permissions);
+          return guild.owner || (permissions & 0x8n) === 0x8n || (permissions & 0x20n) === 0x20n;
+        }).map((guild) => guild.id));
+        const allowedCommunityIds = new Set(database.getCommunityIdentitiesSnapshot()
+          .filter((identity) => identity.platform === "discord" && manageableGuildIds.has(identity.externalId))
+          .map((identity) => identity.communityId));
+        json(res, 200, { items: database.getCommunitiesSnapshot().filter((community) => allowedCommunityIds.has(community.id)) });
+        return;
       }
       const body = await readJsonBody(req);
       const name = typeof body.name === "string" ? body.name.trim() : "";

@@ -510,33 +510,38 @@ try{localStorage.removeItem('modexa_api_key')}catch{}
 function esc(v){return String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function toast(msg){const e=document.getElementById('toast');e.textContent=msg;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2600);}
 function authHeaders(){return authKey&&authKey!==OWNER_COOKIE_SESSION?{Authorization:'Bearer '+authKey}:{}}
-function showLogin(msg=''){document.getElementById('login').classList.remove('hidden');if(msg)document.getElementById('loginError').textContent=msg;}
-async function request(path,options={}){const r=await fetch(API+path,{...options,headers:{...authHeaders(),...(options.headers||{})},credentials:'same-origin'});if(r.status===401){showLogin('Сессия истекла или API-ключ недействителен.');throw new Error('unauthorized')}if(!r.ok)throw new Error(await r.text());return r.status===204?null:r.json();}
+function showLogin(msg=''){document.getElementById('login').classList.remove('hidden');document.getElementById('loginError').textContent=msg;}
+async function request(path,options={}){const r=await fetch(API+path,{...options,headers:{...authHeaders(),...(options.headers||{})},credentials:'same-origin',cache:'no-store'});if(r.status===401){authKey='';discordUser=null;document.body.classList.remove('owner-mode');showLogin('Сессия истекла. Войдите снова.');throw new Error('unauthorized')}if(!r.ok)throw new Error(await r.text());return r.status===204?null:r.json();}
 async function get(path){return request(path)}
 async function post(path,body){return request(path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})}
 async function send(path,method,body){return request(path,{method,headers:{'content-type':'application/json'},body:JSON.stringify(body)})}
 
 async function discordLogin(){try{const c=await fetch('/api/config').then(r=>r.json());if(!c.oauth?.discord){showLogin('Discord OAuth не настроен. Проверьте DISCORD_CLIENT_ID и DISCORD_CLIENT_SECRET.');return}location.href='/auth/discord'}catch{showLogin('API недоступен.');}}
-async function login(){const key=document.getElementById('apiKey').value.trim();if(!key)return;try{await fetch('/api/auth',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({key})}).then(async r=>{if(!r.ok)throw new Error('bad');return r.json()});authKey=OWNER_COOKIE_SESSION;document.getElementById('apiKey').value='';document.getElementById('login').classList.add('hidden');await loadAll()}catch{showLogin('Неверный API-ключ.')}} 
+async function login(){const key=document.getElementById('apiKey').value.trim();if(!key)return;try{const response=await fetch('/api/auth',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',cache:'no-store',body:JSON.stringify({key})});if(!response.ok)throw new Error(response.status===401?'Неверный API-ключ.':'Не удалось выполнить вход.');const result=await response.json();if(!result.authenticated||result.role!=='owner')throw new Error('Сервер не подтвердил права владельца.');authKey=OWNER_COOKIE_SESSION;discordUser=null;document.getElementById('apiKey').value='';document.getElementById('login').classList.add('hidden');await loadAll()}catch(e){showLogin(e.message||'Не удалось выполнить вход.')}} 
 async function initAuth(){
   try{
-    const owner=await fetch('/api/auth',{credentials:'same-origin'}).then(r=>r.ok?r.json():{authenticated:false});
-    if(owner.authenticated){authKey=OWNER_COOKIE_SESSION;document.getElementById('login').classList.add('hidden');return true}
+    const ownerResponse=await fetch('/api/auth',{credentials:'same-origin',cache:'no-store'});
+    const owner=ownerResponse.ok?await ownerResponse.json():{authenticated:false};
+    if(owner.authenticated&&owner.role==='owner'){authKey=OWNER_COOKIE_SESSION;discordUser=null;document.getElementById('login').classList.add('hidden');return true}
     const params=new URLSearchParams(location.search);
     const handoff=params.get('discord_handoff');
     if(handoff){
-      const r=await fetch('/api/auth/discord/handoff',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({handoff})});
-      if(!r.ok)throw 0;
+      const response=await fetch('/api/auth/discord/handoff',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',cache:'no-store',body:JSON.stringify({handoff})});
+      if(!response.ok)throw new Error('Ссылка входа истекла. Запустите вход через Discord ещё раз.');
       history.replaceState({},document.title,location.pathname+location.hash);
     }
-    const d=await fetch('/api/auth/discord',{credentials:'same-origin'}).then(async r=>{if(!r.ok)throw 0;return r.json()});
-    discordUser=d.user;
+    const response=await fetch('/api/auth/discord',{credentials:'same-origin',cache:'no-store'});
+    if(!response.ok)throw new Error('Войдите через Discord, чтобы продолжить.');
+    const d=await response.json();
+    if(!d.authenticated||d.role!=='user')throw new Error('Сервер не подтвердил пользовательскую сессию.');
+    authKey='';discordUser=d.user;
+    document.body.classList.remove('owner-mode');
     document.getElementById('profile').style.display='block';
     document.getElementById('profileName').textContent=d.modexa?.displayName||d.user.global_name||d.user.username;
     document.querySelector('#profile .profile-sub').textContent=d.modexa?('Modexa · '+d.modexa.id):'Discord · аккаунт не привязан к Modexa';
     document.getElementById('login').classList.add('hidden');
     return true
-  }catch{showLogin();return false}
+  }catch(error){showLogin(error.message||'Не удалось восстановить сессию.');return false}
 }
 async function logout(){try{await fetch('/api/auth/discord',{method:'DELETE',credentials:'same-origin'});await fetch('/api/auth',{method:'DELETE',credentials:'same-origin'})}catch{}authKey='';location.reload()}
 
@@ -723,7 +728,8 @@ async function createAutoModRule(){
 }
 async function deleteAutoModRule(id){if(!confirm('Удалить правило AutoMod?'))return;try{await send('/api/communities/'+encodeURIComponent(selectedCommunity)+'/automod/rules/'+encodeURIComponent(id),'DELETE');toast('Правило удалено');loadAutoMod()}catch(e){toast(e.message)}}
 
-async function loadAll(){document.body.classList.toggle('owner-mode',!!authKey);if(!authKey&&['system','runtime'].includes(document.querySelector('.page.active')?.id))showPage('overview');try{const [h,o,c]=await Promise.all([get('/health'),get('/api/overview'),get('/api/config')]);let r=null,s=null;if(authKey){[r,s]=await Promise.all([get('/api/runtime'),get('/api/system')]);}document.getElementById('apiDot').textContent='● online';document.getElementById('healthText').textContent=h.status;document.getElementById('mCommunities').textContent=o.communities;document.getElementById('mActive').textContent=o.activeCommunities;document.getElementById('mCases').textContent=o.moderationCases;document.getElementById('mRunner').textContent=r?(r.state==='running'?'ON':'OFF'):'—';document.getElementById('runnerText').textContent=r?r.state:'OWNER KEY REQUIRED';document.getElementById('maintenanceText').textContent=s?(s.maintenanceMode?'ON':'OFF'):'—';document.getElementById('oauthText').textContent=c.oauth?.discord?'OK':'OFF';document.getElementById('systemPill').textContent=r?(r.state==='running'?'Online':'Degraded'):'Restricted';if(s){maintenance=s.maintenanceMode;document.getElementById('maintenanceSwitch').classList.toggle('on',maintenance);}let g;try{g=await get('/api/auth/discord/guilds');communities=(g.items||[]).filter(c=>c.canManageBot===true||c.canInviteBot===true).sort((a,b)=>serverRank(a)-serverRank(b)||String(a.name||'').localeCompare(String(b.name||''),'ru')); }catch(e){communities=[];toast('Не удалось проверить доступ к Discord-серверам. Переподключи Discord.')}renderCommunitySelect();renderServers();await renderSelected();await loadRuntime();}catch(e){document.getElementById('apiDot').textContent='● offline';showLogin(e.message)}}
+let loadAllInFlight=false;
+async function loadAll(){if(loadAllInFlight)return;loadAllInFlight=true;try{document.body.classList.toggle('owner-mode',!!authKey);if(!authKey&&['system','runtime'].includes(document.querySelector('.page.active')?.id))showPage('overview');try{const [h,o,c]=await Promise.all([get('/health'),get('/api/overview'),get('/api/config')]);let r=null,s=null;if(authKey){[r,s]=await Promise.all([get('/api/runtime'),get('/api/system')]);}document.getElementById('apiDot').textContent='● online';document.getElementById('healthText').textContent=h.status;document.getElementById('mCommunities').textContent=o.communities;document.getElementById('mActive').textContent=o.activeCommunities;document.getElementById('mCases').textContent=o.moderationCases;document.getElementById('mRunner').textContent=r?(r.state==='running'?'ON':'OFF'):'—';document.getElementById('runnerText').textContent=r?r.state:'OWNER KEY REQUIRED';document.getElementById('maintenanceText').textContent=s?(s.maintenanceMode?'ON':'OFF'):'—';document.getElementById('oauthText').textContent=c.oauth?.discord?'OK':'OFF';document.getElementById('systemPill').textContent=r?(r.state==='running'?'Online':'Degraded'):'Restricted';if(s){maintenance=s.maintenanceMode;document.getElementById('maintenanceSwitch').classList.toggle('on',maintenance);}let g;try{g=await get('/api/auth/discord/guilds');communities=(g.items||[]).filter(c=>c.canManageBot===true||c.canInviteBot===true).sort((a,b)=>serverRank(a)-serverRank(b)||String(a.name||'').localeCompare(String(b.name||''),'ru')); }catch(e){communities=[];toast('Не удалось проверить доступ к Discord-серверам. Переподключи Discord.')}renderCommunitySelect();renderServers();await renderSelected();await loadRuntime();}catch(e){document.getElementById('apiDot').textContent='● offline';showLogin(e.message)}finally{loadAllInFlight=false}}
 
 const mxProgress=document.getElementById('mxProgress');
 function mxUpdateProgress(){const root=document.documentElement,max=root.scrollHeight-root.clientHeight;mxProgress.style.transform='scaleX('+(max>0?root.scrollTop/max:0)+')'}
