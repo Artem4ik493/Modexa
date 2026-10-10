@@ -1753,39 +1753,34 @@ const server = createServer((req, res) => {
       json(res, 200, { updated: items.length, items: database.getCommandSettings(communityId) }); return;
     }
 
-    if (url.pathname === "/api/command-settings" && req.method === "POST" && !authorized(req)) {
-      const body = await readJsonBody(req);
-      const communityId = typeof body.communityId === "string" ? body.communityId : "";
-      const session = discordSession(req);
-      const identities = database.getCommunityIdentitiesSnapshot(communityId).filter((identity) => identity.platform === "discord");
-      if (!session || !communityId || identities.length === 0) {
-        json(res, 403, { error: "community_management_forbidden" });
-        return;
-      }
-      try {
-        const response = await fetch("https://discord.com/api/users/@me/guilds", {
-          headers: { Authorization: `Bearer ${session.accessToken}` }
-        });
-        if (!response.ok) { json(res, 502, { error: "discord_guild_lookup_failed" }); return; }
-        const guilds = await response.json() as DiscordGuild[];
-        const canManage = identities.some((identity) => {
-          const guild = guilds.find((item) => item.id === identity.externalId);
-          if (!guild) return false;
-          const permissions = BigInt(guild.permissions);
-          return guild.owner || (permissions & 0x8n) === 0x8n || (permissions & 0x20n) === 0x20n;
-        });
-        if (!canManage) { json(res, 403, { error: "community_management_forbidden" }); return; }
-      } catch {
-        json(res, 502, { error: "discord_guild_lookup_failed" });
-        return;
-      }
-    }
-
     if (url.pathname === "/api/command-settings" && req.method === "POST") {
       const body = await readJsonBody(req);
       const communityId = typeof body.communityId === "string" ? body.communityId : "";
       const commandName = typeof body.commandName === "string" ? body.commandName : "";
       const enabled = typeof body.enabled === "boolean" ? body.enabled : undefined;
+      if (!authorized(req)) {
+        const session = discordSession(req);
+        const identities = communityId ? database.getCommunityIdentitiesSnapshot(communityId).filter((identity) => identity.platform === "discord") : [];
+        if (!session || !communityId || identities.length === 0) {
+          json(res, 403, { error: "community_management_forbidden" });
+          return;
+        }
+        try {
+          const response = await fetch("https://discord.com/api/users/@me/guilds", { headers: { Authorization: `Bearer ${session.accessToken}` } });
+          if (!response.ok) { json(res, 502, { error: "discord_guild_lookup_failed" }); return; }
+          const guilds = await response.json() as DiscordGuild[];
+          const canManage = identities.some((identity) => {
+            const guild = guilds.find((item) => item.id === identity.externalId);
+            if (!guild) return false;
+            const permissions = BigInt(guild.permissions);
+            return guild.owner || (permissions & 0x8n) === 0x8n || (permissions & 0x20n) === 0x20n;
+          });
+          if (!canManage) { json(res, 403, { error: "community_management_forbidden" }); return; }
+        } catch {
+          json(res, 502, { error: "discord_guild_lookup_failed" });
+          return;
+        }
+      }
       if (!communityId || !commandName || enabled === undefined) {
         json(res, 400, { error: "communityId, commandName and enabled are required" });
         return;
