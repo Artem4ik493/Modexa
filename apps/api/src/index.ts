@@ -948,7 +948,8 @@ const server = createServer((req, res) => {
       url.pathname === "/api/system" ||
       url.pathname === "/api/runtime" ||
       url.pathname === "/api/runtime/logs" ||
-      url.pathname === "/api/backup";
+      url.pathname === "/api/backup" ||
+      url.pathname === "/api/bridge";
     if (ownerOnlyPath && !authorized(req)) {
       json(res, 403, { error: "owner_api_key_required" });
       return;
