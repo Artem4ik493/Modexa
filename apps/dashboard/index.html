@@ -639,7 +639,7 @@ async function loadPendingTelegramGroups(){
     if(selected?.communityId){
      const linked=await get('/api/telegram/groups/linked?communityId='+encodeURIComponent(selected.communityId));
      const groups=linked.items||[];
-     linkedHtml='<div class="section" style="margin-top:18px"><h3>Привязанные Telegram-группы</h3><span class="muted">'+groups.length+'</span></div>'+(groups.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.chatTitle)+'</div><div class="meta">ID: '+esc(x.chatId)+'</div></div><button class="btn danger" onclick="unlinkTelegramGroup(\\''+esc(x.chatId)+'\\')">Отвязать</button></div>').join('')||'<div class="empty">К этому сообществу Telegram-группы не привязаны.</div>');
+     linkedHtml='<div class="section" style="margin-top:18px"><h3>Привязанные Telegram-группы</h3><span class="muted">'+groups.length+'</span></div>'+(groups.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.chatTitle)+'</div><div class="meta">ID: '+esc(x.chatId)+'</div></div><button class="btn danger" data-chat-id="'+esc(x.chatId)+'" onclick="unlinkTelegramGroup(this.dataset.chatId)">Отвязать</button></div>').join('')||'<div class="empty">К этому сообществу Telegram-группы не привязаны.</div>');
     }
    }catch(e){linkedHtml='<div class="empty">Не удалось загрузить привязанные группы: '+esc(e.message||'ошибка API')+'</div>'}
    if(root)root.innerHTML=pendingHtml+linkedHtml;
@@ -650,7 +650,7 @@ async function loadPendingTelegramGroups(){
     if(selected?.communityId){
      const linked=await get('/api/telegram/groups/linked?communityId='+encodeURIComponent(selected.communityId));
      const groups=linked.items||[];
-     linkedHtml='<div class="section" style="margin-top:18px"><h3>Привязанные Telegram-группы</h3><span class="muted">'+groups.length+'</span></div>'+(groups.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.chatTitle)+'</div><div class="meta">ID: '+esc(x.chatId)+'</div></div><button class="btn danger" onclick="unlinkTelegramGroup(\\''+esc(x.chatId)+'\\')">Отвязать</button></div>').join('')||'<div class="empty">К этому сообществу Telegram-группы не привязаны.</div>');
+     linkedHtml='<div class="section" style="margin-top:18px"><h3>Привязанные Telegram-группы</h3><span class="muted">'+groups.length+'</span></div>'+(groups.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.chatTitle)+'</div><div class="meta">ID: '+esc(x.chatId)+'</div></div><button class="btn danger" data-chat-id="'+esc(x.chatId)+'" onclick="unlinkTelegramGroup(this.dataset.chatId)">Отвязать</button></div>').join('')||'<div class="empty">К этому сообществу Telegram-группы не привязаны.</div>');
     }
    }catch(e){linkedHtml='<div class="empty">Не удалось загрузить привязанные группы: '+esc(e.message||'ошибка API')+'</div>'}
    accountLinkedRoot.innerHTML=linkedHtml;
