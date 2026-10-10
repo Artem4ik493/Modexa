@@ -1196,26 +1196,27 @@ const server = createServer((req, res) => {
 
       let communityId = typeof body.communityId === "string" ? body.communityId : "";
       const communityPath = url.pathname.match(/^\/api\/communities\/([^/]+)/);
-      if (!communityId && communityPath) {
+      if (communityPath) {
+        // The route's community is authoritative; never trust a body override.
         try { communityId = decodeURIComponent(communityPath[1]!); } catch { communityId = ""; }
       }
 
       const automationMatch = url.pathname.match(/^\/api\/automations\/([^/]+)$/);
-      if (!communityId && automationMatch) {
+      if (automationMatch) {
         const id = decodeURIComponent(automationMatch[1]!);
         const automation = runtimeServices.automationService.list().find((item) => item.id === id);
         communityId = automation?.communityId ?? "";
       }
 
       const customCommandMatch = url.pathname.match(/^\/api\/custom-commands\/([^/]+)$/);
-      if (!communityId && customCommandMatch) {
+      if (customCommandMatch) {
         const id = decodeURIComponent(customCommandMatch[1]!);
         const commands = database.getRuntimeState<Array<Record<string, unknown>>>("api.custom_commands") ?? [];
         const command = commands.find((item) => item.id === id);
         communityId = typeof command?.communityId === "string" ? command.communityId : "";
       }
 
-      if (!communityId && url.pathname === "/api/moderation/revoke") {
+      if (url.pathname === "/api/moderation/revoke") {
         const caseId = typeof body.caseId === "string" ? body.caseId : "";
         const moderationCase = database.getAllModerationCases().find((item) => item.id === caseId);
         communityId = moderationCase?.communityId ?? "";
