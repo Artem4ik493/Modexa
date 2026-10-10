@@ -385,7 +385,8 @@ type DiscordGuild = {
   name: string;
   icon: string | null;
   owner: boolean;
-  permissions: string;
+  permissions?: string;
+  permissions_new?: string;
 };
 
 function json(res: ServerResponse, status: number, value: unknown): void {
@@ -1002,19 +1003,19 @@ const server = createServer((req, res) => {
           .map((item) => item.externalId)
       );
 
+      const manageableGuilds = guilds.flatMap((guild) => {
+        // Discord may return permissions_new instead of the legacy permissions field.
+        const rawPermissions = guild.permissions_new ?? guild.permissions ?? "0";
+        let permissions = 0n;
+        try { permissions = BigInt(rawPermissions); } catch {}
+        const canManageGuild = guild.owner === true ||
+          (permissions & 0x8n) === 0x8n ||
+          (permissions & 0x20n) === 0x20n;
+        return canManageGuild ? [{ guild, canManageGuild }] : [];
+      });
+
       json(res, 200, {
-        items: guilds
-          .filter((guild) => {
-            const permissions = BigInt(guild.permissions);
-            const isAdministrator = (permissions & 0x8n) === 0x8n;
-            const canManageGuild = (permissions & 0x20n) === 0x20n;
-            return guild.owner || isAdministrator || canManageGuild;
-          })
-          .map((guild) => {
-            const permissions = BigInt(guild.permissions);
-            const canManageGuild = guild.owner ||
-              (permissions & 0x8n) === 0x8n ||
-              (permissions & 0x20n) === 0x20n;
+        items: manageableGuilds.map(({ guild, canManageGuild }) => {
             const botInstalled = botGuildIds.has(guild.id);
             return {
               id: guild.id,
