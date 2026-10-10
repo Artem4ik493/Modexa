@@ -444,11 +444,11 @@ async function canManageDiscordCommunity(req: IncomingMessage, communityId: stri
 }
 
 function isCommunityScopedMutationPath(path: string, method: string): boolean {
-  if (method === "POST" && ["/api/automations", "/api/custom-commands", "/api/moderation/cases"].includes(path)) return true;
+  if (method === "POST" && ["/api/automations", "/api/custom-commands", "/api/moderation/cases", "/api/moderation/revoke"].includes(path)) return true;
   if (method === "PUT" && path === "/api/command-settings") return true;
-  if (/^\/api\/automations\/[^/]+$/.test(path) && ["POST", "PATCH", "DELETE"].includes(method)) return true;
-  if (/^\/api\/custom-commands\/[^/]+$/.test(path) && method === "DELETE") return true;
-  if (/^\/api\/communities\/[^/]+\/(roles(?:\/[^/]+)?|members\/[^/]+\/roles|ranking|welcome(?:\/preview)?|automod\/rules(?:\/[^/]+)?)$/.test(path) &&
+  if (/^\/api\/automations\/[^/]+$/.test(path) && ["POST", "PUT", "PATCH", "DELETE"].includes(method)) return true;
+  if (/^\/api\/custom-commands\/[^/]+$/.test(path) && ["PUT", "PATCH", "DELETE"].includes(method)) return true;
+  if (/^\/api\/communities\/[^/]+\/(roles(?:\/[^/]+)?|members\/[^/]+(?:\/roles)?|ranking|welcome(?:\/preview)?|automod\/rules(?:\/[^/]+)?)$/.test(path) &&
       ["POST", "PUT", "PATCH", "DELETE"].includes(method)) return true;
   return false;
 }
@@ -1212,6 +1212,12 @@ const server = createServer((req, res) => {
         const commands = database.getRuntimeState<Array<Record<string, unknown>>>("api.custom_commands") ?? [];
         const command = commands.find((item) => item.id === id);
         communityId = typeof command?.communityId === "string" ? command.communityId : "";
+      }
+
+      if (!communityId && url.pathname === "/api/moderation/revoke") {
+        const caseId = typeof body.caseId === "string" ? body.caseId : "";
+        const moderationCase = database.getAllModerationCases().find((item) => item.id === caseId);
+        communityId = moderationCase?.communityId ?? "";
       }
 
       if (!communityId) {
