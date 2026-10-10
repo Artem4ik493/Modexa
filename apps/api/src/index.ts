@@ -385,7 +385,7 @@ type DiscordGuild = {
   name: string;
   icon: string | null;
   owner: boolean;
-  permissions?: string;
+  permissions: string;
   permissions_new?: string;
 };
 
