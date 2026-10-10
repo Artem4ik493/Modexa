@@ -800,7 +800,7 @@ const server = createServer((req, res) => {
       }>>("telegram.pending_group_links") ?? []).filter((item) => Date.parse(item.expiresAt) > now);
       database.setRuntimeState("telegram.pending_group_links", pending);
       json(res, 200, { items: pending.map((item) => ({
-        code: item.code, chatId: item.chatId, chatTitle: item.chatTitle,
+        chatId: item.chatId, chatTitle: item.chatTitle,
         createdAt: item.createdAt, expiresAt: item.expiresAt
       })) });
       return;
