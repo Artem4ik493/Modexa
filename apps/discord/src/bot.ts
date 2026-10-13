@@ -120,10 +120,8 @@ export function createDiscordAdapter(
     new Client({
       intents: [
         GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.DirectMessages,
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.DirectMessages
       ],
       partials: [
         Partials.Channel
