@@ -224,7 +224,7 @@ export class ModexaDatabase {
        WHERE community_id = ?
        ORDER BY created_at DESC
        LIMIT ?`
-    ).all(communityId, Math.max(1, Math.min(500, limit))) as Array<{
+    ).all(communityId, Math.max(1, Math.min(10000, limit))) as Array<{
       id: string;
       community_id: string;
       action: string;
