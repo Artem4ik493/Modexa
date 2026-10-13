@@ -198,7 +198,8 @@ export function createRuntimeServices(
   const moderationService =
     new ModerationService(
       accessControlService,
-      database
+      database,
+      auditService
     );
 
   const autoModService = new AutoModService();
