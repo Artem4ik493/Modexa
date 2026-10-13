@@ -15,6 +15,7 @@ export type AuditAction =
   | "member.unwarn"
   | "member.roles"
   | "member.nickname"
+  | "moderation.case.revoke"
   | "channel.create"
   | "channel.update"
   | "channel.delete"
