@@ -143,7 +143,7 @@ function auditEntryText(entry: AuditExportEntry): string {
   ].join("\n");
 }
 async function deliverDiscordAudit(entry: AuditExportEntry, communityId: string): Promise<void> {
-  if (entry.action && database.getCommunitySetting(communityId, "audit.discord.enabled") !== "true") return;
+  if (database.getCommunitySetting(communityId, "audit.discord.enabled") !== "true") return;
   const channelId = database.getCommunitySetting(communityId, "audit.discord.channel_id")?.trim();
   const token = process.env.DISCORD_BOT_TOKEN;
   if (!channelId || !token) return;
@@ -177,7 +177,7 @@ async function deliverDiscordAudit(entry: AuditExportEntry, communityId: string)
   });
   if (!response.ok) {
     const detail = (await response.text()).slice(0, 300);
-    console.error("[Modexa Audit] Discord delivery failed", response.status, detail);
+    throw new Error(`Discord API ${response.status}: ${detail}`);
   }
 }
 let auditDispatchInFlight = false;
@@ -185,28 +185,24 @@ async function dispatchPendingAuditEntries(): Promise<void> {
   if (auditDispatchInFlight || !process.env.DISCORD_BOT_TOKEN) return;
   auditDispatchInFlight = true;
   try {
-    const cursors = database.getRuntimeState<Record<string, string>>("api.audit_discord_cursors") ?? {};
     const seen = database.getRuntimeState<string[]>("api.audit_discord_seen") ?? [];
     const seenSet = new Set(seen);
     for (const community of database.getCommunitiesSnapshot()) {
       const channelId = database.getCommunitySetting(community.id, "audit.discord.channel_id")?.trim();
       if (database.getCommunitySetting(community.id, "audit.discord.enabled") !== "true" || !channelId) continue;
-      const cursor = cursors[community.id];
-      if (!cursor) {
-        cursors[community.id] = new Date().toISOString();
-        continue;
-      }
       const entries = database.getAuditEntries(community.id, 10000)
-        .filter((item) => item.createdAt.toISOString() >= cursor && !seenSet.has(item.id))
+        .filter((item) => !seenSet.has(item.id))
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       for (const entry of entries) {
-        try { await deliverDiscordAudit(entry, community.id); }
-        catch (error) { console.error("[Modexa Audit] Discord delivery error", error); break; }
-        cursors[community.id] = entry.createdAt.toISOString();
-        seenSet.add(entry.id);
+        try {
+          await deliverDiscordAudit(entry, community.id);
+          seenSet.add(entry.id);
+        } catch (error) {
+          console.error("[Modexa Audit] Discord delivery error", error);
+          break;
+        }
       }
     }
-    database.setRuntimeState("api.audit_discord_cursors", cursors);
     database.setRuntimeState("api.audit_discord_seen", [...seenSet].slice(-5000));
   } finally {
     auditDispatchInFlight = false;
@@ -2723,6 +2719,11 @@ const server = createServer((req, res) => {
 server.listen(port, host, () => {
   console.log(`Modexa API listening on http://${host}:${port}`);
   startRunner();
+  // Dispatch queued audit entries from the same SQLite database used by the runner.
+  void dispatchPendingAuditEntries();
+  setInterval(() => {
+    void dispatchPendingAuditEntries();
+  }, 5000).unref();
 });
 
 async function shutdown(): Promise<void> {
