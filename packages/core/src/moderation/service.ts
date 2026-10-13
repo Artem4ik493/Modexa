@@ -101,7 +101,7 @@ export class ModerationService {
       input.durationSeconds !== undefined &&
       (!Number.isSafeInteger(input.durationSeconds) || input.durationSeconds <= 0)
     ) {
-      throw new Error("Moderation duration must be a positive whole number of seconds");
+      throw new Error("Moderation duration must be greater than zero");
     }
 
     const reason = input.reason?.trim();
