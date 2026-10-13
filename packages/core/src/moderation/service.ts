@@ -5,6 +5,7 @@ import type { AccessControlService } from "../access/service.js";
 import type { Permission } from "../access/types.js";
 import type { UserId } from "../identity/types.js";
 import type { CommunityId } from "../communities/types.js";
+import type { AuditService } from "../audit/service.js";
 import type {
   CreateModerationCaseInput,
   ModerationActionType,
@@ -31,7 +32,8 @@ export class ModerationService {
 
   constructor(
     private readonly accessControlService?: AccessControlService,
-    private readonly store?: ModerationCaseStore
+    private readonly store?: ModerationCaseStore,
+    private readonly auditService?: AuditService
   ) {
     for (const item of store?.getAllModerationCases() ?? []) {
       this.cases.set(item.id, item);
@@ -103,6 +105,22 @@ export class ModerationService {
 
     this.cases.set(moderationCase.id, moderationCase);
     this.store?.upsertModerationCase(moderationCase);
+    this.auditService?.record({
+      communityId: moderationCase.communityId,
+      action: this.toAuditAction(moderationCase.action),
+      actorUserId: moderationCase.actorUserId,
+      targetUserId: moderationCase.targetUserId,
+      reason: moderationCase.reason,
+      metadata: {
+        platform: moderationCase.platform,
+        communityExternalId: moderationCase.communityExternalId,
+        targetExternalId: moderationCase.userExternalId,
+        moderationCaseId: moderationCase.id,
+        durationSeconds: moderationCase.durationSeconds,
+        caseStatus: moderationCase.status,
+        result: "case_created"
+      }
+    });
 
     return {
       case: moderationCase,
@@ -142,7 +160,31 @@ export class ModerationService {
     item.revokedAt = now;
     this.cases.set(item.id, item);
     this.store?.upsertModerationCase(item);
+    this.auditService?.record({
+      communityId: item.communityId,
+      action: this.toAuditAction(item.action === "mute" ? "unmute" : item.action),
+      actorUserId,
+      targetUserId: item.targetUserId,
+      reason: item.reason,
+      metadata: {
+        platform: item.platform,
+        communityExternalId: item.communityExternalId,
+        targetExternalId: item.userExternalId,
+        moderationCaseId: item.id,
+        result: "case_revoked"
+      }
+    });
     return item;
+  }
+
+  private toAuditAction(action: ModerationActionType | "unmute"): "member.warn" | "member.mute" | "member.kick" | "member.ban" | "member.unmute" {
+    switch (action) {
+      case "warn": return "member.warn";
+      case "mute": return "member.mute";
+      case "kick": return "member.kick";
+      case "ban": return "member.ban";
+      case "unmute": return "member.unmute";
+    }
   }
 
   toAdapterAction(item: ModerationCase): AdapterAction {
