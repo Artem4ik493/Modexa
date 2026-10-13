@@ -162,7 +162,7 @@ export class ModerationService {
     this.store?.upsertModerationCase(item);
     this.auditService?.record({
       communityId: item.communityId,
-      action: this.toAuditAction(item.action === "mute" ? "unmute" : item.action),
+      action: "moderation.case.revoke",
       actorUserId,
       targetUserId: item.targetUserId,
       reason: item.reason,
@@ -177,14 +177,13 @@ export class ModerationService {
     return item;
   }
 
-  private toAuditAction(action: ModerationActionType | "unmute"): "member.warn" | "member.mute" | "member.kick" | "member.ban" | "member.unmute" {
+  private toAuditAction(action: ModerationActionType): "member.warn" | "member.mute" | "member.kick" | "member.ban" {
     switch (action) {
       case "warn": return "member.warn";
       case "mute": return "member.mute";
       case "kick": return "member.kick";
       case "ban": return "member.ban";
-      case "unmute": return "member.unmute";
-    }
+     }
   }
 
   toAdapterAction(item: ModerationCase): AdapterAction {
