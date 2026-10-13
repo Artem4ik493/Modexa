@@ -81,13 +81,38 @@ export class ModerationService {
     }
 
     if (
-      input.durationSeconds !== undefined &&
-      (!Number.isFinite(input.durationSeconds) || input.durationSeconds <= 0)
+      !input.actorUserId?.trim() ||
+      !input.targetUserId?.trim() ||
+      !input.communityId?.trim() ||
+      !input.communityExternalId?.trim() ||
+      !input.userExternalId?.trim()
     ) {
-      throw new Error("Moderation duration must be greater than zero");
+      throw new Error("Moderation requires actor, target, community, and platform identity IDs");
+    }
+
+    if (
+      input.durationSeconds !== undefined &&
+      input.action !== "mute"
+    ) {
+      throw new Error("Duration is only supported for mute actions");
+    }
+
+    if (
+      input.durationSeconds !== undefined &&
+      (!Number.isSafeInteger(input.durationSeconds) || input.durationSeconds <= 0)
+    ) {
+      throw new Error("Moderation duration must be a positive whole number of seconds");
+    }
+
+    const reason = input.reason?.trim();
+    if (reason && reason.length > 1000) {
+      throw new Error("Moderation reason must not exceed 1000 characters");
     }
 
     const now = input.now ?? new Date();
+    if (!Number.isFinite(now.getTime())) {
+      throw new Error("Moderation creation date is invalid");
+    }
     const moderationCase: ModerationCase = {
       id: `mod_${randomUUID()}`,
       action: input.action,
@@ -98,7 +123,7 @@ export class ModerationService {
       communityExternalId: input.communityExternalId,
       userExternalId: input.userExternalId,
       ...(input.durationSeconds !== undefined ? { durationSeconds: input.durationSeconds } : {}),
-      ...(input.reason?.trim() ? { reason: input.reason.trim() } : {}),
+      ...(reason ? { reason } : {}),
       status: "active",
       createdAt: now
     };
@@ -143,6 +168,14 @@ export class ModerationService {
   revokeCase(actorUserId: UserId, caseId: string, now = new Date()): ModerationCase {
     const item = this.getCase(caseId);
     if (!item) throw new Error(`Moderation case "${caseId}" does not exist`);
+
+    if (item.status !== "active") {
+      throw new Error(`Moderation case "${caseId}" is already revoked`);
+    }
+
+    if (!Number.isFinite(now.getTime())) {
+      throw new Error("Moderation revocation date is invalid");
+    }
 
     const permission = ACTION_PERMISSIONS[item.action];
     if (
