@@ -193,7 +193,7 @@ async function dispatchPendingAuditEntries(): Promise<void> {
         cursors[community.id] = new Date().toISOString();
         continue;
       }
-      const entries = database.getAuditEntries(community.id, 500)
+      const entries = database.getAuditEntries(community.id, 10000)
         .filter((item) => item.createdAt.toISOString() > cursor)
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       for (const entry of entries) {
@@ -2539,7 +2539,7 @@ const server = createServer((req, res) => {
       if (!communityId) { json(res, 400, { error: "communityId_required" }); return; }
       if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) { json(res, 404, { error: "community_not_found" }); return; }
       database.deleteExpiredAuditEntries(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000));
-      const entries = database.getAuditEntries(communityId, 500).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      const entries = database.getAuditEntries(communityId, 10000).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       const body = [
         "MODEXA AUDIT EXPORT",
         "Community: " + communityId,
