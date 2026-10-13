@@ -525,7 +525,6 @@ export function createTelegramAdapter(
         options.communityService,
       database:
         options.database
-    })
   });
   adapter.onEvent(async (event) => {
     const externalCommunityId =
