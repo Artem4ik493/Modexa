@@ -30,7 +30,8 @@ import {
   createModerationCommands,
   createModerationRestoreCommands,
   createPublicFeatureCommands,
-  type MemberDirectory
+  type MemberDirectory,
+  type AuditService
 } from "@modexa/core";
 
 import {
@@ -105,6 +106,8 @@ export interface CreateDiscordAdapterOptions {
 
   commandSettingsService?:
     import("@modexa/core").CommandSettingsService;
+
+  auditService?: AuditService;
 }
 
 export function createDiscordAdapter(
@@ -429,8 +432,7 @@ export function createDiscordAdapter(
 
   memberDirectory = adapter;
 
-  adapter.onEvent(
-    createDiscordEventHandler({
+  const platformEventHandler = createDiscordEventHandler({
       responder: {
         id: adapter.id,
         sendAction: async (action) => { await adapter.sendAction(action); },
@@ -456,7 +458,61 @@ export function createDiscordAdapter(
       communityService:
         options.communityService
     })
-  );
+  });
+  adapter.onEvent(async (event) => {
+    const externalCommunityId = event.type.startsWith("message.")
+      ? event.message.community?.externalId
+      : event.type.startsWith("member.")
+        ? event.member.community.externalId
+        : undefined;
+    const community = externalCommunityId
+      ? options.communityService?.findByIdentity("discord", externalCommunityId)
+      : undefined;
+    if (community && options.auditService) {
+      let action: import("@modexa/core").AuditAction | undefined;
+      let metadata: Record<string, unknown> = { platform: "discord" };
+      let channelId: string | undefined;
+      let messageId: string | undefined;
+      switch (event.type) {
+        case "message.deleted":
+          action = "message.delete";
+          metadata = { ...metadata, targetExternalId: event.message.author.externalId, channelExternalId: event.message.channel?.externalId, messageExternalId: event.message.externalId, content: event.message.content.slice(0, 1500) };
+          channelId = event.message.channel?.externalId;
+          messageId = event.message.externalId;
+          break;
+        case "message.updated":
+          action = "message.edit";
+          metadata = { ...metadata, targetExternalId: event.message.author.externalId, channelExternalId: event.message.channel?.externalId, messageExternalId: event.message.externalId, content: event.message.content.slice(0, 1500) };
+          channelId = event.message.channel?.externalId;
+          messageId = event.message.externalId;
+          break;
+        case "member.joined":
+          action = "member.join";
+          metadata = { ...metadata, targetExternalId: event.member.user.externalId, username: event.member.user.username ?? event.member.user.displayName };
+          break;
+        case "member.left":
+          action = "member.leave";
+          metadata = { ...metadata, targetExternalId: event.member.user.externalId, username: event.member.user.username ?? event.member.user.displayName };
+          break;
+        case "member.banned":
+          action = "member.ban";
+          metadata = { ...metadata, targetExternalId: event.member.user.externalId };
+          break;
+        case "member.unbanned":
+          action = "member.unban";
+          metadata = { ...metadata, targetExternalId: event.member.user.externalId };
+          break;
+      }
+      if (action) options.auditService.record({
+        communityId: community.id,
+        action,
+        ...(channelId ? { channelId } : {}),
+        ...(messageId ? { messageId } : {}),
+        metadata
+      });
+    }
+    await platformEventHandler(event);
+  });
 
   return adapter;
 }
