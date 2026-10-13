@@ -494,7 +494,30 @@ nav{min-height:0;padding-bottom:18px}
 </section>
 
 <section class="page" id="audit">
-  <div class="card"><div class="section"><h2>Audit Log</h2><span class="muted">последние 200 событий</span></div><div class="table-wrap"><table class="table"><thead><tr><th>Время</th><th>Действие</th><th>Actor</th><th>Target</th><th>Причина</th></tr></thead><tbody id="auditTable"><tr><td colspan="5" class="empty">Выберите сервер.</td></tr></tbody></table></div></div>
+  <div class="two">
+    <div class="card">
+      <div class="section"><div><h2>Настройки журнала</h2><div class="meta">Discord отправляет Embed-сообщения в выбранный канал. Telegram-события сохраняются в SQLite и доступны в TXT.</div></div><span class="pill">5 DAYS</span></div>
+      <div class="form">
+        <label class="setting"><span>Отправлять Embed-логи в Discord</span><input id="auditDiscordEnabled" type="checkbox"></label>
+        <label for="auditChannelId">ID Discord-канала для логов</label>
+        <input id="auditChannelId" class="input" inputmode="numeric" maxlength="25" placeholder="Например, 123456789012345678">
+        <div class="section" style="margin-top:8px"><h3>Какие события записывать в Discord</h3><span class="muted">Если ничего не отмечено — все события.</span></div>
+        <div id="auditActionOptions" class="command-grid"></div>
+        <div class="top-actions"><button class="btn primary" onclick="saveAuditSettings()">Сохранить настройки</button><button class="btn" onclick="loadAuditSettings()">↻ Обновить</button></div>
+        <div id="auditSettingsStatus" class="meta">Выберите сообщество.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section"><div><h2>Экспорт аудита</h2><div class="meta">Скачать журнал в текстовом формате, включая события Telegram и Discord.</div></div><span class="pill">TXT</span></div>
+      <p class="muted">Записи хранятся пять дней. Скачивайте аудит каждые 3–5 дней, если требуется долговременный архив.</p>
+      <button class="btn primary" onclick="downloadAuditExport()">Скачать TXT</button>
+      <div id="auditExportStatus" class="meta" style="margin-top:10px">Экспортирует все доступные записи выбранного сообщества.</div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:13px">
+    <div class="section"><div><h2>Журнал событий</h2><div class="meta">Последние записи из SQLite. Метаданные можно раскрыть в TXT-экспорте.</div></div><button class="btn" onclick="loadAudit()">↻ Обновить</button></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Время</th><th>Действие</th><th>Actor</th><th>Target</th><th>Причина</th></tr></thead><tbody id="auditTable"><tr><td colspan="5" class="empty">Выберите сервер.</td></tr></tbody></table></div>
+  </div>
 </section>
 
 <section class="page owner-only" id="system">
@@ -579,7 +602,7 @@ async function initAuth(){
 }
 async function logout(){try{await fetch('/api/auth/discord',{method:'DELETE',credentials:'same-origin'});await fetch('/api/auth',{method:'DELETE',credentials:'same-origin'})}catch{}authKey='';location.reload()}
 
-function showPage(id){if(['system','runtime'].includes(id)&&!authKey){toast('Этот раздел доступен только владельцу Modexa.');return}document.querySelectorAll('.page').forEach(e=>e.classList.toggle('active',e.id===id));document.querySelectorAll('.nav').forEach(e=>e.classList.toggle('active',e.dataset.page===id));document.getElementById('pageTitle').textContent=titles[id][0];document.getElementById('pageSubtitle').textContent=titles[id][1];if(id==='servers')loadPendingTelegramGroups();if(id==='commands')loadCommands();if(id==='members')loadMembers();if(id==='roles')loadRoles();if(id==='ranking')loadRanking();if(id==='welcome')loadWelcome();if(id==='custom')loadCustomCommands();if(id==='automod')loadAutoMod();if(id==='moderation')loadModeration();if(id==='automations')loadAutomations();if(id==='bridge')loadBridge();if(id==='audit')loadAudit();if(id==='system')loadSystem();if(id==='runtime')loadRuntime()}
+function showPage(id){if(['system','runtime'].includes(id)&&!authKey){toast('Этот раздел доступен только владельцу Modexa.');return}document.querySelectorAll('.page').forEach(e=>e.classList.toggle('active',e.id===id));document.querySelectorAll('.nav').forEach(e=>e.classList.toggle('active',e.dataset.page===id));document.getElementById('pageTitle').textContent=titles[id][0];document.getElementById('pageSubtitle').textContent=titles[id][1];if(id==='servers')loadPendingTelegramGroups();if(id==='commands')loadCommands();if(id==='members')loadMembers();if(id==='roles')loadRoles();if(id==='ranking')loadRanking();if(id==='welcome')loadWelcome();if(id==='custom')loadCustomCommands();if(id==='automod')loadAutoMod();if(id==='moderation')loadModeration();if(id==='automations')loadAutomations();if(id==='bridge')loadBridge();if(id==='audit'){loadAudit();loadAuditSettings();}if(id==='system')loadSystem();if(id==='runtime')loadRuntime()}
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
 
 function changeCommunity(id){selectedCommunity=id;localStorage.setItem('modexa_community',id);membersPage=1;renderSelected();loadCommands();loadMembers();loadRoles();loadRanking();loadWelcome();loadCustomCommands();loadAutoMod();loadModeration();loadAudit();loadAutomations();loadPendingTelegramGroups();}
@@ -611,7 +634,56 @@ async function loadCommands(){if(!selectedCommunity){document.getElementById('co
 async function toggleCommand(name,enabled,button){try{await post('/api/command-settings',{communityId:selectedCommunity,commandName:name,enabled});button.classList.toggle('on',enabled);toast('/'+name+' '+(enabled?'включена':'отключена'))}catch(e){toast(e.message)}}
 
 async function loadModeration(){if(!selectedCommunity)return;try{const d=await get('/api/moderation?communityId='+encodeURIComponent(selectedCommunity));document.getElementById('modTable').innerHTML=d.items.map(x=>'<tr><td>'+esc(String(x.id).slice(0,14))+'</td><td>'+esc(x.action)+'</td><td>'+esc(x.platform)+'</td><td class="'+(x.status==='active'?'warn':'')+'">'+esc(x.status)+'</td><td>'+esc(x.reason||'—')+'</td><td>'+esc(x.targetUserId||'—')+'</td></tr>').join('')||'<tr><td colspan="6" class="empty">Кейсов нет.</td></tr>'}catch(e){toast(e.message)}}
-async function loadAudit(){if(!selectedCommunity)return;try{const d=await get('/api/audit?communityId='+encodeURIComponent(selectedCommunity));document.getElementById('auditTable').innerHTML=d.items.map(x=>'<tr><td>'+esc(new Date(x.createdAt).toLocaleString('ru-RU'))+'</td><td>'+esc(x.action)+'</td><td>'+esc(x.actorUserId||'—')+'</td><td>'+esc(x.targetUserId||'—')+'</td><td>'+esc(x.reason||'—')+'</td></tr>').join('')||'<tr><td colspan="5" class="empty">Событий нет.</td></tr>'}catch(e){toast(e.message)}}
+const auditActionLabels={
+  'message.delete':'Удаление сообщения','message.edit':'Изменение сообщения','message.clear':'Очистка сообщений',
+  'member.join':'Вход участника','member.leave':'Выход участника','member.ban':'Бан','member.unban':'Разбан',
+  'member.kick':'Кик','member.mute':'Мут','member.unmute':'Снятие мута','member.warn':'Предупреждение',
+  'member.unwarn':'Снятие предупреждения','member.roles':'Изменение ролей','member.nickname':'Изменение ника',
+  'channel.create':'Создание канала','channel.update':'Изменение канала','channel.delete':'Удаление канала',
+  'role.create':'Создание роли','role.update':'Изменение роли','role.delete':'Удаление роли',
+  'role.assign':'Выдача роли','role.remove':'Снятие роли','automation.trigger':'Запуск автоматизации',
+  'automod.trigger':'Срабатывание AutoMod','system':'Системное событие','moderation.case.revoke':'Отзыв кейса модерации'
+};
+function renderAuditActionOptions(selected=[]){
+ const root=document.getElementById('auditActionOptions');
+ root.innerHTML=Object.entries(auditActionLabels).map(([key,label])=>'<label class="setting"><span>'+esc(label)+' <span class="meta">'+esc(key)+'</span></span><input type="checkbox" name="auditAction" value="'+esc(key)+'" '+(selected.includes(key)?'checked':'')+'></label>').join('');
+}
+async function loadAuditSettings(){
+ if(!selectedCommunity){document.getElementById('auditSettingsStatus').textContent='Сначала выберите сообщество.';return}
+ try{
+  const d=await get('/api/audit/settings?communityId='+encodeURIComponent(selectedCommunity));
+  document.getElementById('auditDiscordEnabled').checked=!!d.enabled;
+  document.getElementById('auditChannelId').value=d.channelId||'';
+  renderAuditActionOptions(d.actions||[]);
+  document.getElementById('auditSettingsStatus').textContent=d.enabled?'Discord Embed-логи включены.':'Discord Embed-логи выключены.';
+ }catch(e){document.getElementById('auditSettingsStatus').textContent=esc(e.message);toast(e.message)}
+}
+async function saveAuditSettings(){
+ if(!selectedCommunity)return toast('Выберите сообщество');
+ const body={communityId:selectedCommunity,enabled:document.getElementById('auditDiscordEnabled').checked,channelId:document.getElementById('auditChannelId').value.trim(),actions:[...document.querySelectorAll('input[name="auditAction"]:checked')].map(x=>x.value)};
+ try{
+  await send('/api/audit/settings','PUT',body);
+  document.getElementById('auditSettingsStatus').textContent='Настройки сохранены.';
+  toast('Настройки аудита сохранены');
+ }catch(e){toast(e.message);document.getElementById('auditSettingsStatus').textContent=esc(e.message)}
+}
+async function downloadAuditExport(){
+ if(!selectedCommunity)return toast('Выберите сообщество');
+ try{
+  const response=await fetch('/api/audit/export?communityId='+encodeURIComponent(selectedCommunity),{credentials:'same-origin',headers:authHeaders()});
+  if(!response.ok){let error='Не удалось экспортировать аудит';try{const data=await response.json();error=friendlyApiError(data.error,response.status)}catch{}throw new Error(error)}
+  const blob=await response.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='modexa-audit-'+selectedCommunity+'.txt';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  document.getElementById('auditExportStatus').textContent='Экспорт создан: '+new Date().toLocaleString('ru-RU');
+ }catch(e){toast(e.message)}
+}
+async function loadAudit(){
+ if(!selectedCommunity){document.getElementById('auditTable').innerHTML='<tr><td colspan="5" class="empty">Выберите сообщество.</td></tr>';return}
+ try{
+  const d=await get('/api/audit?communityId='+encodeURIComponent(selectedCommunity)+'&limit=100');
+  document.getElementById('auditTable').innerHTML=d.items.map(x=>'<tr><td>'+esc(new Date(x.createdAt).toLocaleString('ru-RU'))+'</td><td>'+esc(auditActionLabels[x.action]||x.action)+'</td><td>'+esc(x.actorUserId||'—')+'</td><td>'+esc(x.targetUserId||'—')+'</td><td>'+esc(x.reason||'—')+'</td></tr>').join('')||'<tr><td colspan="5" class="empty">Событий нет.</td></tr>';
+ }catch(e){toast(e.message)}
+}
 
 async function loadAutomations(){if(!selectedCommunity){document.getElementById('automationList').innerHTML='<div class="empty">Выберите сервер.</div>';return}try{const d=await get('/api/automations?communityId='+encodeURIComponent(selectedCommunity));document.getElementById('automationList').innerHTML=d.items.map(a=>'<div class="row"><div class="grow"><div class="name">'+esc(a.name)+'</div><div class="meta">'+esc(a.trigger.type)+' → '+esc(a.action.type)+' · '+(a.enabled?'активна':'выключена')+'</div></div><button class="switch '+(a.enabled?'on':'')+'" onclick="toggleAutomation(\''+esc(a.id)+'\','+(a.enabled?'false':'true')+',this)"></button></div>').join('')||'<div class="empty">Автоматизаций нет.</div>'}catch(e){toast(e.message)}}
 async function toggleAutomation(id,enabled,button){try{await post('/api/automations/'+encodeURIComponent(id),{enabled});button.classList.toggle('on',enabled);toast('Автоматизация '+(enabled?'включена':'отключена'))}catch(e){toast(e.message)}}
