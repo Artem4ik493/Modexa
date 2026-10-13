@@ -155,7 +155,7 @@ async function deliverDiscordAudit(entry: AuditExportEntry, communityId: string)
 
   const metadata = entry.metadata ?? {};
   const platform = String(metadata.platform ?? "discord");
-  const targetId = String(entry.targetUserId ?? metadata.targetExternalId ?? "");
+  const targetId = String(metadata.targetExternalId ?? metadata.userExternalId ?? entry.targetUserId ?? "");
   const channelExternalId = String(entry.channelId ?? metadata.channelExternalId ?? "");
   const messageExternalId = String(entry.messageId ?? metadata.messageExternalId ?? "");
   const communityExternalId = String(metadata.communityExternalId ?? "");
