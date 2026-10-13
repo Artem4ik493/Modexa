@@ -200,7 +200,12 @@ async function deliverDiscordAudit(entry: AuditExportEntry, communityId: string)
   const fields: Array<{ name: string; value: string; inline?: boolean }> = [];
   if (target !== "—") fields.push({ name: "Участник", value: target.slice(0, 1024), inline: true });
   if (channel !== "—") fields.push({ name: "Канал", value: channel.slice(0, 1024), inline: true });
-  if (entry.actorUserId) fields.push({ name: "Модератор", value: (platform === "discord" ? `<@${entry.actorUserId}>` : entry.actorUserId).slice(0, 1024), inline: true });
+  const actorExternalId = String(metadata.actorExternalId ?? metadata.moderatorExternalId ?? metadata.executorExternalId ?? "");
+  const actorUsername = String(metadata.actorUsername ?? metadata.moderatorUsername ?? metadata.executorUsername ?? "");
+  const actorValue = actorExternalId
+    ? (platform === "discord" ? `<@${actorExternalId}>` : actorExternalId)
+    : actorUsername || entry.actorUserId || "";
+  if (actorValue) fields.push({ name: "Модератор", value: actorValue.slice(0, 1024), inline: true });
   if (entry.reason) fields.push({ name: "Причина", value: entry.reason.slice(0, 1024), inline: false });
 
   const messageContent = typeof metadata.content === "string" ? metadata.content : "";
