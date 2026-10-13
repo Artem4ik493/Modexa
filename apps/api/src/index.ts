@@ -2538,7 +2538,7 @@ const server = createServer((req, res) => {
       const communityId = url.searchParams.get("communityId");
       if (!communityId) { json(res, 400, { error: "communityId_required" }); return; }
       if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) { json(res, 404, { error: "community_not_found" }); return; }
-      database.deleteExpiredAuditEntries(new Date());
+      database.deleteExpiredAuditEntries(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000));
       const entries = database.getAuditEntries(communityId, 500).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       const body = [
         "MODEXA AUDIT EXPORT",
@@ -2569,7 +2569,7 @@ const server = createServer((req, res) => {
       }
       const page = Math.max(1, Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
       const limit = Math.min(100, Math.max(1, Number.parseInt(url.searchParams.get("limit") ?? "25", 10) || 25));
-      database.deleteExpiredAuditEntries(new Date());\n      const items = database.getAuditEntries(communityId, 500);
+      database.deleteExpiredAuditEntries(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000));\n      const items = database.getAuditEntries(communityId, 500);
       json(res, 200, { items: items.slice((page - 1) * limit, page * limit), pagination: { page, limit, total: items.length, pages: Math.ceil(items.length / limit) } });
       return;
     }
