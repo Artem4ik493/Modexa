@@ -179,6 +179,7 @@ export class ModexaDatabase {
     metadata?: Record<string, unknown>;
     createdAt: Date;
   }): void {
+    this.deleteExpiredAuditEntries(new Date(entry.createdAt.getTime() - 5 * 24 * 60 * 60 * 1000));
     this.database.prepare(
       `INSERT INTO audit_entries
        (id, community_id, action, actor_user_id, target_user_id, channel_id, message_id, reason, metadata, created_at)
@@ -195,6 +196,13 @@ export class ModexaDatabase {
       entry.metadata ? JSON.stringify(entry.metadata) : null,
       entry.createdAt.toISOString()
     );
+  }
+
+  deleteExpiredAuditEntries(before: Date = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)): number {
+    const result = this.database.prepare(
+      "DELETE FROM audit_entries WHERE created_at < ?"
+    ).run(before.toISOString());
+    return Number(result.changes);
   }
 
   getAuditEntries(communityId: string, limit = 100): Array<{
