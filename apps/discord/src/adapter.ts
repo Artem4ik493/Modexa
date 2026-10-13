@@ -11,6 +11,8 @@ import {
   type PlatformUserRole,
   type BridgeService,
   type MemberDirectory,
+  type AuditService,
+  type CommunityService,
   type PlatformMemberDetails
 } from "@modexa/core";
 
@@ -54,6 +56,8 @@ export interface DiscordAdapterOptions {
   logger?: Logger;
 
   bridgeService?: BridgeService;
+  auditService?: AuditService;
+  communityService?: CommunityService;
 }
 
 export class DiscordAdapter
@@ -1518,6 +1522,54 @@ export class DiscordAdapter
           channelName:
             channel.name
         });
+      }
+    );
+
+    this.client.on(
+      Events.GuildMemberUpdate,
+      async (oldMember, newMember) => {
+        const community = this.options.communityService?.findByIdentity("discord", newMember.guild.id);
+        const audit = this.options.auditService;
+        if (!community || !audit) return;
+
+        const oldRoles = oldMember.roles.cache
+          .filter((role) => role.id !== newMember.guild.id)
+          .map((role) => role.id)
+          .sort();
+        const newRoles = newMember.roles.cache
+          .filter((role) => role.id !== newMember.guild.id)
+          .map((role) => role.id)
+          .sort();
+        const addedRoles = newRoles.filter((roleId) => !oldRoles.includes(roleId));
+        const removedRoles = oldRoles.filter((roleId) => !newRoles.includes(roleId));
+
+        if (addedRoles.length || removedRoles.length) {
+          audit.record({
+            communityId: community.id,
+            action: "member.roles",
+            metadata: {
+              platform: "discord",
+              targetExternalId: newMember.id,
+              username: newMember.user.username,
+              addedRoleIds: addedRoles,
+              removedRoleIds: removedRoles
+            }
+          });
+        }
+
+        if (oldMember.nickname !== newMember.nickname) {
+          audit.record({
+            communityId: community.id,
+            action: "member.nickname",
+            metadata: {
+              platform: "discord",
+              targetExternalId: newMember.id,
+              username: newMember.user.username,
+              previousNickname: oldMember.nickname,
+              nickname: newMember.nickname
+            }
+          });
+        }
       }
     );
 
