@@ -122,7 +122,92 @@ let runnerProcess: ChildProcess | undefined;
 let runnerStartedAt: string | undefined;
 let runnerLastExit: { code: number | null; signal: string | null; at: string } | undefined;
 const runnerLogs: Array<{ at: string; stream: "stdout" | "stderr"; message: string }> = [];
-function appendRunnerLog(stream: "stdout" | "stderr", chunk: Buffer | string): void {
+const AUDIT_ACTIONS = new Set<string>(["message.delete","message.edit","message.clear","member.join","member.leave","member.ban","member.unban","member.kick","member.mute","member.unmute","member.warn","member.unwarn","member.roles","member.nickname","channel.create","channel.update","channel.delete","role.create","role.update","role.delete","role.assign","role.remove","automation.trigger","automod.trigger","system","moderation.case.revoke"]);
+type AuditExportEntry = {
+  id: string; communityId: string; action: string; actorUserId?: string;
+  targetUserId?: string; channelId?: string; messageId?: string; reason?: string;
+  metadata?: Record<string, unknown>; createdAt: Date;
+};
+function auditEntryText(entry: AuditExportEntry): string {
+  const metadata = entry.metadata ? JSON.stringify(entry.metadata) : "{}";
+  return [
+    "[" + entry.createdAt.toISOString() + "] " + entry.action,
+    "ID: " + entry.id,
+    "Community: " + entry.communityId,
+    "Actor: " + (entry.actorUserId ?? "—"),
+    "Target: " + (entry.targetUserId ?? "—"),
+    "Channel: " + (entry.channelId ?? "—"),
+    "Message: " + (entry.messageId ?? "—"),
+    "Reason: " + (entry.reason ?? "—"),
+    "Metadata: " + metadata
+  ].join("\n");
+}
+async function deliverDiscordAudit(entry: AuditExportEntry, communityId: string): Promise<void> {
+  if (entry.action && database.getCommunitySetting(communityId, "audit.discord.enabled") !== "true") return;
+  const channelId = database.getCommunitySetting(communityId, "audit.discord.channel_id")?.trim();
+  const token = process.env.DISCORD_BOT_TOKEN;
+  if (!channelId || !token) return;
+  const selectedRaw = database.getCommunitySetting(communityId, "audit.events");
+  let selected: string[] = [];
+  try { selected = selectedRaw ? JSON.parse(selectedRaw) as string[] : []; } catch { selected = []; }
+  if (selected.length > 0 && !selected.includes(entry.action)) return;
+  const metadata = entry.metadata ?? {};
+  const fields = [
+    { name: "Пользователь", value: entry.targetUserId ? String(entry.targetUserId).slice(0, 1024) : "—", inline: true },
+    { name: "Модератор / инициатор", value: entry.actorUserId ? String(entry.actorUserId).slice(0, 1024) : "Неизвестен", inline: true },
+    { name: "Причина", value: (entry.reason || "Не указана").slice(0, 1024), inline: false }
+  ];
+  const embed = {
+    title: "Modexa • " + entry.action,
+    color: entry.action.includes("ban") || entry.action.includes("kick") ? 0xEF4444 : entry.action.includes("warn") || entry.action.includes("mute") ? 0xF59E0B : 0x8B5CF6,
+    fields,
+    description: [
+      "**Платформа:** " + String(metadata.platform ?? "—"),
+      "**Время:** " + entry.createdAt.toISOString(),
+      "**Audit ID:** " + entry.id
+    ].join("\n").slice(0, 4000),
+    footer: { text: "Modexa Audit • события хранятся 5 дней" }
+  };
+  const response = await fetch("https://discord.com/api/v10/channels/" + encodeURIComponent(channelId) + "/messages", {
+    method: "POST",
+    headers: { Authorization: "Bot " + token, "Content-Type": "application/json" },
+    body: JSON.stringify({ embeds: [embed], allowed_mentions: { parse: [] } }),
+    signal: AbortSignal.timeout(8000)
+  });
+  if (!response.ok) {
+    const detail = (await response.text()).slice(0, 300);
+    console.error("[Modexa Audit] Discord delivery failed", response.status, detail);
+  }
+}
+let auditDispatchInFlight = false;
+async function dispatchPendingAuditEntries(): Promise<void> {
+  if (auditDispatchInFlight || !process.env.DISCORD_BOT_TOKEN) return;
+  auditDispatchInFlight = true;
+  try {
+    const cursors = database.getRuntimeState<Record<string, string>>("api.audit_discord_cursors") ?? {};
+    for (const community of database.getCommunitiesSnapshot()) {
+      const channelId = database.getCommunitySetting(community.id, "audit.discord.channel_id")?.trim();
+      if (database.getCommunitySetting(community.id, "audit.discord.enabled") !== "true" || !channelId) continue;
+      const cursor = cursors[community.id];
+      if (!cursor) {
+        cursors[community.id] = new Date().toISOString();
+        continue;
+      }
+      const entries = database.getAuditEntries(community.id, 500)
+        .filter((item) => item.createdAt.toISOString() > cursor)
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      for (const entry of entries) {
+        try { await deliverDiscordAudit(entry, community.id); }
+        catch (error) { console.error("[Modexa Audit] Discord delivery error", error); break; }
+        cursors[community.id] = entry.createdAt.toISOString();
+      }
+    }
+    database.setRuntimeState("api.audit_discord_cursors", cursors);
+  } finally {
+    auditDispatchInFlight = false;
+  }
+}
+\nfunction appendRunnerLog(stream: "stdout" | "stderr", chunk: Buffer | string): void {
   for (const line of String(chunk).split(/\\r?\\n/).filter(Boolean)) {
     runnerLogs.push({ at: new Date().toISOString(), stream, message: line.slice(0, 4000) });
   }
@@ -2419,6 +2504,63 @@ const server = createServer((req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/audit/settings" && ["GET", "PUT"].includes(req.method ?? "")) {
+      const communityId = url.searchParams.get("communityId") ?? (await readJsonBody(req)).communityId;
+      if (typeof communityId !== "string" || !communityId) { json(res, 400, { error: "communityId_required" }); return; }
+      if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) { json(res, 404, { error: "community_not_found" }); return; }
+      if (req.method === "GET") {
+        let actions: string[] = [];
+        try { actions = JSON.parse(database.getCommunitySetting(communityId, "audit.events") ?? "[]") as string[]; } catch { actions = []; }
+        json(res, 200, {
+          enabled: database.getCommunitySetting(communityId, "audit.discord.enabled") === "true",
+          channelId: database.getCommunitySetting(communityId, "audit.discord.channel_id") ?? "",
+          actions
+        });
+        return;
+      }
+      const body = await readJsonBody(req);
+      const channelId = typeof body.channelId === "string" ? body.channelId.trim() : "";
+      const enabled = body.enabled;
+      const actions = body.actions;
+      if (typeof enabled !== "boolean" || channelId.length > 32 || (channelId && !/^\d{15,25}$/.test(channelId)) ||
+          !Array.isArray(actions) || actions.length > AUDIT_ACTIONS.size || !actions.every((item) => typeof item === "string" && AUDIT_ACTIONS.has(item)) ||
+          new Set(actions).size !== actions.length) {
+        json(res, 400, { error: "invalid_audit_settings" }); return;
+      }
+      database.setCommunitySetting(communityId, "audit.discord.enabled", String(enabled));
+      database.setCommunitySetting(communityId, "audit.discord.channel_id", channelId);
+      database.setCommunitySetting(communityId, "audit.events", JSON.stringify(actions));
+      json(res, 200, { updated: true, enabled, channelId, actions });
+      return;
+    }
+
+    if (url.pathname === "/api/audit/export" && req.method === "GET") {
+      const communityId = url.searchParams.get("communityId");
+      if (!communityId) { json(res, 400, { error: "communityId_required" }); return; }
+      if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) { json(res, 404, { error: "community_not_found" }); return; }
+      database.deleteExpiredAuditEntries(new Date());
+      const entries = database.getAuditEntries(communityId, 500).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      const body = [
+        "MODEXA AUDIT EXPORT",
+        "Community: " + communityId,
+        "Exported at: " + new Date().toISOString(),
+        "Retention: 5 days",
+        "Entries: " + entries.length,
+        "",
+        ...entries.map((entry) => auditEntryText(entry as AuditExportEntry)),
+        ""
+      ].join("\n----------------------------------------\n");
+      const safeId = communityId.replace(/[^a-zA-Z0-9_-]/g, "_");
+      res.writeHead(200, {
+        "content-type": "text/plain; charset=utf-8",
+        "content-disposition": 'attachment; filename="modexa-audit-' + safeId + '.txt"',
+        "cache-control": "no-store",
+        "x-content-type-options": "nosniff"
+      });
+      res.end(body);
+      return;
+    }
+
     if (url.pathname === "/api/audit" && req.method === "GET") {
       const communityId = url.searchParams.get("communityId");
       if (!communityId) { json(res, 400, { error: "communityId_required" }); return; }
@@ -2427,7 +2569,7 @@ const server = createServer((req, res) => {
       }
       const page = Math.max(1, Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
       const limit = Math.min(100, Math.max(1, Number.parseInt(url.searchParams.get("limit") ?? "25", 10) || 25));
-      const items = database.getAuditEntries(communityId, 500);
+      database.deleteExpiredAuditEntries(new Date());\n      const items = database.getAuditEntries(communityId, 500);
       json(res, 200, { items: items.slice((page - 1) * limit, page * limit), pagination: { page, limit, total: items.length, pages: Math.ceil(items.length / limit) } });
       return;
     }
