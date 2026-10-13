@@ -147,27 +147,84 @@ async function deliverDiscordAudit(entry: AuditExportEntry, communityId: string)
   const channelId = database.getCommunitySetting(communityId, "audit.discord.channel_id")?.trim();
   const token = process.env.DISCORD_BOT_TOKEN;
   if (!channelId || !token) return;
+
   const selectedRaw = database.getCommunitySetting(communityId, "audit.events");
   let selected: string[] = [];
   try { selected = selectedRaw ? JSON.parse(selectedRaw) as string[] : []; } catch { selected = []; }
   if (selected.length > 0 && !selected.includes(entry.action)) return;
+
   const metadata = entry.metadata ?? {};
-  const fields = [
-    { name: "Пользователь", value: String(entry.targetUserId ?? metadata.targetExternalId ?? metadata.username ?? "—").slice(0, 1024), inline: true },
-    { name: "Модератор / инициатор", value: entry.actorUserId ? String(entry.actorUserId).slice(0, 1024) : "Неизвестен", inline: true },
-    { name: "Причина", value: (entry.reason || "Не указана").slice(0, 1024), inline: false }
-  ];
+  const platform = String(metadata.platform ?? "discord");
+  const targetId = String(entry.targetUserId ?? metadata.targetExternalId ?? "");
+  const channelExternalId = String(entry.channelId ?? metadata.channelExternalId ?? "");
+  const messageExternalId = String(entry.messageId ?? metadata.messageExternalId ?? "");
+  const communityExternalId = String(metadata.communityExternalId ?? "");
+  const target = targetId ? (platform === "discord" ? `<@${targetId}>` : targetId) : String(metadata.username ?? "—");
+  const channel = channelExternalId ? (platform === "discord" ? `<#${channelExternalId}>` : channelExternalId) : "—";
+  const jumpUrl = platform === "discord" && communityExternalId && channelExternalId && messageExternalId
+    ? `https://discord.com/channels/${communityExternalId}/${channelExternalId}/${messageExternalId}`
+    : undefined;
+
+  const actionDetails: Record<string, { title: string; color: number; description: string; icon: string }> = {
+    "message.delete": { title: "Сообщение удалено", color: 0xED4245, description: "Удалённое сообщение участника.", icon: "🗑️" },
+    "message.edit": { title: "Сообщение изменено", color: 0xFEE75C, description: "Участник отредактировал сообщение.", icon: "✏️" },
+    "message.clear": { title: "Сообщения очищены", color: 0xED4245, description: "В канале была выполнена очистка сообщений.", icon: "🧹" },
+    "member.join": { title: "Участник присоединился", color: 0x57F287, description: "Новый участник присоединился к серверу.", icon: "📥" },
+    "member.leave": { title: "Участник покинул сервер", color: 0x747F8D, description: "Участник покинул сервер.", icon: "📤" },
+    "member.ban": { title: "Участник заблокирован", color: 0xED4245, description: "Участник был заблокирован на сервере.", icon: "🔨" },
+    "member.unban": { title: "Блокировка снята", color: 0x57F287, description: "Блокировка участника была снята.", icon: "🔓" },
+    "member.kick": { title: "Участник исключён", color: 0xED4245, description: "Участник был исключён с сервера.", icon: "👢" },
+    "member.mute": { title: "Участник ограничен", color: 0xFEE75C, description: "Участнику ограничили возможность отправлять сообщения.", icon: "🔇" },
+    "member.unmute": { title: "Ограничение снято", color: 0x57F287, description: "Ограничение участника было снято.", icon: "🔊" },
+    "member.warn": { title: "Предупреждение выдано", color: 0xFEE75C, description: "Участнику выдано предупреждение.", icon: "⚠️" },
+    "member.unwarn": { title: "Предупреждение снято", color: 0x57F287, description: "Предупреждение участника было снято.", icon: "✅" },
+    "member.roles": { title: "Роли участника изменены", color: 0x5865F2, description: "Изменён список ролей участника.", icon: "🎭" },
+    "member.nickname": { title: "Никнейм изменён", color: 0x5865F2, description: "Изменён никнейм участника.", icon: "📝" },
+    "channel.create": { title: "Канал создан", color: 0x57F287, description: "На сервере создан канал.", icon: "➕" },
+    "channel.update": { title: "Канал изменён", color: 0xFEE75C, description: "Изменены настройки канала.", icon: "🛠️" },
+    "channel.delete": { title: "Канал удалён", color: 0xED4245, description: "На сервере удалён канал.", icon: "🗑️" },
+    "role.create": { title: "Роль создана", color: 0x57F287, description: "На сервере создана роль.", icon: "➕" },
+    "role.update": { title: "Роль изменена", color: 0xFEE75C, description: "Изменены настройки роли.", icon: "🛠️" },
+    "role.delete": { title: "Роль удалена", color: 0xED4245, description: "На сервере удалена роль.", icon: "🗑️" },
+    "automation.trigger": { title: "Автоматизация сработала", color: 0x5865F2, description: "Выполнено действие автоматизации.", icon: "⚙️" },
+    "automod.trigger": { title: "Автомодерация сработала", color: 0xFEE75C, description: "Сработало правило автомодерации.", icon: "🛡️" },
+    "system": { title: "Системное событие", color: 0x5865F2, description: "Зафиксировано системное событие Modexa.", icon: "ℹ️" }
+  };
+  const detail = actionDetails[entry.action] ?? {
+    title: entry.action.split(".").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" • "),
+    color: 0x5865F2,
+    description: "Зафиксировано событие аудита.",
+    icon: "📋"
+  };
+
+  const fields: Array<{ name: string; value: string; inline?: boolean }> = [];
+  if (target !== "—") fields.push({ name: "Участник", value: target.slice(0, 1024), inline: true });
+  if (channel !== "—") fields.push({ name: "Канал", value: channel.slice(0, 1024), inline: true });
+  if (entry.actorUserId) fields.push({ name: "Модератор", value: (platform === "discord" ? `<@${entry.actorUserId}>` : entry.actorUserId).slice(0, 1024), inline: true });
+  if (entry.reason) fields.push({ name: "Причина", value: entry.reason.slice(0, 1024), inline: false });
+
+  const messageContent = typeof metadata.content === "string" ? metadata.content : "";
+  if (messageContent && (entry.action === "message.delete" || entry.action === "message.edit")) {
+    fields.push({ name: entry.action === "message.delete" ? "Содержимое удалённого сообщения" : "Текущее содержимое", value: messageContent.slice(0, 1024) || "*(пустое сообщение)*", inline: false });
+  }
+  if (typeof metadata.username === "string" && !targetId) {
+    fields.push({ name: "Имя пользователя", value: metadata.username.slice(0, 1024), inline: true });
+  }
+  if (jumpUrl) fields.push({ name: "Сообщение", value: `[Перейти к сообщению](${jumpUrl})`, inline: false });
+
+  const description = [
+    detail.description,
+    `**Платформа:** ${platform === "discord" ? "Discord" : platform === "telegram" ? "Telegram" : platform}`,
+    `**Время:** <t:${Math.floor(entry.createdAt.getTime() / 1000)}:F> · <t:${Math.floor(entry.createdAt.getTime() / 1000)}:R>`
+  ].join("\n");
+
   const embed = {
-    title: "Modexa • " + entry.action,
-    color: entry.action.includes("ban") || entry.action.includes("kick") ? 0xEF4444 : entry.action.includes("warn") || entry.action.includes("mute") ? 0xF59E0B : 0x8B5CF6,
-    fields,
-    description: [
-      "**Платформа:** " + String(metadata.platform ?? "—"),
-      "**Результат:** " + String(metadata.result ?? "Событие зарегистрировано"),
-      "**Время:** " + entry.createdAt.toISOString(),
-      "**Audit ID:** " + entry.id
-    ].join("\n").slice(0, 4000),
-    footer: { text: "Modexa Audit • события хранятся 5 дней" }
+    title: `${detail.icon} ${detail.title}`.slice(0, 256),
+    color: detail.color,
+    description: description.slice(0, 4000),
+    fields: fields.slice(0, 25),
+    footer: { text: `Modexa Audit • ID: ${entry.id}` },
+    timestamp: entry.createdAt.toISOString()
   };
   const response = await fetch("https://discord.com/api/v10/channels/" + encodeURIComponent(channelId) + "/messages", {
     method: "POST",
