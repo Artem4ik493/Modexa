@@ -476,7 +476,7 @@ export function createDiscordAdapter(
       : undefined;
     if (community && options.auditService) {
       let action: import("@modexa/core").AuditAction | undefined;
-      let metadata: Record<string, unknown> = { platform: "discord" };
+      let metadata: Record<string, unknown> = { platform: "discord", communityExternalId: externalCommunityId };
       let channelId: string | undefined;
       let messageId: string | undefined;
       switch (event.type) {
