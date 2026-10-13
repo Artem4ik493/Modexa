@@ -595,14 +595,14 @@ function isCommunityScopedReadPath(path: string, method: string): boolean {
   if (method !== "GET" && method !== "HEAD") return false;
   if (path === "/api/commands" || path === "/api/command-settings" ||
       path === "/api/analytics" || path === "/api/audit" ||
-      path === "/api/moderation" || path === "/api/custom-commands" ||
+      path === "/api/moderation" || path === "/api/audit/settings" || path === "/api/audit/export" || path === "/api/custom-commands" ||
       path === "/api/automations") return true;
   if (/^\/api\/communities\/[^/]+(?:\/.*)?$/.test(path)) return true;
   return false;
 }
 
 function isCommunityScopedMutationPath(path: string, method: string): boolean {
-  if (method === "POST" && ["/api/automations", "/api/custom-commands", "/api/moderation/cases", "/api/moderation/revoke"].includes(path)) return true;
+  if (method === "POST" && ["/api/automations", "/api/custom-commands", "/api/moderation/cases", "/api/moderation/revoke"].includes(path)) return true;\n  if (method === "PUT" && path === "/api/audit/settings") return true;
   if (method === "PUT" && path === "/api/command-settings") return true;
   if (/^\/api\/automations\/[^/]+$/.test(path) && ["POST", "PUT", "PATCH", "DELETE"].includes(method)) return true;
   if (/^\/api\/custom-commands\/[^/]+$/.test(path) && ["PUT", "PATCH", "DELETE"].includes(method)) return true;
