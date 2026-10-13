@@ -460,11 +460,12 @@ export function createDiscordAdapter(
     })
   });
   adapter.onEvent(async (event) => {
-    const externalCommunityId = event.type.startsWith("message.")
-      ? event.message.community?.externalId
-      : event.type.startsWith("member.")
-        ? event.member.community.externalId
-        : undefined;
+    const externalCommunityId =
+      event.type === "message.created" || event.type === "message.updated" || event.type === "message.deleted"
+        ? event.message.community?.externalId
+        : event.type === "member.joined" || event.type === "member.left" || event.type === "member.banned" || event.type === "member.unbanned"
+          ? event.member.community.externalId
+          : undefined;
     const community = externalCommunityId
       ? options.communityService?.findByIdentity("discord", externalCommunityId)
       : undefined;
