@@ -538,7 +538,7 @@ export function createTelegramAdapter(
       : undefined;
     if (community && options.auditService) {
       let action: import("@modexa/core").AuditAction | undefined;
-      let metadata: Record<string, unknown> = { platform: "telegram" };
+      let metadata: Record<string, unknown> = { platform: "telegram", communityExternalId: externalCommunityId };
       let channelId: string | undefined;
       let messageId: string | undefined;
       switch (event.type) {
