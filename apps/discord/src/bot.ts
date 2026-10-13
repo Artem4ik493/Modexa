@@ -426,7 +426,13 @@ export function createDiscordAdapter(
         logger,
 
         bridgeService:
-          bridgeService
+          bridgeService,
+
+        auditService:
+          options.auditService,
+
+        communityService:
+          options.communityService
       }
     );
 
