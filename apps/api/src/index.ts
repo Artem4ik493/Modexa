@@ -153,7 +153,7 @@ async function deliverDiscordAudit(entry: AuditExportEntry, communityId: string)
   if (selected.length > 0 && !selected.includes(entry.action)) return;
   const metadata = entry.metadata ?? {};
   const fields = [
-    { name: "Пользователь", value: entry.targetUserId ? String(entry.targetUserId).slice(0, 1024) : "—", inline: true },
+    { name: "Пользователь", value: String(entry.targetUserId ?? metadata.targetExternalId ?? metadata.username ?? "—").slice(0, 1024), inline: true },
     { name: "Модератор / инициатор", value: entry.actorUserId ? String(entry.actorUserId).slice(0, 1024) : "Неизвестен", inline: true },
     { name: "Причина", value: (entry.reason || "Не указана").slice(0, 1024), inline: false }
   ];
