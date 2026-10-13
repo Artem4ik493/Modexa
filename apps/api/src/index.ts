@@ -925,7 +925,7 @@ const server = createServer((req, res) => {
           ["/api/command-settings", ["get", "post", "put"]],
           ["/api/custom-commands", ["get", "post"]],
           ["/api/custom-commands/{id}", ["put", "patch", "delete"]],
-          ["/api/audit", ["get"]],
+          ["/api/audit", ["get"]],\n          ["/api/audit/settings", ["get", "put"]],\n          ["/api/audit/export", ["get"]],
           ["/api/moderation", ["get"]],
           ["/api/moderation/cases", ["post"]],
           ["/api/moderation/revoke", ["post"]],
