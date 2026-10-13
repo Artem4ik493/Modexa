@@ -44,12 +44,14 @@ export interface AuditStore {
   appendAudit(entry: AuditEntry): void;
   getAuditEntries(communityId: string, limit?: number): AuditEntry[];
   getCommunitySetting?(communityId: string, key: string): string | undefined;
+  deleteExpiredAuditEntries?(before?: Date): number;
 }
 
 export class AuditService {
   constructor(private readonly store?: AuditStore) {}
 
   record(input: Omit<AuditEntry, "id" | "createdAt">): AuditEntry {
+    this.pruneExpired();
     const entry: AuditEntry = {
       ...input,
       id: `audit_${randomUUID()}`,
@@ -62,6 +64,12 @@ export class AuditService {
   }
 
   list(communityId: string, limit = 100): AuditEntry[] {
+    this.pruneExpired();
     return this.store?.getAuditEntries(communityId, limit) ?? [];
+  }
+
+  pruneExpired(now = new Date()): number {
+    const cutoff = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
+    return this.store?.deleteExpiredAuditEntries?.(cutoff) ?? 0;
   }
 }
