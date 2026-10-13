@@ -162,7 +162,8 @@ async function deliverDiscordAudit(entry: AuditExportEntry, communityId: string)
     color: entry.action.includes("ban") || entry.action.includes("kick") ? 0xEF4444 : entry.action.includes("warn") || entry.action.includes("mute") ? 0xF59E0B : 0x8B5CF6,
     fields,
     description: [
-      "**Платформа:** " + String(metadata.platform ?? "—"),\n      "**Результат:** " + String(metadata.result ?? "Событие зарегистрировано"),
+      "**Платформа:** " + String(metadata.platform ?? "—"),
+      "**Результат:** " + String(metadata.result ?? "Событие зарегистрировано"),
       "**Время:** " + entry.createdAt.toISOString(),
       "**Audit ID:** " + entry.id
     ].join("\n").slice(0, 4000),
