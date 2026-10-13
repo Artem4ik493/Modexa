@@ -38,6 +38,7 @@ describe("AuditService", () => {
     const { store } = createStore();
     const service = new AuditService(store);
     const now = new Date("2026-10-13T12:00:00.000Z");
+    vi.useFakeTimers();
     vi.setSystemTime(now);
 
     try {
