@@ -154,7 +154,10 @@ if (telegramToken) {
           services.commandSettingsService,
 
         database:
-          database
+          database,
+
+        auditService:
+          services.auditService
       }
     )
   );
@@ -214,7 +217,10 @@ if (discordToken) {
           services.commandSettingsService,
 
         database:
-          database
+          database,
+
+        auditService:
+          services.auditService
       }
     )
   );
