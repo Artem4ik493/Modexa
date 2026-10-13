@@ -207,7 +207,8 @@ async function dispatchPendingAuditEntries(): Promise<void> {
     auditDispatchInFlight = false;
   }
 }
-\nfunction appendRunnerLog(stream: "stdout" | "stderr", chunk: Buffer | string): void {
+
+function appendRunnerLog(stream: "stdout" | "stderr", chunk: Buffer | string): void {
   for (const line of String(chunk).split(/\\r?\\n/).filter(Boolean)) {
     runnerLogs.push({ at: new Date().toISOString(), stream, message: line.slice(0, 4000) });
   }
@@ -602,7 +603,8 @@ function isCommunityScopedReadPath(path: string, method: string): boolean {
 }
 
 function isCommunityScopedMutationPath(path: string, method: string): boolean {
-  if (method === "POST" && ["/api/automations", "/api/custom-commands", "/api/moderation/cases", "/api/moderation/revoke"].includes(path)) return true;\n  if (method === "PUT" && path === "/api/audit/settings") return true;
+  if (method === "POST" && ["/api/automations", "/api/custom-commands", "/api/moderation/cases", "/api/moderation/revoke"].includes(path)) return true;
+  if (method === "PUT" && path === "/api/audit/settings") return true;
   if (method === "PUT" && path === "/api/command-settings") return true;
   if (/^\/api\/automations\/[^/]+$/.test(path) && ["POST", "PUT", "PATCH", "DELETE"].includes(method)) return true;
   if (/^\/api\/custom-commands\/[^/]+$/.test(path) && ["PUT", "PATCH", "DELETE"].includes(method)) return true;
@@ -925,7 +927,9 @@ const server = createServer((req, res) => {
           ["/api/command-settings", ["get", "post", "put"]],
           ["/api/custom-commands", ["get", "post"]],
           ["/api/custom-commands/{id}", ["put", "patch", "delete"]],
-          ["/api/audit", ["get"]],\n          ["/api/audit/settings", ["get", "put"]],\n          ["/api/audit/export", ["get"]],
+          ["/api/audit", ["get"]],
+          ["/api/audit/settings", ["get", "put"]],
+          ["/api/audit/export", ["get"]],
           ["/api/moderation", ["get"]],
           ["/api/moderation/cases", ["post"]],
           ["/api/moderation/revoke", ["post"]],
@@ -2569,7 +2573,8 @@ const server = createServer((req, res) => {
       }
       const page = Math.max(1, Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
       const limit = Math.min(100, Math.max(1, Number.parseInt(url.searchParams.get("limit") ?? "25", 10) || 25));
-      database.deleteExpiredAuditEntries(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000));\n      const items = database.getAuditEntries(communityId, 500);
+      database.deleteExpiredAuditEntries(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000));
+      const items = database.getAuditEntries(communityId, 500);
       json(res, 200, { items: items.slice((page - 1) * limit, page * limit), pagination: { page, limit, total: items.length, pages: Math.ceil(items.length / limit) } });
       return;
     }
