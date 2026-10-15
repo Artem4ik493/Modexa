@@ -125,6 +125,7 @@ describe("ModerationService", () => {
     };
 
     const restored = new ModerationService(createAccess(), store);
+    restored.markApplied(seeded.id, new Date("2020-01-01T00:00:00.000Z"));
     const cases = restored.getCases("community-1");
 
     expect(cases[0]?.status).toBe("revoked");
@@ -146,6 +147,7 @@ describe("ModerationService", () => {
       userExternalId: "user-1"
     });
 
+    service.markApplied(result.case.id);
     const revoked = service.revokeCase(
       "user-mod",
       result.case.id
