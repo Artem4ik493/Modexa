@@ -47,6 +47,7 @@ export interface ModerationCase {
   revokedAt?: Date;
   expiredAt?: Date;
   failureReason?: string;
+  supersedesCaseId?: string;
 }
 
 export interface ModerationResult {
