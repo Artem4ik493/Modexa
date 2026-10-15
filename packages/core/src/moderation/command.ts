@@ -321,16 +321,11 @@ export function createModerationCommands(
             }
           };
 
+          let punishmentApplied = false;
           try {
             await executeAction(muteAction);
             moderationService.markApplied(muteResult.case.id);
-            moderationService.clearActiveWarnings(
-              context.user.id,
-              context.community.id,
-              target.id
-            );
-            warningPunishmentMessage =
-              `⚖️ Достигнут порог предупреждений (${policy.threshold}). Применён мут на ${formatDuration(policy.punishment.durationSeconds)}.`;
+            punishmentApplied = true;
           } catch (error) {
             const message = error instanceof Error ? error.message : "неизвестная ошибка";
             try {
@@ -340,6 +335,22 @@ export function createModerationCommands(
             }
             warningPunishmentMessage =
               `⚠️ Порог предупреждений достигнут, но автоматический мут не применён: ${message}`;
+          }
+
+          if (punishmentApplied) {
+            try {
+              moderationService.clearActiveWarnings(
+                context.user.id,
+                context.community.id,
+                target.id
+              );
+              warningPunishmentMessage =
+                `⚖️ Достигнут порог предупреждений (${policy.threshold}). Применён мут на ${formatDuration(policy.punishment.durationSeconds)}.`;
+            } catch (error) {
+              warningPunishmentMessage =
+                "⚠️ Автоматический мут применён, но не удалось сбросить предупреждения: " +
+                (error instanceof Error ? error.message : "ошибка");
+            }
           }
         }
       }
