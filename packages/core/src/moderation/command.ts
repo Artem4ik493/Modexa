@@ -440,6 +440,74 @@ export function createModerationCommands(
   ];
 
   managementCommands.push({
+    name: "mutes",
+    aliases: ["muted", "муты"],
+    description: "Показать активные муты",
+    requiredPermissions: ["moderation.view"],
+    handler: async (context) => {
+      if (!context.community) {
+        return { content: "Команда доступна только в сообществе." };
+      }
+
+      const targetArg = context.args[0];
+      let targetId: string | undefined;
+      let targetName: string | undefined;
+
+      if (targetArg) {
+        const target = await resolveModerationTarget(
+          context,
+          targetArg,
+          identityService,
+          membershipService,
+          memberDirectory
+        );
+        if (!target) return { content: "Участник не найден." };
+        targetId = target.id;
+        targetName = target.displayName;
+      }
+
+      const now = Date.now();
+      const activeMutes = moderationService.getCases(context.community.id)
+        .filter((item) =>
+          item.action === "mute" &&
+          item.status === "active" &&
+          (!targetId || item.targetUserId === targetId)
+        )
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+      if (!activeMutes.length) {
+        return {
+          content: targetName
+            ? `У ${targetName} нет активных мутов.`
+            : "Активных мутов нет."
+        };
+      }
+
+      const lines = activeMutes.slice(0, 20).map((item) => {
+        const expiresAt = item.durationSeconds !== undefined
+          ? item.createdAt.getTime() + item.durationSeconds * 1000
+          : undefined;
+        const duration = expiresAt === undefined
+          ? "бессрочно"
+          : expiresAt <= now
+            ? "истёк"
+            : `ещё ${formatDuration(Math.ceil((expiresAt - now) / 1000))}`;
+        return `• ${item.id} · ${duration} · ${item.reason ?? "без причины"}`;
+      });
+
+      return {
+        content: [
+          targetName ? `🔇 Активные муты: ${targetName}` : "🔇 Активные муты",
+          ...lines,
+          ...(activeMutes.length > 20
+            ? [`Показаны первые 20 из ${activeMutes.length}.`]
+            : [])
+        ].join("\n")
+      };
+    }
+  });
+
+  managementCommands.push({
     name: "unmute",
     aliases: ["размут", "снятьмут"],
     description: "Снять активный мут с участника",
