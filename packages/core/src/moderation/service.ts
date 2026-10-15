@@ -249,6 +249,51 @@ export class ModerationService {
     return item;
   }
 
+  reconcileMuteWithPlatform(
+    caseId: string,
+    state: { isMuted: boolean; mutedUntil?: Date },
+    now = new Date()
+  ): ModerationCase {
+    const item = this.cases.get(caseId);
+    if (!item) throw new Error(`Moderation case "${caseId}" does not exist`);
+    if (item.action !== "mute" || item.status !== "active") {
+      throw new Error(`Moderation case "${caseId}" is not an active mute`);
+    }
+    if (!Number.isFinite(now.getTime())) {
+      throw new Error("Moderation reconciliation date is invalid");
+    }
+
+    const appliedAt = item.appliedAt ?? item.createdAt;
+    const expectedExpiry = item.durationSeconds === undefined
+      ? undefined
+      : appliedAt.getTime() + item.durationSeconds * 1000;
+
+    if (!state.isMuted) {
+      if (expectedExpiry !== undefined && expectedExpiry <= now.getTime()) {
+        item.status = "expired";
+        item.expiredAt = new Date(expectedExpiry);
+      } else {
+        item.status = "revoked";
+        item.revokedAt = now;
+      }
+      this.cases.set(item.id, item);
+      this.store?.upsertModerationCase(item);
+      return item;
+    }
+
+    if (state.mutedUntil && Number.isFinite(state.mutedUntil.getTime())) {
+      const durationSeconds = Math.max(
+        1,
+        Math.ceil((state.mutedUntil.getTime() - appliedAt.getTime()) / 1000)
+      );
+      item.durationSeconds = durationSeconds;
+      this.cases.set(item.id, item);
+      this.store?.upsertModerationCase(item);
+    }
+
+    return item;
+  }
+
   getWarningPolicy(): WarningPolicy {
     return {
       threshold: this.warningPolicy.threshold,
