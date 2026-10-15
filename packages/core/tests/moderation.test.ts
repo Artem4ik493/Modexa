@@ -174,9 +174,9 @@ describe("ModerationService", () => {
       communityExternalId: "guild-1",
       userExternalId: "user-1",
       durationSeconds: 600,
-      now: new Date("2026-10-15T10:00:00.000Z")
+      now: new Date("2099-10-15T10:00:00.000Z")
     });
-    service.markApplied(first.case.id, new Date("2026-10-15T10:00:00.000Z"));
+    service.markApplied(first.case.id, new Date("2099-10-15T10:00:00.000Z"));
 
     const second = service.createCase({
       action: "mute",
@@ -187,12 +187,12 @@ describe("ModerationService", () => {
       communityExternalId: "guild-1",
       userExternalId: "user-1",
       durationSeconds: 300,
-      now: new Date("2026-10-15T10:05:00.000Z")
+      now: new Date("2099-10-15T10:05:00.000Z")
     });
 
     expect(second.case.durationSeconds).toBe(600);
     expect(second.case.supersedesCaseId).toBe(first.case.id);
-    service.markApplied(second.case.id, new Date("2026-10-15T10:05:00.000Z"));
+    service.markApplied(second.case.id, new Date("2099-10-15T10:05:00.000Z"));
     expect(service.getCase(first.case.id)?.status).toBe("revoked");
     expect(service.getCase(second.case.id)?.status).toBe("active");
   });
@@ -208,9 +208,9 @@ describe("ModerationService", () => {
       communityExternalId: "guild-1",
       userExternalId: "user-1",
       durationSeconds: 600,
-      now: new Date("2026-10-15T10:00:00.000Z")
+      now: new Date("2099-10-15T10:00:00.000Z")
     });
-    service.markApplied(result.case.id, new Date("2026-10-15T10:00:00.000Z"));
+    service.markApplied(result.case.id, new Date("2099-10-15T10:00:00.000Z"));
 
     const removed = service.reconcileMuteWithPlatform(
       result.case.id,
