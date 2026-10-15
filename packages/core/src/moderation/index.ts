@@ -29,7 +29,8 @@ export type {
   ModerationActionType,
   ModerationCase,
   ModerationCaseStatus,
-  ModerationResult
+  ModerationResult,
+  WarningPolicy
 } from "./types.js";
 
 export { createModerationRestoreCommands } from "./restore-command.js";
