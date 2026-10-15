@@ -10,7 +10,8 @@ import type {
   CreateModerationCaseInput,
   ModerationActionType,
   ModerationCase,
-  ModerationResult
+  ModerationResult,
+  WarningPolicy
 } from "./types.js";
 
 export interface ModerationCaseStore {
@@ -33,8 +34,18 @@ export class ModerationService {
   constructor(
     private readonly accessControlService?: AccessControlService,
     private readonly store?: ModerationCaseStore,
-    private readonly auditService?: AuditService
+    private readonly auditService?: AuditService,
+    private readonly warningPolicy: WarningPolicy = {
+      threshold: 3,
+      punishment: { action: "mute", durationSeconds: 600 }
+    }
   ) {
+    if (!Number.isSafeInteger(warningPolicy.threshold) || warningPolicy.threshold < 1) {
+      throw new Error("Warning threshold must be a positive whole number");
+    }
+    if (!Number.isSafeInteger(warningPolicy.punishment.durationSeconds) || warningPolicy.punishment.durationSeconds <= 0) {
+      throw new Error("Warning punishment duration must be a positive whole number of seconds");
+    }
     for (const item of store?.getAllModerationCases() ?? []) {
       this.cases.set(item.id, item);
     }
@@ -238,6 +249,33 @@ export class ModerationService {
     return item;
   }
 
+  getWarningPolicy(): WarningPolicy {
+    return {
+      threshold: this.warningPolicy.threshold,
+      punishment: { ...this.warningPolicy.punishment }
+    };
+  }
+
+  getActiveWarningCount(communityId: CommunityId, targetUserId: UserId): number {
+    return this.getCases(communityId).filter((item) =>
+      item.action === "warn" &&
+      item.targetUserId === targetUserId &&
+      item.status === "active"
+    ).length;
+  }
+
+  clearActiveWarnings(actorUserId: UserId, communityId: CommunityId, targetUserId: UserId, now = new Date()): number {
+    const warnings = this.getCases(communityId).filter((item) =>
+      item.action === "warn" &&
+      item.targetUserId === targetUserId &&
+      item.status === "active"
+    );
+    for (const warning of warnings) {
+      this.revokeCase(actorUserId, warning.id, now);
+    }
+    return warnings.length;
+  }
+
   getCase(caseId: string): ModerationCase | undefined {
     this.expireTimedMutes(new Date());
     return this.cases.get(caseId) ?? this.store?.getModerationCase(caseId);
@@ -272,6 +310,16 @@ export class ModerationService {
       )
     ) {
       throw new Error(`Missing permission "${permission}"`);
+    }
+    if (
+      this.accessControlService &&
+      !this.accessControlService.canModerateUser(
+        actorUserId,
+        item.targetUserId,
+        item.communityId
+      )
+    ) {
+      throw new Error("Moderation target must have a lower Modexa role than the actor");
     }
 
     item.status = "revoked";
