@@ -627,12 +627,19 @@ export function createModerationCommands(
 
       // Lift the platform restriction first. Keep the case active if the
       // platform call fails, so Modexa does not claim the mute was removed.
+      const actorIdentity = identityService.getUserIdentities(context.user.id)
+        .find((identity) => identity.platform === context.platform);
+
       try {
         await executeAction({
           type: "member.unmute",
           platform: activeMute.platform,
           communityExternalId: activeMute.communityExternalId,
-          userExternalId: activeMute.userExternalId
+          userExternalId: activeMute.userExternalId,
+          metadata: {
+            ...(actorIdentity ? { actorExternalId: actorIdentity.externalId } : {}),
+            moderationCaseId: activeMute.id
+          }
         });
       } catch (error) {
         return {
