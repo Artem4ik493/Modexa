@@ -10,8 +10,11 @@ export type ModerationActionType =
   | "ban";
 
 export type ModerationCaseStatus =
+  | "pending"
   | "active"
-  | "revoked";
+  | "failed"
+  | "revoked"
+  | "expired";
 
 export interface CreateModerationCaseInput {
   action: ModerationActionType;
@@ -39,7 +42,11 @@ export interface ModerationCase {
   reason?: string;
   status: ModerationCaseStatus;
   createdAt: Date;
+  appliedAt?: Date;
+  failedAt?: Date;
   revokedAt?: Date;
+  expiredAt?: Date;
+  failureReason?: string;
 }
 
 export interface ModerationResult {
