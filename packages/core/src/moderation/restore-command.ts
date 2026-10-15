@@ -91,9 +91,15 @@ export function createModerationRestoreCommands(
       } catch (error) {
         return { content: "❌ Недостаточно прав для этого действия: " + (error instanceof Error ? error.message : "ошибка") };
       }
+      const actorIdentity = identities.getUserIdentities(context.user.id)
+        .find((item) => item.platform === context.platform);
+      const metadata = {
+        ...(actorIdentity ? { actorExternalId: actorIdentity.externalId } : {}),
+        moderationCaseId: item.id
+      };
       const action: AdapterAction = name === "unmute"
-        ? { type: "member.unmute", platform: context.platform, communityExternalId: community.externalId, userExternalId: identity.externalId }
-        : { type: "member.unban", platform: context.platform, communityExternalId: community.externalId, userExternalId: identity.externalId };
+        ? { type: "member.unmute", platform: context.platform, communityExternalId: community.externalId, userExternalId: identity.externalId, metadata }
+        : { type: "member.unban", platform: context.platform, communityExternalId: community.externalId, userExternalId: identity.externalId, metadata };
       try {
         await executeAction(action);
       } catch (error) {
