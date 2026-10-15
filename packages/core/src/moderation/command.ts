@@ -291,11 +291,64 @@ export function createModerationCommands(
       const details = action === "mute" && appliedCase.durationSeconds !== undefined
         ? ` на ${formatDuration(appliedCase.durationSeconds)}`
         : "";
+      let warningPunishmentMessage: string | undefined;
+
+      if (action === "warn") {
+        const policy = moderationService.getWarningPolicy();
+        const warningCount = moderationService.getActiveWarningCount(
+          context.community.id,
+          target.id
+        );
+
+        if (warningCount >= policy.threshold) {
+          const muteResult = moderationService.createCase({
+            action: policy.punishment.action,
+            actorUserId: context.user.id,
+            targetUserId: target.id,
+            communityId: context.community.id,
+            platform: context.platform,
+            communityExternalId: communityIdentity.externalId,
+            userExternalId: targetIdentity.externalId,
+            durationSeconds: policy.punishment.durationSeconds,
+            reason: `Автоматическое наказание за ${warningCount} предупреждения(й)`
+          });
+          const muteAction: AdapterAction = {
+            ...muteResult.adapterAction,
+            metadata: {
+              targetDisplayName: target.displayName,
+              moderationCaseId: muteResult.case.id,
+              ...(actorIdentity ? { actorExternalId: actorIdentity.externalId } : {})
+            }
+          };
+
+          try {
+            await executeAction(muteAction);
+            moderationService.markApplied(muteResult.case.id);
+            moderationService.clearActiveWarnings(
+              context.user.id,
+              context.community.id,
+              target.id
+            );
+            warningPunishmentMessage =
+              `⚖️ Достигнут порог предупреждений (${policy.threshold}). Применён мут на ${formatDuration(policy.punishment.durationSeconds)}.`;
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "неизвестная ошибка";
+            try {
+              moderationService.markFailed(muteResult.case.id, message);
+            } catch {
+              // Keep the original failure visible in the response.
+            }
+            warningPunishmentMessage =
+              `⚠️ Порог предупреждений достигнут, но автоматический мут не применён: ${message}`;
+          }
+        }
+      }
 
       return {
         content: [
           `✅ ${actionLabel(action)[0]!.toUpperCase() + actionLabel(action).slice(1)} применён к ${target.displayName}${details}.`,
           ...(reason ? [`Причина: ${reason}`] : []),
+          ...(warningPunishmentMessage ? [warningPunishmentMessage] : []),
           `Case: ${created.case.id}`
         ].join("\n")
       };
