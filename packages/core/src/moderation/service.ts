@@ -333,6 +333,37 @@ export class ModerationService {
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
+  assertCanRevokeCase(actorUserId: UserId, caseId: string): ModerationCase {
+    const item = this.getCase(caseId);
+    if (!item) throw new Error(`Moderation case "${caseId}" does not exist`);
+    if (item.status !== "active") {
+      throw new Error(`Moderation case "${caseId}" is not active`);
+    }
+
+    const permission = ACTION_PERMISSIONS[item.action];
+    if (
+      this.accessControlService &&
+      !this.accessControlService.hasCommunityPermission(
+        actorUserId,
+        item.communityId,
+        permission
+      )
+    ) {
+      throw new Error(`Missing permission "${permission}"`);
+    }
+    if (
+      this.accessControlService &&
+      !this.accessControlService.canModerateUser(
+        actorUserId,
+        item.targetUserId,
+        item.communityId
+      )
+    ) {
+      throw new Error("Moderation target must have a lower Modexa role than the actor");
+    }
+    return item;
+  }
+
   revokeCase(actorUserId: UserId, caseId: string, now = new Date()): ModerationCase {
     const item = this.getCase(caseId);
     if (!item) throw new Error(`Moderation case "${caseId}" does not exist`);
