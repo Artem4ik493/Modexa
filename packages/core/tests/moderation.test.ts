@@ -197,6 +197,38 @@ describe("ModerationService", () => {
     expect(service.getCase(second.case.id)?.status).toBe("active");
   });
 
+  it("reconciles active mutes with the platform's actual timeout", () => {
+    const service = new ModerationService(createAccess());
+    const result = service.createCase({
+      action: "mute",
+      actorUserId: "user-mod",
+      targetUserId: "user-target",
+      communityId: "community-1",
+      platform: "discord",
+      communityExternalId: "guild-1",
+      userExternalId: "user-1",
+      durationSeconds: 600,
+      now: new Date("2026-10-15T10:00:00.000Z")
+    });
+    service.markApplied(result.case.id, new Date("2026-10-15T10:00:00.000Z"));
+
+    const removed = service.reconcileMuteWithPlatform(
+      result.case.id,
+      { isMuted: false },
+      new Date("2026-10-15T10:01:00.000Z")
+    );
+    expect(removed.status).toBe("revoked");
+    expect(removed.revokedAt?.toISOString()).toBe("2026-10-15T10:01:00.000Z");
+  });
+
+  it("exposes the configurable warning threshold and punishment", () => {
+    const service = new ModerationService(createAccess());
+    expect(service.getWarningPolicy()).toEqual({
+      threshold: 3,
+      punishment: { action: "mute", durationSeconds: 600 }
+    });
+  });
+
   it("can revoke a moderation case", () => {
     const service = new ModerationService(createAccess());
 
