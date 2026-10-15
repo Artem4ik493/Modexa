@@ -301,6 +301,7 @@ export function createModerationCommands(
         );
 
         if (warningCount >= policy.threshold) {
+          try {
           const muteResult = moderationService.createCase({
             action: policy.punishment.action,
             actorUserId: context.user.id,
@@ -351,6 +352,11 @@ export function createModerationCommands(
                 "⚠️ Автоматический мут применён, но не удалось сбросить предупреждения: " +
                 (error instanceof Error ? error.message : "ошибка");
             }
+          }
+          } catch (error) {
+            warningPunishmentMessage =
+              "⚠️ Порог предупреждений достигнут, но наказание не удалось подготовить: " +
+              (error instanceof Error ? error.message : "ошибка");
           }
         }
       }
