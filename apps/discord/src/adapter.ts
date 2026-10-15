@@ -278,9 +278,13 @@ export class DiscordAdapter
           throw new Error("Discord bot is missing the Moderate Members permission");
         }
         const member = await guild.members.fetch(action.userExternalId);
-        if (member.id === guild.ownerId || member.roles.highest.comparePositionTo(me.roles.highest) >= 0) {
-          throw new Error("Discord bot cannot timeout this member because of role hierarchy");
-        }
+        await this.assertNativeModerationHierarchy(
+          guild,
+          typeof action.metadata?.actorExternalId === "string"
+            ? action.metadata.actorExternalId
+            : undefined,
+          member
+        );
         if (!Number.isFinite(action.durationSeconds) || !action.durationSeconds || action.durationSeconds <= 0) {
           throw new Error("Discord mute duration must be positive");
         }
@@ -298,9 +302,13 @@ export class DiscordAdapter
           throw new Error("Discord bot is missing the Kick Members permission");
         }
         const member = await guild.members.fetch(action.userExternalId);
-        if (member.id === guild.ownerId || member.roles.highest.comparePositionTo(me.roles.highest) >= 0) {
-          throw new Error("Discord bot cannot kick this member because of role hierarchy");
-        }
+        await this.assertNativeModerationHierarchy(
+          guild,
+          typeof action.metadata?.actorExternalId === "string"
+            ? action.metadata.actorExternalId
+            : undefined,
+          member
+        );
         await member.kick(action.reason);
         return;
       }
@@ -336,12 +344,43 @@ export class DiscordAdapter
           throw new Error("Discord bot is missing the Ban Members permission");
         }
         const member = await guild.members.fetch(action.userExternalId);
-        if (member.id === guild.ownerId || member.roles.highest.comparePositionTo(me.roles.highest) >= 0) {
-          throw new Error("Discord bot cannot ban this member because of role hierarchy");
-        }
+        await this.assertNativeModerationHierarchy(
+          guild,
+          typeof action.metadata?.actorExternalId === "string"
+            ? action.metadata.actorExternalId
+            : undefined,
+          member
+        );
         await guild.members.ban(action.userExternalId, { reason: action.reason });
         return;
       }
+    }
+  }
+
+  private async assertNativeModerationHierarchy(
+    guild: Guild,
+    actorExternalId: string | undefined,
+    target: GuildMember
+  ): Promise<void> {
+    if (target.id === guild.ownerId) {
+      throw new Error("Discord moderation cannot target the server owner");
+    }
+
+    if (!actorExternalId) {
+      throw new Error("Cannot verify the moderator's Discord identity for role hierarchy");
+    }
+
+    if (actorExternalId === target.id) {
+      throw new Error("You cannot moderate yourself");
+    }
+
+    if (actorExternalId === guild.ownerId) {
+      return;
+    }
+
+    const actor = await guild.members.fetch(actorExternalId);
+    if (actor.roles.highest.comparePositionTo(target.roles.highest) <= 0) {
+      throw new Error("Discord role hierarchy: the moderator must have a higher role than the target");
     }
   }
 
