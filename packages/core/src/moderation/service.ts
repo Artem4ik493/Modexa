@@ -58,8 +58,8 @@ export class ModerationService {
         new Date(item.createdAt.getTime() + item.durationSeconds * 1000);
 
       if (expiresAt.getTime() <= now.getTime()) {
-        item.status = "revoked";
-        item.revokedAt = expiresAt;
+        item.status = "expired";
+        item.expiredAt = expiresAt;
         this.cases.set(item.id, item);
         this.store?.upsertModerationCase(item);
       }
@@ -78,6 +78,21 @@ export class ModerationService {
       )
     ) {
       throw new Error(`Missing permission "${permission}"`);
+    }
+
+    if (input.actorUserId === input.targetUserId) {
+      throw new Error("You cannot moderate yourself");
+    }
+
+    if (
+      this.accessControlService &&
+      !this.accessControlService.canModerateUser(
+        input.actorUserId,
+        input.targetUserId,
+        input.communityId
+      )
+    ) {
+      throw new Error("Moderation target must have a lower Modexa role than the actor");
     }
 
     if (
@@ -104,15 +119,42 @@ export class ModerationService {
       throw new Error("Moderation duration must be greater than zero");
     }
 
+    const now = input.now ?? new Date();
+    if (!Number.isFinite(now.getTime())) {
+      throw new Error("Moderation creation date is invalid");
+    }
+
+    let effectiveDurationSeconds = input.durationSeconds;
+    let supersedesCaseId: string | undefined;
+
+    if (input.action === "mute" && input.durationSeconds !== undefined) {
+      const existingMute = [...this.cases.values()]
+        .filter((item) =>
+          item.action === "mute" &&
+          item.status === "active" &&
+          item.communityId === input.communityId &&
+          item.targetUserId === input.targetUserId &&
+          item.platform === input.platform
+        )
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+
+      if (existingMute) {
+        if (existingMute.durationSeconds === undefined) {
+          throw new Error("An indefinite mute is already active; remove it before applying another mute");
+        }
+
+        const existingExpiry = existingMute.createdAt.getTime() + existingMute.durationSeconds * 1000;
+        const remainingSeconds = Math.max(0, Math.ceil((existingExpiry - now.getTime()) / 1000));
+        effectiveDurationSeconds = remainingSeconds + input.durationSeconds;
+        supersedesCaseId = existingMute.id;
+      }
+    }
+
     const reason = input.reason?.trim();
     if (reason && reason.length > 1000) {
       throw new Error("Moderation reason must not exceed 1000 characters");
     }
 
-    const now = input.now ?? new Date();
-    if (!Number.isFinite(now.getTime())) {
-      throw new Error("Moderation creation date is invalid");
-    }
     const moderationCase: ModerationCase = {
       id: `mod_${randomUUID()}`,
       action: input.action,
@@ -122,9 +164,10 @@ export class ModerationService {
       platform: input.platform,
       communityExternalId: input.communityExternalId,
       userExternalId: input.userExternalId,
-      ...(input.durationSeconds !== undefined ? { durationSeconds: input.durationSeconds } : {}),
+      ...(effectiveDurationSeconds !== undefined ? { durationSeconds: effectiveDurationSeconds } : {}),
       ...(reason ? { reason } : {}),
-      status: "active",
+      ...(supersedesCaseId ? { supersedesCaseId } : {}),
+      status: "pending",
       createdAt: now
     };
 
@@ -153,6 +196,48 @@ export class ModerationService {
     };
   }
 
+  markApplied(caseId: string, now = new Date()): ModerationCase {
+    const item = this.cases.get(caseId);
+    if (!item) throw new Error(`Moderation case "${caseId}" does not exist`);
+    if (item.status !== "pending") {
+      throw new Error(`Moderation case "${caseId}" is not pending`);
+    }
+    if (!Number.isFinite(now.getTime())) {
+      throw new Error("Moderation application date is invalid");
+    }
+
+    item.status = "active";
+    item.appliedAt = now;
+    this.cases.set(item.id, item);
+    this.store?.upsertModerationCase(item);
+
+    if (item.supersedesCaseId) {
+      const previous = this.cases.get(item.supersedesCaseId);
+      if (previous?.status === "active") {
+        previous.status = "revoked";
+        previous.revokedAt = now;
+        this.cases.set(previous.id, previous);
+        this.store?.upsertModerationCase(previous);
+      }
+    }
+
+    return item;
+  }
+
+  markFailed(caseId: string, failureReason: string, now = new Date()): ModerationCase {
+    const item = this.cases.get(caseId);
+    if (!item) throw new Error(`Moderation case "${caseId}" does not exist`);
+    if (item.status !== "pending") {
+      throw new Error(`Moderation case "${caseId}" is not pending`);
+    }
+    item.status = "failed";
+    item.failedAt = now;
+    item.failureReason = failureReason.slice(0, 1000);
+    this.cases.set(item.id, item);
+    this.store?.upsertModerationCase(item);
+    return item;
+  }
+
   getCase(caseId: string): ModerationCase | undefined {
     this.expireTimedMutes(new Date());
     return this.cases.get(caseId) ?? this.store?.getModerationCase(caseId);
@@ -170,7 +255,7 @@ export class ModerationService {
     if (!item) throw new Error(`Moderation case "${caseId}" does not exist`);
 
     if (item.status !== "active") {
-      throw new Error(`Moderation case "${caseId}" is already revoked`);
+      throw new Error(`Moderation case "${caseId}" is not active`);
     }
 
     if (!Number.isFinite(now.getTime())) {
