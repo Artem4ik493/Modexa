@@ -2689,8 +2689,18 @@ const server = createServer((req, res) => {
           ...(typeof body.durationSeconds === "number" ? { durationSeconds: body.durationSeconds } : {}),
           ...(typeof body.reason === "string" ? { reason: body.reason.slice(0, 1000) } : {})
         });
-        const queued = enqueueAdapterAction(result.adapterAction, communityId, `moderation:${result.case.id}`);
-        json(res, 201, { item: result.case, adapterAction: result.adapterAction, execution: { status: "queued", actionId: queued.id } });
+        const actorIdentity = runtimeServices.identityService.getUserIdentities(actorUserId)
+          .find((identity) => identity.platform === platform);
+        const actionWithMetadata = {
+          ...result.adapterAction,
+          metadata: {
+            ...result.adapterAction.metadata,
+            ...(actorIdentity ? { actorExternalId: actorIdentity.externalId } : {}),
+            moderationCaseId: result.case.id
+          }
+        };
+        const queued = enqueueAdapterAction(actionWithMetadata, communityId, `moderation:${result.case.id}`);
+        json(res, 201, { item: result.case, adapterAction: actionWithMetadata, execution: { status: "queued", actionId: queued.id } });
       } catch (error) {
         json(res, 403, { error: error instanceof Error ? error.message : "moderation_create_failed" });
       }
