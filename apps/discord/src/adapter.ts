@@ -531,6 +531,25 @@ export class DiscordAdapter
     };
   }
 
+  async getModerationState(
+    communityExternalId: string,
+    userExternalId: string
+  ): Promise<{ isMuted: boolean; mutedUntil?: Date } | undefined> {
+    try {
+      const guild = await this.client.guilds.fetch(communityExternalId);
+      const member = await guild.members.fetch(userExternalId);
+      const mutedUntil = member.communicationDisabledUntil ?? undefined;
+      return {
+        isMuted: Boolean(mutedUntil && mutedUntil.getTime() > Date.now()),
+        ...(mutedUntil ? { mutedUntil } : {})
+      };
+    } catch {
+      // Unknown is not the same as unmuted: do not reconcile a case when
+      // Discord could not confirm the member's current state.
+      return undefined;
+    }
+  }
+
   async getMember(
     communityExternalId: string,
     userExternalId: string
