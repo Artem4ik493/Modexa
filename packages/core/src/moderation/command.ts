@@ -257,9 +257,9 @@ export function createModerationCommands(
         // If the platform rejects it, immediately revoke the case so
         // /mutes, history and dashboards do not report a fake action.
         try {
-          moderationService.revokeCase(
-            context.user.id,
-            created.case.id
+          moderationService.markFailed(
+            created.case.id,
+            error instanceof Error ? error.message : "Unknown platform error"
           );
         } catch {
           // Preserve the original platform error for the user.
@@ -271,8 +271,18 @@ export function createModerationCommands(
         };
       }
 
-      const details = action === "mute" && durationSeconds !== undefined
-        ? ` на ${formatDuration(durationSeconds)}`
+      try {
+        moderationService.markApplied(created.case.id);
+      } catch (error) {
+        return {
+          content: "Действие применено на платформе, но не удалось обновить кейс Modexa: " +
+            (error instanceof Error ? error.message : "ошибка")
+        };
+      }
+
+      const appliedCase = moderationService.getCase(created.case.id) ?? created.case;
+      const details = action === "mute" && appliedCase.durationSeconds !== undefined
+        ? ` на ${formatDuration(appliedCase.durationSeconds)}`
         : "";
 
       return {
