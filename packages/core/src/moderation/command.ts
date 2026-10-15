@@ -625,8 +625,17 @@ export function createModerationCommands(
         return { content: `У ${target.displayName} нет активного мута в Modexa.` };
       }
 
-      // Lift the platform restriction first. Keep the case active if the
-      // platform call fails, so Modexa does not claim the mute was removed.
+      // Validate Modexa permission and hierarchy before calling the platform.
+      try {
+        moderationService.assertCanRevokeCase(context.user.id, activeMute.id);
+      } catch (error) {
+        return {
+          content: "❌ Нельзя снять мут: " +
+            (error instanceof Error ? error.message : "ошибка")
+        };
+      }
+
+      // Keep the case active if the platform call fails.
       const actorIdentity = identityService.getUserIdentities(context.user.id)
         .find((identity) => identity.platform === context.platform);
 
