@@ -66,7 +66,7 @@ export class ModerationService {
       }
 
       const expiresAt =
-        new Date(item.createdAt.getTime() + item.durationSeconds * 1000);
+        new Date((item.appliedAt ?? item.createdAt).getTime() + item.durationSeconds * 1000);
 
       if (expiresAt.getTime() <= now.getTime()) {
         item.status = "expired";
