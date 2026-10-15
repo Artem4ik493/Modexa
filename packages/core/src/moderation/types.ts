@@ -16,6 +16,15 @@ export type ModerationCaseStatus =
   | "revoked"
   | "expired";
 
+export interface WarningPolicy {
+  /** Number of active warnings required before applying the configured punishment. */
+  threshold: number;
+  punishment: {
+    action: "mute";
+    durationSeconds: number;
+  };
+}
+
 export interface CreateModerationCaseInput {
   action: ModerationActionType;
   actorUserId: UserId;
