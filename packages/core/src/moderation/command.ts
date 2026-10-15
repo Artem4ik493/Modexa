@@ -537,6 +537,25 @@ export function createModerationCommands(
       }
 
       const now = Date.now();
+      const muteCases = moderationService.getCases(context.community.id)
+        .filter((item) =>
+          item.action === "mute" &&
+          item.status === "active" &&
+          (!targetId || item.targetUserId === targetId)
+        );
+
+      if (memberDirectory?.getModerationState) {
+        for (const item of muteCases) {
+          const state = await memberDirectory.getModerationState(
+            item.communityExternalId,
+            item.userExternalId
+          );
+          if (state) {
+            moderationService.reconcileMuteWithPlatform(item.id, state);
+          }
+        }
+      }
+
       const activeMutes = moderationService.getCases(context.community.id)
         .filter((item) =>
           item.action === "mute" &&
