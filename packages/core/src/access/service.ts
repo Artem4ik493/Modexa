@@ -99,6 +99,52 @@ export class AccessControlService {
     return this.communityRoles.get(roleId);
   }
 
+  getCommunityRoleRank(role: CommunityRole): number {
+    if (Number.isFinite(role.rank)) {
+      return role.rank!;
+    }
+
+    const standardRanks: Record<string, number> = {
+      OWNER: 400,
+      ADMIN: 300,
+      MODERATOR: 200,
+      MEMBER: 100
+    };
+
+    return standardRanks[role.name.trim().toUpperCase()] ?? 0;
+  }
+
+  getUserCommunityRank(userId: UserId, communityId: CommunityId): number {
+    return this.getUserCommunityRoles(userId, communityId)
+      .reduce((rank, role) => Math.max(rank, this.getCommunityRoleRank(role)), 0);
+  }
+
+  canModerateUser(
+    actorUserId: UserId,
+    targetUserId: UserId,
+    communityId: CommunityId
+  ): boolean {
+    if (actorUserId === targetUserId) {
+      return false;
+    }
+
+    const actorRoles = this.getUserCommunityRoles(actorUserId, communityId);
+    const targetRoles = this.getUserCommunityRoles(targetUserId, communityId);
+
+    // Users without a Modexa role cannot moderate role-bearing users.
+    if (actorRoles.length === 0) {
+      return false;
+    }
+
+    const actorRank = Math.max(...actorRoles.map((role) => this.getCommunityRoleRank(role)));
+    const targetRank = targetRoles.length > 0
+      ? Math.max(...targetRoles.map((role) => this.getCommunityRoleRank(role)))
+      : 0;
+
+    // Strict hierarchy: equal-rank users cannot moderate each other.
+    return actorRank > targetRank;
+  }
+
   assignSystemRole(
     userId: UserId,
     roleId: string
