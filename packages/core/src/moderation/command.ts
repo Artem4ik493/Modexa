@@ -557,6 +557,9 @@ export function createModerationCommands(
 
       if (memberDirectory?.getModerationState) {
         for (const item of muteCases) {
+          if (item.platform !== context.platform) {
+            continue;
+          }
           const state = await memberDirectory.getModerationState(
             item.communityExternalId,
             item.userExternalId
