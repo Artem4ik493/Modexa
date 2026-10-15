@@ -280,6 +280,7 @@ export class DiscordAdapter
         const member = await guild.members.fetch(action.userExternalId);
         await this.assertNativeModerationHierarchy(
           guild,
+          me,
           typeof action.metadata?.actorExternalId === "string"
             ? action.metadata.actorExternalId
             : undefined,
@@ -366,11 +367,16 @@ export class DiscordAdapter
 
   private async assertNativeModerationHierarchy(
     guild: Guild,
+    botMember: GuildMember,
     actorExternalId: string | undefined,
     target: GuildMember
   ): Promise<void> {
     if (target.id === guild.ownerId) {
       throw new Error("Discord moderation cannot target the server owner");
+    }
+
+    if (target.roles.highest.comparePositionTo(botMember.roles.highest) >= 0) {
+      throw new Error("Discord bot role hierarchy: the bot must have a higher role than the target");
     }
 
     if (!actorExternalId) {
