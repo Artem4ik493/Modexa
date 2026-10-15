@@ -36,6 +36,8 @@ export interface CommunityRole {
   id: CommunityRoleId;
   communityId: CommunityId;
   name: string;
+  /** Higher values outrank lower values. If omitted, built-in role names use the standard hierarchy. */
+  rank?: number;
   permissions: Permission[];
 }
 
