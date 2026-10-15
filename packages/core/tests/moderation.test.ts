@@ -134,6 +134,69 @@ describe("ModerationService", () => {
     expect(persisted.revokedAt?.toISOString()).toBe("2020-01-01T00:00:10.000Z");
   });
 
+  it("enforces strict Modexa role hierarchy and blocks self-moderation", () => {
+    const access = createAccess();
+    access.assignCommunityRole(
+      "user-target",
+      `community-1:${COMMUNITY_ROLE_NAMES.ADMIN.toLowerCase()}`
+    );
+    const service = new ModerationService(access);
+
+    expect(() => service.createCase({
+      action: "warn",
+      actorUserId: "user-mod",
+      targetUserId: "user-target",
+      communityId: "community-1",
+      platform: "discord",
+      communityExternalId: "guild-1",
+      userExternalId: "user-1"
+    })).toThrow("Moderation target must have a lower Modexa role than the actor");
+
+    expect(() => service.createCase({
+      action: "warn",
+      actorUserId: "user-mod",
+      targetUserId: "user-mod",
+      communityId: "community-1",
+      platform: "discord",
+      communityExternalId: "guild-1",
+      userExternalId: "user-mod"
+    })).toThrow("You cannot moderate yourself");
+  });
+
+  it("extends a repeated timed mute from the existing expiry", () => {
+    const service = new ModerationService(createAccess());
+    const first = service.createCase({
+      action: "mute",
+      actorUserId: "user-mod",
+      targetUserId: "user-target",
+      communityId: "community-1",
+      platform: "discord",
+      communityExternalId: "guild-1",
+      userExternalId: "user-1",
+      durationSeconds: 600,
+      now: new Date("2026-10-15T10:00:00.000Z")
+    });
+    service.markApplied(first.case.id, new Date("2026-10-15T10:00:00.000Z"));
+
+    const second = service.createCase({
+      action: "mute",
+      actorUserId: "user-mod",
+      targetUserId: "user-target",
+      communityId: "community-1",
+      platform: "discord",
+      communityExternalId: "guild-1",
+      userExternalId: "user-1",
+      durationSeconds: 300,
+      now: new Date("2026-10-15T10:05:00.000Z")
+    });
+
+    expect(second.case.durationSeconds).toBe(600);
+    expect(second.case.supersedesCaseId).toBe(first.case.id);
+    service.markApplied(second.case.id, new Date("2026-10-15T10:05:00.000Z"));
+    expect(service.getCase(first.case.id)?.status).toBe("revoked");
+    expect(service.getCase(second.case.id)?.status).toBe("active");
+  });
+
   it("can revoke a moderation case", () => {
     const service = new ModerationService(createAccess());
 
