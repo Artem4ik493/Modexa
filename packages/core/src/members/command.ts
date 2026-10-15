@@ -17,7 +17,17 @@ export interface PlatformMemberDetails {
   isMember?: boolean;
 }
 
+export interface PlatformModerationState {
+  isMuted: boolean;
+  mutedUntil?: Date;
+}
+
 export interface MemberDirectory {
+  getModerationState?(
+    communityExternalId: string,
+    userExternalId: string
+  ): Promise<PlatformModerationState | undefined>;
+
   getMember(
     communityExternalId: string,
     userExternalId: string
