@@ -305,6 +305,7 @@ export class DiscordAdapter
         const member = await guild.members.fetch(action.userExternalId);
         await this.assertNativeModerationHierarchy(
           guild,
+          me,
           typeof action.metadata?.actorExternalId === "string"
             ? action.metadata.actorExternalId
             : undefined,
@@ -323,6 +324,7 @@ export class DiscordAdapter
         const member = await guild.members.fetch(action.userExternalId);
         await this.assertNativeModerationHierarchy(
           guild,
+          me,
           typeof action.metadata?.actorExternalId === "string"
             ? action.metadata.actorExternalId
             : undefined,
@@ -354,6 +356,7 @@ export class DiscordAdapter
         const member = await guild.members.fetch(action.userExternalId);
         await this.assertNativeModerationHierarchy(
           guild,
+          me,
           typeof action.metadata?.actorExternalId === "string"
             ? action.metadata.actorExternalId
             : undefined,
