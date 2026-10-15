@@ -248,6 +248,11 @@ export class DiscordAdapter
 
       case "member.warn": {
         const guild = await this.client.guilds.fetch(action.communityExternalId);
+        const actorExternalId = typeof action.metadata?.actorExternalId === "string"
+          ? action.metadata.actorExternalId
+          : undefined;
+        const targetMember = await guild.members.fetch(action.userExternalId);
+        await this.assertActorNativeHierarchy(guild, actorExternalId, targetMember);
         const target = await this.client.users.fetch(action.userExternalId);
         const targetName =
           typeof action.metadata?.targetDisplayName === "string"
@@ -380,6 +385,18 @@ export class DiscordAdapter
 
     if (target.roles.highest.comparePositionTo(botMember.roles.highest) >= 0) {
       throw new Error("Discord bot role hierarchy: the bot must have a higher role than the target");
+    }
+
+    await this.assertActorNativeHierarchy(guild, actorExternalId, target);
+  }
+
+  private async assertActorNativeHierarchy(
+    guild: Guild,
+    actorExternalId: string | undefined,
+    target: GuildMember
+  ): Promise<void> {
+    if (target.id === guild.ownerId) {
+      throw new Error("Discord moderation cannot target the server owner");
     }
 
     if (!actorExternalId) {
