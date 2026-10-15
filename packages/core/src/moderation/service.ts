@@ -154,7 +154,7 @@ export class ModerationService {
           throw new Error("An indefinite mute is already active; remove it before applying another mute");
         }
 
-        const existingExpiry = existingMute.createdAt.getTime() + existingMute.durationSeconds * 1000;
+        const existingExpiry = (existingMute.appliedAt ?? existingMute.createdAt).getTime() + existingMute.durationSeconds * 1000;
         const remainingSeconds = Math.max(0, Math.ceil((existingExpiry - now.getTime()) / 1000));
         effectiveDurationSeconds = remainingSeconds + input.durationSeconds;
         supersedesCaseId = existingMute.id;
