@@ -245,9 +245,16 @@ export function createModerationCommands(
         ...(reason ? { reason } : {})
       });
 
+      const actorIdentity = identityService.getUserIdentities(context.user.id)
+        .find((identity) => identity.platform === context.platform);
+
       const actionWithMetadata: AdapterAction = {
         ...created.adapterAction,
-        metadata: { targetDisplayName: target.displayName, moderationCaseId: created.case.id }
+        metadata: {
+          targetDisplayName: target.displayName,
+          moderationCaseId: created.case.id,
+          ...(actorIdentity ? { actorExternalId: actorIdentity.externalId } : {})
+        }
       };
 
       try {
