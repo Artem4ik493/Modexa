@@ -320,8 +320,15 @@ export class DiscordAdapter
           throw new Error("Discord bot is missing the Moderate Members permission");
         }
         const member = await guild.members.fetch(action.userExternalId);
-        if (member.id === guild.ownerId || member.roles.highest.comparePositionTo(me.roles.highest) >= 0) {
-          throw new Error("Discord bot cannot modify this member because of role hierarchy");
+        await this.assertNativeModerationHierarchy(
+          guild,
+          typeof action.metadata?.actorExternalId === "string"
+            ? action.metadata.actorExternalId
+            : undefined,
+          member
+        );
+        if (member.communicationDisabledUntilTimestamp === null) {
+          return;
         }
         await member.timeout(null);
         return;
