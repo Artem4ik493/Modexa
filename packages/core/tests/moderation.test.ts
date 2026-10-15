@@ -128,10 +128,10 @@ describe("ModerationService", () => {
     restored.markApplied(seeded.id, new Date("2020-01-01T00:00:00.000Z"));
     const cases = restored.getCases("community-1");
 
-    expect(cases[0]?.status).toBe("revoked");
-    expect(cases[0]?.revokedAt?.toISOString()).toBe("2020-01-01T00:00:10.000Z");
-    expect(persisted.status).toBe("revoked");
-    expect(persisted.revokedAt?.toISOString()).toBe("2020-01-01T00:00:10.000Z");
+    expect(cases[0]?.status).toBe("expired");
+    expect(cases[0]?.expiredAt?.toISOString()).toBe("2020-01-01T00:00:10.000Z");
+    expect(persisted.status).toBe("expired");
+    expect(persisted.expiredAt?.toISOString()).toBe("2020-01-01T00:00:10.000Z");
   });
 
   it("enforces strict Modexa role hierarchy and blocks self-moderation", () => {
