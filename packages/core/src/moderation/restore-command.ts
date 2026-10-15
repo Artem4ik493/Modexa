@@ -86,6 +86,11 @@ export function createModerationRestoreCommands(
       const identity = identities.getUserIdentities(target.id).find((i) => i.platform === context.platform);
       const community = communities.getCommunityIdentities(context.community.id).find((i) => i.platform === context.platform);
       if (!identity || !community) return { content: "Не найден внешний аккаунт участника." };
+      try {
+        moderation.assertCanRevokeCase(context.user.id, item.id);
+      } catch (error) {
+        return { content: "❌ Недостаточно прав для этого действия: " + (error instanceof Error ? error.message : "ошибка") };
+      }
       const action: AdapterAction = name === "unmute"
         ? { type: "member.unmute", platform: context.platform, communityExternalId: community.externalId, userExternalId: identity.externalId }
         : { type: "member.unban", platform: context.platform, communityExternalId: community.externalId, userExternalId: identity.externalId };
