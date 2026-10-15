@@ -373,7 +373,7 @@ export function createModerationCommands(
         return {
           content: cases.length
             ? [`⚠️ Предупреждения: ${target.displayName}`, ...cases.slice(0, 20).map(
-                (item) => `• ${item.id} · ${item.status === "active" ? "активно" : "снято"} · ${item.reason ?? "без причины"}`
+                (item) => `• ${item.id} · ${item.status === "active" ? "активно" : item.status === "pending" ? "ожидает выполнения" : item.status === "failed" ? "ошибка" : item.status === "expired" ? "истекло" : "снято"} · ${item.reason ?? "без причины"}`
               )].join("\n")
             : `У ${target.displayName} предупреждений нет.`
         };
