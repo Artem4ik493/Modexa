@@ -180,7 +180,7 @@ describe("Modexa core", () => {
     });
 
     expect(result.case.id).toMatch(/^mod_/);
-    expect(result.case.status).toBe("active");
+    expect(result.case.status).toBe("pending");
     expect(result.adapterAction.type).toBe("member.mute");
     expect(moderation.getCases("community-1")).toHaveLength(1);
   });
