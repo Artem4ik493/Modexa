@@ -511,11 +511,88 @@ async function sendConfiguredAuditLog(item: QueuedApiAction, succeeded: boolean,
   }
   logger.error("audit.channel_delivery_failed", { communityId: item.communityId, channelId, actionId: item.id, error: lastError instanceof Error ? lastError.message : String(lastError) });
 }
+type StoredAuditEntry = {
+  id: string;
+  communityId: string;
+  action: string;
+  actorUserId?: string;
+  targetUserId?: string;
+  channelId?: string;
+  messageId?: string;
+  reason?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: Date | string;
+};
+
+function auditCategory(action: string): string {
+  if (/^(member\\.|moderation\\.|automod\\.)/.test(action)) return "moderation";
+  if (/^automation\\./.test(action)) return "panel";
+  if (/^(channel\\.|role\\.)/.test(action)) return "settings";
+  return "panel";
+}
+
+async function dispatchRecordedAuditEntries(): Promise<void> {
+  for (const community of database.getCommunitiesSnapshot()) {
+    const settings = database.getRuntimeState<Record<string, unknown>>(`api.audit_settings.${community.id}`) ?? {};
+    if (settings.enabled !== true) continue;
+    const channelId = typeof settings.channelId === "string" ? settings.channelId.trim() : "";
+    if (!/^\\d{15,25}$/.test(channelId)) continue;
+    const entries = database.getAuditEntries(community.id, 100) as StoredAuditEntry[];
+    const key = `api.audit_dispatched.${community.id}`;
+    const stored = database.getRuntimeState<string[]>(key);
+    const seen = new Set(Array.isArray(stored) ? stored : []);
+    // On first run, establish a baseline rather than flooding the configured channel
+    // with historical records. Future records are delivered exactly once per stored ID.
+    if (!stored) {
+      database.setRuntimeState(key, entries.map((entry) => entry.id).filter(Boolean).slice(0, 500));
+      continue;
+    }
+    const fresh = entries.filter((entry) => entry.id && !seen.has(entry.id)).reverse();
+    if (fresh.length === 0) continue;
+    const actions = Array.isArray(settings.actions) ? settings.actions as string[] : [];
+    const discord = adapters.find((candidate) => candidate.platform === "discord");
+    if (!discord) {
+      logger.warn("audit.event_delivery_skipped", { reason: "discord_adapter_not_running", communityId: community.id, count: fresh.length });
+      continue;
+    }
+    const deliveredIds = [...seen];
+    for (const entry of fresh) {
+      const category = auditCategory(entry.action);
+      if (actions.length > 0 && !actions.includes(category)) {
+        deliveredIds.push(entry.id);
+        continue;
+      }
+      const createdAt = entry.createdAt instanceof Date ? entry.createdAt.toISOString() : String(entry.createdAt);
+      const content = [
+        "**Modexa · журнал аудита**",
+        `Событие: ${entry.action}`,
+        `Участник: ${entry.actorUserId ?? "—"}`,
+        `Цель: ${entry.targetUserId ?? "—"}`,
+        `Канал: ${entry.channelId ?? "—"}`,
+        `Причина: ${entry.reason ?? "—"}`,
+        `Сообщество: ${community.id}`,
+        `Время: ${createdAt}`
+      ].join("\\n").slice(0, 1900);
+      try {
+        await discord.sendAction({ type: "message.send", platform: "discord", channelExternalId: channelId, content });
+        deliveredIds.push(entry.id);
+        logger.info("audit.event_delivery_succeeded", { communityId: community.id, channelId, auditId: entry.id });
+      } catch (error) {
+        logger.warn("audit.event_delivery_failed", { communityId: community.id, channelId, auditId: entry.id, error: error instanceof Error ? error.message : String(error) });
+        // Keep the failed event out of the cursor so the next polling cycle retries it.
+        break;
+      }
+    }
+    database.setRuntimeState(key, [...new Set(deliveredIds)].slice(-500));
+  }
+}
+
 async function processPendingApiActions(): Promise<void> {
   if (processingApiActions || stopping) return;
   processingApiActions = true;
   try {
     services.bridgeService.refreshFromDatabase();
+    await dispatchRecordedAuditEntries();
     const queue = database.getRuntimeState<QueuedApiAction[]>("api.action_queue") ?? [];
     for (const item of queue.filter((entry) => entry.status === "pending").slice(0, 20)) {
       updateQueuedAction(item.id, { status: "processing", startedAt: new Date().toISOString() });
