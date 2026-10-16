@@ -813,7 +813,7 @@ const translations={
 };
 const exact=new Map(Object.entries(translations));
 function translateTextNode(node,locale){
- if(locale!=="en") {if(node.__mxOriginal!==undefined)node.nodeValue=node.__mxOriginal;return}
+ if(locale!=="en") {if(node.__mxOriginal!==undefined&&node.nodeValue!==node.__mxOriginal)node.nodeValue=node.__mxOriginal;return}
  const original=node.__mxOriginal!==undefined?node.__mxOriginal:node.nodeValue;
  if(node.__mxOriginal===undefined)node.__mxOriginal=original;
  const trimmed=original.trim();
