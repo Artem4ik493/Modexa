@@ -669,14 +669,14 @@ function closeModerationCase(){document.getElementById('moderationCaseDetails').
 async function revokeSelectedModerationCase(){
  if(!selectedModerationCase)return;
  if(!confirm('Отозвать это действие модерации?'))return;
- try{await post('/api/moderation/revoke',{caseId:selectedModerationCase.id,actorUserId:discordUser?.id||selectedModerationCase.actorUserId});toast('Запрос на отзыв обработан');await loadModeration();closeModerationCase()}catch(e){toast('Не удалось отозвать кейс: '+e.message)}
+ try{await post('/api/moderation/revoke',{caseId:selectedModerationCase.id,actorUserId:selectedModerationCase.actorUserId});toast('Запрос на отзыв обработан');await loadModeration();closeModerationCase()}catch(e){toast('Не удалось отозвать кейс: '+e.message)}
 }
 async function reapplySelectedModerationCase(){
  if(!selectedModerationCase)return;
  const x=selectedModerationCase;
  if(!confirm('Повторно назначить действие '+x.action+' для пользователя '+x.userExternalId+'?'))return;
  try{
-  const result=await post('/api/moderation/cases',{action:x.action,platform:x.platform,actorUserId:discordUser?.id||x.actorUserId,targetUserId:x.targetUserId,communityId:selectedCommunity,communityExternalId:x.communityExternalId,userExternalId:x.userExternalId,reason:document.getElementById('modReapplyReason')?.value.trim()||x.reason||'Повторно назначено из панели',...(x.durationSeconds?{durationSeconds:x.durationSeconds}:{})});
+  const result=await post('/api/moderation/cases',{action:x.action,platform:x.platform,actorUserId:x.actorUserId,targetUserId:x.targetUserId,communityId:selectedCommunity,communityExternalId:x.communityExternalId,userExternalId:x.userExternalId,reason:document.getElementById('modReapplyReason')?.value.trim()||x.reason||'Повторно назначено из панели',...(x.durationSeconds?{durationSeconds:x.durationSeconds}:{})});
   toast('Наказание поставлено в очередь. Статус обновится после ответа бота.');await loadModeration();await loadAudit();
   if(result?.execution?.actionId)void waitForModerationAction(result.execution.actionId);
  }catch(e){toast('Не удалось повторить действие: '+e.message)}
