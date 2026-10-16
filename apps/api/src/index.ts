@@ -721,7 +721,7 @@ const server = createServer((req, res) => {
       url.pathname === "/dashboard" ||
       url.pathname.startsWith("/dashboard/");
     const handoffCandidate = url.searchParams.get("discord_handoff");
-    const validHandoff = Boolean(handoffCandidate && oauthHandoffs.get(handoffCandidate)?.expiresAt! > Date.now());
+    const validHandoff = Boolean(handoffCandidate && Number(oauthHandoffs.get(handoffCandidate)?.expiresAt ?? 0) > Date.now());
     if (isDashboardRoute && !dashboardAuthorized(req) && !validHandoff) {
       res.writeHead(302, { location: "/login", "cache-control": "no-store" });
       res.end();
