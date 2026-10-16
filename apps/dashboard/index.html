@@ -873,7 +873,7 @@ async function loadAll(){if(loadAllInFlight)return;loadAllInFlight=true;try{docu
 const mxProgress=document.getElementById('mxProgress');
 function mxUpdateProgress(){const root=document.documentElement,max=root.scrollHeight-root.clientHeight;mxProgress.style.transform='scaleX('+(max>0?root.scrollTop/max:0)+')'}
 window.addEventListener('scroll',mxUpdateProgress,{passive:true});window.addEventListener('resize',mxUpdateProgress);mxUpdateProgress();
-initAuth().then(ok=>{if(ok){const routePages={communities:'servers','custom-commands':'custom',overview:'overview',members:'members',roles:'roles',commands:'commands',ranking:'ranking',welcome:'welcome',moderation:'moderation',automod:'automod',automations:'automations',bridge:'bridge',audit:'audit',system:'system',runtime:'runtime'};const slug=location.pathname.replace(/^\\/dashboard\\/?/,'').replace(/\\/$/,'');const target=routePages[slug];if(target)showPage(target);else if(location.pathname==='/login')history.replaceState({},document.title,'/dashboard');loadAll()}});setInterval(()=>{if(authKey||discordUser)loadAll()},30000);
+initAuth().then(ok=>{if(ok){const routePages={communities:'servers','custom-commands':'custom',overview:'overview',members:'members',roles:'roles',commands:'commands',ranking:'ranking',welcome:'welcome',moderation:'moderation',automod:'automod',automations:'automations',bridge:'bridge',audit:'audit',system:'system',runtime:'runtime'};const slug=location.pathname.replace(/^\/dashboard\/?/,'').replace(/\/$/,'');const target=routePages[slug];if(target)showPage(target);else if(location.pathname==='/login')history.replaceState({},document.title,'/dashboard');loadAll()}});setInterval(()=>{if(authKey||discordUser)loadAll()},30000);
 </script>
 </body>
 </html>
