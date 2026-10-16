@@ -2506,7 +2506,7 @@ const server = createServer((req, res) => {
         json(res, 404, { error: "community_not_found" }); return;
       }
       if (typeof enabled !== "boolean" || channelId.length > 25 ||
-          (channelId && !/^\\d{15,25}$/.test(channelId)) ||
+          (channelId && !/^\d{15,25}$/.test(channelId)) ||
           !Array.isArray(actions) || actions.length > 100 ||
           actions.some((item) => typeof item !== "string" || item.length > 100)) {
         json(res, 400, { error: "invalid_audit_settings" }); return;
@@ -2536,9 +2536,9 @@ const server = createServer((req, res) => {
           `  Target: ${item.targetUserId ?? "—"}`,
           `  Reason: ${item.reason ?? "—"}`,
           `  Metadata: ${JSON.stringify(item.metadata ?? {})}`
-        ].join("\\n"))
+        ].join("\n"))
       ];
-      const body = lines.join("\\n");
+      const body = lines.join("\n");
       res.writeHead(200, {
         "content-type": "text/plain; charset=utf-8",
         "content-disposition": `attachment; filename="modexa-audit-${communityId.replace(/[^a-zA-Z0-9_-]/g, "_")}.txt"`,
