@@ -734,53 +734,10 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       return;
     }
 
-    const dashboardPageSlugs: Record<string, string> = {
-      overview: "overview.html",
-      communities: "communities.html",
-      members: "members.html",
-      roles: "roles.html",
-      commands: "commands.html",
-      "custom-commands": "custom-commands.html",
-      ranking: "ranking.html",
-      welcome: "welcome.html",
-      moderation: "moderation.html",
-      automod: "automod.html",
-      automations: "automations.html",
-      bridge: "bridge.html",
-      audit: "audit.html",
-      system: "system.html",
-      runtime: "runtime.html"
-    };
-
-    const dashboardSlug = url.pathname.startsWith("/dashboard/pages/")
-      ? url.pathname.slice("/dashboard/pages/".length).replace(/\.html$/, "")
-      : url.pathname.startsWith("/dashboard/")
-        ? url.pathname.slice("/dashboard/".length).replace(/\/$/, "").replace(/\.html$/, "")
-        : "";
-
-    if (dashboardSlug && dashboardPageSlugs[dashboardSlug]) {
-      try {
-        const page = readFileSync(resolve(process.cwd(), "apps/dashboard/pages", dashboardPageSlugs[dashboardSlug]!), "utf8");
-        res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
-        res.end(page);
-      } catch {
-        res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
-        res.end("Dashboard page not found");
-      }
-      return;
-    }
-
-    if (url.pathname === "/" || url.pathname === "/dashboard" || url.pathname === "/dashboard/") {
-      const html = readFileSync(resolve(process.cwd(), "apps/dashboard/pages/overview.html"), "utf8");
-      res.writeHead(200, {
-        "content-type": "text/html; charset=utf-8",
-        "cache-control": "no-store"
-      });
-      res.end(html);
-      return;
-    }
-
-    if (url.pathname === "/" || url.pathname === "/dashboard") {
+    // Serve the proven release dashboard for every dashboard URL.
+    // Its own client-side router handles /dashboard/* paths; serving modular
+    // placeholder pages here bypassed the release auth/session UI and handlers.
+    if (url.pathname === "/" || url.pathname === "/dashboard" || url.pathname === "/dashboard/" || url.pathname.startsWith("/dashboard/")) {
       const html = readFileSync(dashboardPath, "utf8");
       res.writeHead(200, {
         "content-type": "text/html; charset=utf-8",
