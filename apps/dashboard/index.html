@@ -556,7 +556,7 @@ async function initAuth(){
   try{
     const ownerResponse=await fetch('/api/auth',{credentials:'same-origin',cache:'no-store'});
     const owner=ownerResponse.ok?await ownerResponse.json():{authenticated:false};
-    if(owner.authenticated&&owner.role==='owner'){authKey=OWNER_COOKIE_SESSION;discordUser=null;document.getElementById('login').classList.add('hidden');return true}
+    if(owner.authenticated&&owner.role==='owner'){authKey=OWNER_COOKIE_SESSION;discordUser=null;document.getElementById('profile').style.display='block';document.getElementById('profileName').textContent='Владелец Modexa';document.querySelector('#profile .profile-sub').textContent='Владелец платформы';document.getElementById('login').classList.add('hidden');return true}
     const params=new URLSearchParams(location.search);
     const handoff=params.get('discord_handoff');
     if(handoff){
