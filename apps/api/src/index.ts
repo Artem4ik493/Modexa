@@ -29,6 +29,13 @@ const allowedOrigins = new Set((process.env.MODEXA_ALLOWED_ORIGINS ?? "").split(
 const database = new ModexaDatabase({
   path: process.env.MODEXA_DATABASE_PATH ?? "data/modexa.sqlite"
 });
+// Keep the five-day audit retention policy enforced even when no new events arrive.
+const auditRetentionTimer = setInterval(() => {
+  try { database.deleteExpiredAuditEntries(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)); }
+  catch (error) { console.error("[audit-retention] cleanup failed", error); }
+}, 60 * 60 * 1000);
+auditRetentionTimer.unref?.();
+database.deleteExpiredAuditEntries(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000));
 const backup = new BackupService(database);
 const runtimeServices = createRuntimeServices(undefined, database);
 for (const community of database.getCommunitiesSnapshot()) {
@@ -2495,20 +2502,35 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) {
         json(res, 404, { error: "community_not_found" }); return;
       }
-      const items = database.getAuditEntries(communityId, 500);
+      const items = database.getAuditEntries(communityId, 10000);
+      const moderationCases = database.getAllModerationCases().filter((item) => item.communityId === communityId);
       const lines = [
         `Modexa audit export`,
         `Community: ${communityId}`,
         `Exported at: ${new Date().toISOString()}`,
-        `Entries: ${items.length}`,
+        `Audit entries: ${items.length}`,
+        `Moderation cases: ${moderationCases.length}`,
         "",
+        "===== AUDIT EVENTS =====",
         ...items.map((item) => [
           `[${item.createdAt}] ${item.action}`,
           `  Actor: ${item.actorUserId ?? "—"}`,
           `  Target: ${item.targetUserId ?? "—"}`,
           `  Reason: ${item.reason ?? "—"}`,
           `  Metadata: ${JSON.stringify(item.metadata ?? {})}`
-        ].join("\n"))
+        ].join("\n")),
+        "",
+        "===== MODERATION CASES =====",
+        ...moderationCases.map((item) => [
+          `[${item.createdAt}] ${item.action} · ${item.status}`,
+          `  Platform: ${item.platform}`,
+          `  Actor: ${item.actorUserId}`,
+          `  Target: ${item.targetUserId}`,
+          `  External community: ${item.communityExternalId}`,
+          `  External user: ${item.userExternalId}`,
+          `  Reason: ${item.reason ?? "—"}`,
+          `  Duration seconds: ${item.durationSeconds ?? "—"}`
+        ].join("\\n"))
       ];
       const body = lines.join("\n");
       res.writeHead(200, {
