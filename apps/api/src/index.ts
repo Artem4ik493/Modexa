@@ -2530,7 +2530,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
           `  External user: ${item.userExternalId}`,
           `  Reason: ${item.reason ?? "—"}`,
           `  Duration seconds: ${item.durationSeconds ?? "—"}`
-        ].join("\\n"))
+        ].join("\n"))
       ];
       const body = lines.join("\n");
       res.writeHead(200, {
