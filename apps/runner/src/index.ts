@@ -429,6 +429,42 @@ function updateQueuedAction(id: string, patch: Partial<QueuedApiAction>): void {
   database.setRuntimeState("api.action_queue", updated);
 }
 
+function updateModerationCaseForAction(source: string, succeeded: boolean, error?: string): void {
+  const match = source.match(/^moderation:(mod_[^:]+)$/);
+  if (!match) return;
+  try {
+    if (succeeded) services.moderationService.markApplied(match[1]!);
+    else services.moderationService.markFailed(match[1]!, error ?? "Adapter action failed");
+  } catch (statusError) {
+    logger.error("moderation.case.status_update_failed", { caseId: match[1], succeeded }, statusError);
+  }
+}
+
+async function sendConfiguredAuditLog(item: QueuedApiAction, succeeded: boolean, error?: string): Promise<void> {
+  const sourceCategory = item.source.startsWith("moderation") ? "moderation" : "panel";
+  const settings = database.getRuntimeState<Record<string, unknown>>(`api.audit_settings.${item.communityId}`) ?? {};
+  const channelId = typeof settings.channelId === "string" ? settings.channelId.trim() : "";
+  const actions = Array.isArray(settings.actions) ? settings.actions as string[] : [];
+  if (settings.enabled !== true || !/^\\d{15,25}$/.test(channelId) || (actions.length > 0 && !actions.includes(sourceCategory))) return;
+  const discord = adapters.find((candidate) => candidate.platform === "discord");
+  if (!discord) return;
+  const actionType = typeof item.action.type === "string" ? item.action.type : "unknown";
+  const lines = [
+    `**Modexa · ${sourceCategory === "moderation" ? "Moderation log" : "Panel action"}**`,
+    `Status: ${succeeded ? "SUCCESS" : "FAILED"}`,
+    `Action: ${actionType}`,
+    `Community ID: ${item.communityId}`,
+    `Source: ${item.source}`,
+    ...(error ? [`Error: ${error.slice(0, 500)}`] : []),
+    `Time: ${new Date().toISOString()}`
+  ];
+  try {
+    await discord.sendAction({ type: "message.send", platform: "discord", channelExternalId: channelId, content: lines.join("\\n") });
+  } catch (logError) {
+    logger.error("audit.channel_delivery_failed", { communityId: item.communityId, channelId, actionId: item.id }, logError);
+  }
+}
+
 async function processPendingApiActions(): Promise<void> {
   if (processingApiActions || stopping) return;
   processingApiActions = true;
@@ -442,10 +478,14 @@ async function processPendingApiActions(): Promise<void> {
         if (!adapter) throw new Error(`No adapter for platform ${item.action.platform}`);
         await adapter.sendAction(item.action);
         updateQueuedAction(item.id, { status: "succeeded", finishedAt: new Date().toISOString(), error: undefined });
+        updateModerationCaseForAction(item.source, true);
+        await sendConfiguredAuditLog(item, true);
         logger.info("api.action.succeeded", { actionId: item.id, source: item.source, platform: item.action.platform });
       } catch (error) {
         const message = error instanceof Error ? error.message.slice(0, 500) : "adapter_action_failed";
         updateQueuedAction(item.id, { status: "failed", finishedAt: new Date().toISOString(), error: message });
+        updateModerationCaseForAction(item.source, false, message);
+        await sendConfiguredAuditLog(item, false, message);
         logger.error("api.action.failed", { actionId: item.id, source: item.source, platform: item.action.platform }, error);
       }
     }
