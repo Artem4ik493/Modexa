@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080b13">
+<title>Modexa — AutoMod</title>
+<link rel="icon" href="/assets/logo.ico">
+<link rel="apple-touch-icon" href="/assets/logo.png">
+<link rel="stylesheet" href="/assets/dashboard.css">
+</head>
+<body data-page="automod">
+<div class="layout">
+<aside class="sidebar">
+<a class="brand" href="/dashboard/"><img class="brand-mark" src="/assets/logo.png" alt=""><span><strong>Modexa</strong><small>Community OS</small></span></a>
+<div class="workspace"><small>ТЕКУЩЕЕ СООБЩЕСТВО</small><strong data-community-name>Выберите сообщество в API</strong></div>
+<nav><div class="nav-label">Главное</div><a class="nav " href="/dashboard/"><span class="ico">◈</span>Обзор</a><a class="nav " href="/dashboard/communities.html"><span class="ico">▦</span>Сообщества</a><div class="nav-label">Управление</div><a class="nav " href="/dashboard/members.html"><span class="ico">♙</span>Участники</a><a class="nav " href="/dashboard/roles.html"><span class="ico">♜</span>Роли и права</a><a class="nav " href="/dashboard/commands.html"><span class="ico">⌘</span>Команды</a><a class="nav " href="/dashboard/custom-commands.html"><span class="ico">⌘</span>Свои команды</a><a class="nav " href="/dashboard/ranking.html"><span class="ico">↗</span>Рейтинг</a><a class="nav " href="/dashboard/welcome.html"><span class="ico">✦</span>Приветствия</a><div class="nav-label">Безопасность и связь</div><a class="nav " href="/dashboard/moderation.html"><span class="ico">◆</span>Модерация</a><a class="nav active" href="/dashboard/automod.html"><span class="ico">⛨</span>AutoMod</a><a class="nav " href="/dashboard/automations.html"><span class="ico">↯</span>Автоматизации</a><a class="nav " href="/dashboard/bridge.html"><span class="ico">↔</span>Bridge</a><a class="nav " href="/dashboard/audit.html"><span class="ico">≡</span>Журнал событий</a><div class="nav-label">Администрирование</div><a class="nav " href="/dashboard/system.html"><span class="ico">⚙</span>Система</a><a class="nav " href="/dashboard/runtime.html"><span class="ico">●</span>Bot Runtime</a></nav>
+<div class="sidebar-foot">Modexa · Control Center<br><span class="auth-state">API-интеграция подключается отдельно</span></div>
+</aside>
+<main class="main">
+<header class="topbar"><div><div class="eyebrow">Control Center / Безопасность и связь</div><h1 class="page-title">AutoMod</h1><div class="page-desc">Правила автоматической модерации. До подключения API изменения остаются черновиками.</div></div><div class="top-actions"><select class="select" aria-label="Сообщество" data-api-field="selectedCommunity"><option value="">Выберите сообщество…</option></select><button class="btn" data-action="refresh" title="Обновить">↻</button></div></header>
+<div class="content"><div class="notice warning">Это интерфейс-конструктор. Правила не начнут действовать, пока не будет реализован API и обработчик AutoMod в Core.</div><article class="card"><div class="card-head"><h2>Правила AutoMod</h2><button class="btn primary" data-action="add-row" data-target="#automodRows">＋ Добавить правило</button></div><div id="automodRows"><div class="notice">Правила из API пока не загружаются.</div></div></article><article class="card"><div class="card-head"><h2>Редактор правила</h2></div><div class="form-grid"><div class="field"><label>Название</label><input class="input" data-api-field="automodName" placeholder="Например, Flood"></div><div class="field"><label>Тип проверки</label><select class="select" data-api-field="automodType"><option value="spam">Спам / флуд</option><option value="links">Ссылки</option><option value="words">Запрещённые слова</option><option value="mentions">Массовые упоминания</option></select></div><div class="field"><label>Действие</label><select class="select" data-api-field="automodAction"><option value="warn">Предупреждение</option><option value="mute">Мут</option><option value="delete">Удаление сообщения</option><option value="log">Только журнал</option></select></div><div class="field"><label>Порог срабатывания</label><input class="input" type="range" min="1" max="20" value="5" data-api-field="automodThreshold"><div class="range-line"><span>1</span><b data-range-output="automodThreshold">5</b><span>20</span></div></div></div><div class="setting"><label>Правило включено</label><input class="switch" type="checkbox" data-api-field="automodEnabled"></div><div class="page-actions"><button class="btn primary" data-action="save">Сохранить правило</button></div></article></div>
+</main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/assets/dashboard.js" defer></script>
+</body>
+</html>
