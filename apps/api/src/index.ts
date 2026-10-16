@@ -875,6 +875,34 @@ const server = createServer((req, res) => {
       return;
     }
 
+    if (url.pathname === "/login") {
+      const configured = Boolean(discordClientId && discordClientSecret);
+      const loginPage = `<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080b13">
+<title>Вход — Modexa</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#070912;color:#f4f7ff}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(800px 500px at 50% 0%,#5138a633,transparent 70%),#070912}.card{width:min(100%,440px);padding:36px;border:1px solid #26314b;border-radius:24px;background:linear-gradient(145deg,#121a2b,#0c111e);box-shadow:0 24px 90px #0006}.brand{display:flex;align-items:center;gap:12px;margin-bottom:32px}.mark{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:#8b5cf622;border:1px solid #8b5cf677;color:#bba4ff;font-weight:900;font-size:24px}.brand strong{display:block;font-size:21px;letter-spacing:-.6px}.brand small{display:block;margin-top:3px;color:#91a0bd;font-size:10px;letter-spacing:2px;text-transform:uppercase}h1{margin:0 0 12px;font-size:29px;letter-spacing:-1px}p{color:#9ba8c2;line-height:1.65;margin:0 0 26px}.login{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;padding:12px 18px;border-radius:12px;background:#8b5cf6;color:white;text-decoration:none;font-weight:800;transition:background .2s,transform .2s}.login:hover{background:#7c4ee8;transform:translateY(-1px)}.notice{margin-top:18px;padding:12px 14px;border-radius:10px;border:1px solid #3b4560;background:#0a1020;color:#aab6cf;font-size:13px;line-height:1.5}.notice.error{border-color:#713a4b;color:#ffb8c4}.foot{margin-top:26px;color:#677590;font-size:12px;text-align:center}
+</style>
+</head>
+<body><main class="card"><div class="brand"><div class="mark">‹›</div><div><strong>Modexa</strong><small>Community OS</small></div></div><h1>Вход в Control Center</h1><p>Войдите через Discord, чтобы открыть панель управления сообществами Modexa.</p>${configured ? '<a class="login" href="/auth/discord">Продолжить через Discord</a>' : '<div class="notice error">Вход пока не настроен. Укажите DISCORD_CLIENT_ID и DISCORD_CLIENT_SECRET в окружении API, а также проверьте DISCORD_REDIRECT_URI.</div>'}<div class="notice">После входа доступ к данным сообществ определяется правами вашей учётной записи.</div><div class="foot">Modexa · Community OS</div></main></body></html>`;
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+      res.end(loginPage);
+      return;
+    }
+
+    const isDashboardRoute = url.pathname === "/" ||
+      url.pathname === "/dashboard" ||
+      url.pathname.startsWith("/dashboard/");
+    if (isDashboardRoute && !dashboardAuthorized(req)) {
+      res.writeHead(302, { location: "/login", "cache-control": "no-store" });
+      res.end();
+      return;
+    }
+
     const dashboardPageSlugs: Record<string, string> = {
       overview: "overview.html",
       communities: "communities.html",
