@@ -711,9 +711,15 @@ const server = createServer((req, res) => {
     }
 
     if (url.pathname === "/login") {
-      const html = readFileSync(dashboardPath, "utf8");
+      const configured = Boolean(discordClientId && discordClientSecret);
+      const loginPage = `<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#080b13"><title>Вход — Modexa</title><link rel="stylesheet" href="/assets/dashboard.css"><style>
+body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440px);padding:30px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(155deg,#121a2cfa,#0d1320fa);box-shadow:0 25px 80px #0005;animation:login-in .35s ease both}.login-brand{display:flex;align-items:center;gap:12px;margin-bottom:28px}.login-brand img{width:42px;height:42px;object-fit:contain}.login-brand strong{display:block;font-size:20px}.login-brand small{display:block;color:var(--muted);font-size:9px;letter-spacing:.14em;text-transform:uppercase;margin-top:3px}.login-card h1{font-size:28px;letter-spacing:-.05em;margin:0 0 9px}.login-card>p{color:var(--muted);font-size:12px;line-height:1.7;margin:0 0 23px}.login-actions{display:grid;gap:10px}.login-actions .btn{width:100%;min-height:44px;font-size:12px}.login-error{min-height:20px;margin-top:12px;color:var(--red);font-size:11px}.login-foot{display:flex;justify-content:space-between;align-items:center;margin-top:20px;color:var(--muted);font-size:10px}@keyframes login-in{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
+</style></head><body><main class="login-card"><div class="login-brand"><img src="/assets/logo.png" alt="Modexa"><span><strong>Modexa</strong><small>Community OS · Control Center</small></span></div><h1>Рады видеть снова</h1><p>Войди в Modexa, чтобы управлять сообществами, ролями, командами и модерацией.</p><div class="login-actions">${configured?'<a class="btn primary" href="/auth/discord">Продолжить через Discord</a>':'<div class="notice warning">Discord OAuth не настроен. Проверь DISCORD_CLIENT_ID и DISCORD_CLIENT_SECRET.</div>'}<button class="btn" id="ownerLoginToggle" type="button">Войти как владелец по API-ключу</button><form id="ownerLogin" style="display:none;gap:9px"><input class="input" id="apiKey" type="password" autocomplete="current-password" placeholder="MODEXA_API_KEY" required><button class="btn primary" type="submit">Войти</button></form></div><div class="login-error" id="loginError"></div><div class="login-foot"><span>Защищённая сессия</span><button class="btn ghost" id="themeToggle" type="button">☼ Тема</button></div></main><script>
+(()=>{const root=document.documentElement;root.dataset.theme=localStorage.getItem('modexa.theme')||'dark';const theme=document.getElementById('themeToggle');const paint=()=>{theme.textContent=root.dataset.theme==='dark'?'☼ Светлая тема':'☾ Тёмная тема'};paint();theme.onclick=()=>{root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';localStorage.setItem('modexa.theme',root.dataset.theme);paint()};document.getElementById('ownerLoginToggle').onclick=()=>{const form=document.getElementById('ownerLogin');form.style.display=form.style.display==='grid'?'none':'grid'};document.getElementById('ownerLogin').onsubmit=async e=>{e.preventDefault();const error=document.getElementById('loginError');error.textContent='';try{const r=await fetch('/api/auth',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'content-type':'application/json'},body:JSON.stringify({key:document.getElementById('apiKey').value.trim()})});const d=await r.json();if(!r.ok||!d.authenticated||d.role!=='owner')throw Error(r.status===401?'Неверный API-ключ.':d.error||'Не удалось войти.');location.href='/dashboard'}catch(err){error.textContent=err.message||'Ошибка входа'}}})();
+</script></body></html>`;
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
-      res.end(html);
+      res.end(loginPage);
       return;
     }
 
@@ -754,7 +760,7 @@ const server = createServer((req, res) => {
 
     if (dashboardSlug && dashboardPageSlugs[dashboardSlug]) {
       try {
-        const page = readFileSync(dashboardPath, "utf8");
+        const page = readFileSync(resolve(process.cwd(), "apps/dashboard/pages", dashboardPageSlugs[dashboardSlug]!), "utf8");
         res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
         res.end(page);
       } catch {
@@ -765,7 +771,7 @@ const server = createServer((req, res) => {
     }
 
     if (url.pathname === "/" || url.pathname === "/dashboard" || url.pathname === "/dashboard/") {
-      const html = readFileSync(dashboardPath, "utf8");
+      const html = readFileSync(resolve(process.cwd(), "apps/dashboard/pages/overview.html"), "utf8");
       res.writeHead(200, {
         "content-type": "text/html; charset=utf-8",
         "cache-control": "no-store"
