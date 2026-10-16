@@ -433,8 +433,32 @@ function updateModerationCaseForAction(source: string, succeeded: boolean, error
   const match = source.match(/^moderation:(mod_[^:]+)$/);
   if (!match) return;
   try {
-    if (succeeded) services.moderationService.markApplied(match[1]!);
-    else services.moderationService.markFailed(match[1]!, error ?? "Adapter action failed");
+    // The API can create a case after Runner startup, so update the shared database
+    // record directly instead of relying on Runner's in-memory service cache.
+    const item = database.getAllModerationCases().find((entry) => entry.id === match[1]);
+    if (!item || item.status !== "pending") {
+      logger.warn("moderation.case.status_update_skipped", { caseId: match[1], found: Boolean(item), status: item?.status });
+      return;
+    }
+    const now = new Date();
+    if (succeeded) {
+      item.status = "active";
+      item.appliedAt = now;
+      item.failureReason = undefined;
+      if (item.supersedesCaseId) {
+        const previous = database.getAllModerationCases().find((entry) => entry.id === item.supersedesCaseId);
+        if (previous?.status === "active") {
+          previous.status = "revoked";
+          previous.revokedAt = now;
+          database.upsertModerationCase(previous);
+        }
+      }
+    } else {
+      item.status = "failed";
+      item.failedAt = now;
+      item.failureReason = (error ?? "Adapter action failed").slice(0, 1000);
+    }
+    database.upsertModerationCase(item);
   } catch (statusError) {
     logger.error("moderation.case.status_update_failed", { caseId: match[1], succeeded }, statusError);
   }
