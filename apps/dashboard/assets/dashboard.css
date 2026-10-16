@@ -208,3 +208,18 @@ html[data-theme="light"] .telegram-link-help,html[data-theme="light"] .notice{ba
 /* Keep authentication and notifications as overlays above the animated background */
 body>.login{position:fixed;inset:0;z-index:100}
 body>.toast{position:fixed;right:18px;bottom:18px;z-index:150}
+
+/* Fix legacy command switches: button switches use one knob, checkbox switches use the input pseudo-element. */
+button.switch:before{display:none!important}
+button.switch:after{display:block!important}
+.switch{flex:0 0 44px;min-width:44px}
+.command{min-width:0;align-items:center}
+.command .grow{min-width:0}
+.command-grid .command{gap:14px}
+.mod-case-row{cursor:pointer;transition:background .16s ease}
+.mod-case-row:hover,.mod-case-row:focus-visible{background:#a78bfa12;outline:none}
+#moderationCaseDetails[hidden]{display:none!important}
+#moderationCaseDetails{animation:mx-enter .25s ease both}
+html[data-theme="light"] button.switch{background:#d4d9e7}
+html[data-theme="light"] button.switch.on{background:linear-gradient(120deg,#9b6cf1,#d946ef)}
+html[data-theme="light"] button.switch:after{background:#fff;box-shadow:0 1px 3px #20243a25}
