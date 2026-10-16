@@ -743,8 +743,8 @@ async function unlinkTelegramGroup(chatId){
  }catch(e){toast(e.message||'Не удалось отвязать Telegram-группу')}
 }
 
-async let bridgeCache={endpoints:[],links:[]},bridgeDraft=[];
-function loadBridge(){
+let bridgeDraft=[];
+async function loadBridge(){
  if(!authKey){
   document.getElementById('bridgeEndpoints').innerHTML='<div class="empty">Управление мостами доступно владельцу Modexa. Вы можете привязать Telegram-группу через код ниже.</div>';
   document.getElementById('bridgeList').innerHTML='<div class="empty">Владелец Modexa может управлять мостами после подключения чатов.</div>';
