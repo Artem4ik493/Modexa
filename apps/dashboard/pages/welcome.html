@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080b13">
+<title>Modexa — Приветствия</title>
+<link rel="icon" href="/assets/logo.ico">
+<link rel="apple-touch-icon" href="/assets/logo.png">
+<link rel="stylesheet" href="/assets/dashboard.css">
+</head>
+<body data-page="welcome">
+<div class="layout">
+<aside class="sidebar">
+<a class="brand" href="/dashboard/"><img class="brand-mark" src="/assets/logo.png" alt=""><span><strong>Modexa</strong><small>Community OS</small></span></a>
+<div class="workspace"><small>ТЕКУЩЕЕ СООБЩЕСТВО</small><strong data-community-name>Выберите сообщество в API</strong></div>
+<nav><div class="nav-label">Главное</div><a class="nav " href="/dashboard/"><span class="ico">◈</span>Обзор</a><a class="nav " href="/dashboard/communities.html"><span class="ico">▦</span>Сообщества</a><div class="nav-label">Управление</div><a class="nav " href="/dashboard/members.html"><span class="ico">♙</span>Участники</a><a class="nav " href="/dashboard/roles.html"><span class="ico">♜</span>Роли и права</a><a class="nav " href="/dashboard/commands.html"><span class="ico">⌘</span>Команды</a><a class="nav " href="/dashboard/custom-commands.html"><span class="ico">⌘</span>Свои команды</a><a class="nav " href="/dashboard/ranking.html"><span class="ico">↗</span>Рейтинг</a><a class="nav active" href="/dashboard/welcome.html"><span class="ico">✦</span>Приветствия</a><div class="nav-label">Безопасность и связь</div><a class="nav " href="/dashboard/moderation.html"><span class="ico">◆</span>Модерация</a><a class="nav " href="/dashboard/automod.html"><span class="ico">⛨</span>AutoMod</a><a class="nav " href="/dashboard/automations.html"><span class="ico">↯</span>Автоматизации</a><a class="nav " href="/dashboard/bridge.html"><span class="ico">↔</span>Bridge</a><a class="nav " href="/dashboard/audit.html"><span class="ico">≡</span>Журнал событий</a><div class="nav-label">Администрирование</div><a class="nav " href="/dashboard/system.html"><span class="ico">⚙</span>Система</a><a class="nav " href="/dashboard/runtime.html"><span class="ico">●</span>Bot Runtime</a></nav>
+<div class="sidebar-foot">Modexa · Control Center<br><span class="auth-state">API-интеграция подключается отдельно</span></div>
+</aside>
+<main class="main">
+<header class="topbar"><div><div class="eyebrow">Control Center / Управление</div><h1 class="page-title">Приветствия</h1><div class="page-desc">Сообщения при входе и выходе, канал и шаблоны переменных.</div></div><div class="top-actions"><select class="select" aria-label="Сообщество" data-api-field="selectedCommunity"><option value="">Выберите сообщество…</option></select><button class="btn" data-action="refresh" title="Обновить">↻</button></div></header>
+<div class="content"><div class="grid two"><article class="card"><div class="card-head"><h2>Сообщение при входе</h2><span class="pill">Welcome</span></div><div class="setting"><label>Включить приветствия</label><input class="switch" type="checkbox" data-api-field="welcomeEnabled" checked></div><div class="form-stack"><div class="field"><label>ID канала</label><input class="input" data-api-field="welcomeChannel" placeholder="ID канала Discord или target ID"></div><div class="field"><label>Текст приветствия</label><textarea class="textarea" data-api-field="welcomeText" placeholder="Добро пожаловать, {user}!"></textarea><small>Переменные будут валидироваться API.</small></div></div></article><article class="card"><div class="card-head"><h2>Сообщение при выходе</h2><span class="pill">Leave</span></div><div class="setting"><label>Включить уведомления</label><input class="switch" type="checkbox" data-api-field="leaveEnabled"></div><div class="form-stack"><div class="field"><label>ID канала</label><input class="input" data-api-field="leaveChannel" placeholder="ID канала"></div><div class="field"><label>Текст сообщения</label><textarea class="textarea" data-api-field="leaveText" placeholder="{user} покинул сообщество."></textarea></div></div></article></div><div class="page-actions"><button class="btn primary" data-action="save">Сохранить приветствия</button></div></div>
+</main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/assets/dashboard.js" defer></script>
+</body>
+</html>
