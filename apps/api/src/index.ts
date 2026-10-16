@@ -1111,11 +1111,6 @@ const server = createServer((req, res) => {
       );
 
       const communities = database.getCommunityIdentitiesSnapshot();
-      const botGuildIds = new Set(
-        communities
-          .filter((item) => item.platform === "discord")
-          .map((item) => item.externalId)
-      );
 
       const manageableGuilds = guilds.flatMap((guild) => {
         // Discord may return permissions_new instead of the legacy permissions field.
@@ -1127,6 +1122,20 @@ const server = createServer((req, res) => {
           (permissions & 0x20n) === 0x20n;
         return canManageGuild ? [{ guild, canManageGuild }] : [];
       });
+
+      const botToken = process.env.DISCORD_BOT_TOKEN ?? "";
+      const botGuildChecks = await Promise.all(manageableGuilds.map(async ({ guild }) => {
+        if (!botToken) return [guild.id, false] as const;
+        try {
+          const response = await fetch(`https://discord.com/api/v10/guilds/${encodeURIComponent(guild.id)}`, {
+            headers: { authorization: `Bot ${botToken}` }
+          });
+          return [guild.id, response.ok] as const;
+        } catch {
+          return [guild.id, false] as const;
+        }
+      }));
+      const botGuildIds = new Set(botGuildChecks.filter(([, installed]) => installed).map(([id]) => id));
 
       json(res, 200, {
         items: manageableGuilds.map(({ guild, canManageGuild }) => {
