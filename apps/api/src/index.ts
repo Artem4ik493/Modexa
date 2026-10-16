@@ -894,9 +894,9 @@ const server = createServer((req, res) => {
     };
 
     const dashboardSlug = url.pathname.startsWith("/dashboard/pages/")
-      ? url.pathname.slice("/dashboard/pages/".length).replace(/\\.html$/, "")
+      ? url.pathname.slice("/dashboard/pages/".length).replace(/\.html$/, "")
       : url.pathname.startsWith("/dashboard/")
-        ? url.pathname.slice("/dashboard/".length).replace(/\\/$/, "")
+        ? url.pathname.slice("/dashboard/".length).replace(/\/$/, "")
         : "";
 
     if (dashboardSlug && dashboardPageSlugs[dashboardSlug]) {
