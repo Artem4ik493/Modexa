@@ -875,16 +875,33 @@ const server = createServer((req, res) => {
       return;
     }
 
-    if (url.pathname.startsWith("/dashboard/pages/")) {
-      const pageName = url.pathname.slice("/dashboard/pages/".length);
-      const pages = new Set(["overview.html","communities.html","members.html","roles.html","commands.html","custom-commands.html","ranking.html","welcome.html","moderation.html","automod.html","automations.html","bridge.html","audit.html","system.html","runtime.html"]);
-      if (!pages.has(pageName)) {
-        res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
-        res.end("Dashboard page not found");
-        return;
-      }
+    const dashboardPageSlugs: Record<string, string> = {
+      overview: "overview.html",
+      communities: "communities.html",
+      members: "members.html",
+      roles: "roles.html",
+      commands: "commands.html",
+      "custom-commands": "custom-commands.html",
+      ranking: "ranking.html",
+      welcome: "welcome.html",
+      moderation: "moderation.html",
+      automod: "automod.html",
+      automations: "automations.html",
+      bridge: "bridge.html",
+      audit: "audit.html",
+      system: "system.html",
+      runtime: "runtime.html"
+    };
+
+    const dashboardSlug = url.pathname.startsWith("/dashboard/pages/")
+      ? url.pathname.slice("/dashboard/pages/".length).replace(/\\.html$/, "")
+      : url.pathname.startsWith("/dashboard/")
+        ? url.pathname.slice("/dashboard/".length).replace(/\\/$/, "")
+        : "";
+
+    if (dashboardSlug && dashboardPageSlugs[dashboardSlug]) {
       try {
-        const page = readFileSync(resolve(process.cwd(), "apps/dashboard/pages", pageName), "utf8");
+        const page = readFileSync(resolve(process.cwd(), "apps/dashboard/pages", dashboardPageSlugs[dashboardSlug]!), "utf8");
         res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
         res.end(page);
       } catch {
