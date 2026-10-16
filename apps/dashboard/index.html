@@ -652,7 +652,7 @@ let moderationCases=[],selectedModerationCase=null;
 async function loadModeration(){
  if(!selectedCommunity){document.getElementById('modTable').innerHTML='<tr><td colspan="6" class="empty">Выберите сервер.</td></tr>';return}
  try{
-  const d=await get('/api/moderation?communityId='+encodeURIComponent(selectedCommunity));moderationCases=d.items||[];
+  const d=await get('/api/moderation?communityId='+encodeURIComponent(selectedCommunity));moderationCases=d.items||[];await loadAuditSettings();
   document.getElementById('modTable').innerHTML=moderationCases.map((x,i)=>'<tr class="mod-case-row" tabindex="0" role="button" onclick="openModerationCase('+i+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openModerationCase('+i+')}"><td>'+esc(String(x.id).slice(0,14))+'</td><td>'+esc(x.action)+'</td><td>'+esc(x.platform)+'</td><td class="'+(x.status==='active'?'warn':'')+'">'+esc(x.status)+'</td><td>'+esc(x.reason||'—')+'</td><td>'+esc(x.targetUserId||'—')+'</td></tr>').join('')||'<tr><td colspan="6" class="empty">Кейсов нет.</td></tr>';
  }catch(e){toast(e.message)}
 }
