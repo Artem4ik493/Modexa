@@ -445,7 +445,7 @@ async function sendConfiguredAuditLog(item: QueuedApiAction, succeeded: boolean,
   const settings = database.getRuntimeState<Record<string, unknown>>(`api.audit_settings.${item.communityId}`) ?? {};
   const channelId = typeof settings.channelId === "string" ? settings.channelId.trim() : "";
   const actions = Array.isArray(settings.actions) ? settings.actions as string[] : [];
-  if (settings.enabled !== true || !/^\\d{15,25}$/.test(channelId) || (actions.length > 0 && !actions.includes(sourceCategory))) return;
+  if (settings.enabled !== true || !/^\d{15,25}$/.test(channelId) || (actions.length > 0 && !actions.includes(sourceCategory))) return;
   const discord = adapters.find((candidate) => candidate.platform === "discord");
   if (!discord) return;
   const actionType = typeof item.action.type === "string" ? item.action.type : "unknown";
@@ -459,7 +459,7 @@ async function sendConfiguredAuditLog(item: QueuedApiAction, succeeded: boolean,
     `Time: ${new Date().toISOString()}`
   ];
   try {
-    await discord.sendAction({ type: "message.send", platform: "discord", channelExternalId: channelId, content: lines.join("\\n") });
+    await discord.sendAction({ type: "message.send", platform: "discord", channelExternalId: channelId, content: lines.join("\n") });
   } catch (logError) {
     logger.error("audit.channel_delivery_failed", { communityId: item.communityId, channelId, actionId: item.id }, logError);
   }
