@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080b13">
+<title>Modexa — Журнал событий</title>
+<link rel="icon" href="/assets/logo.ico">
+<link rel="apple-touch-icon" href="/assets/logo.png">
+<link rel="stylesheet" href="/assets/dashboard.css">
+</head>
+<body data-page="audit">
+<div class="layout">
+<aside class="sidebar">
+<a class="brand" href="/dashboard/"><img class="brand-mark" src="/assets/logo.png" alt=""><span><strong>Modexa</strong><small>Community OS</small></span></a>
+<div class="workspace"><small>ТЕКУЩЕЕ СООБЩЕСТВО</small><strong data-community-name>Выберите сообщество в API</strong></div>
+<nav><div class="nav-label">Главное</div><a class="nav " href="/dashboard/"><span class="ico">◈</span>Обзор</a><a class="nav " href="/dashboard/communities.html"><span class="ico">▦</span>Сообщества</a><div class="nav-label">Управление</div><a class="nav " href="/dashboard/members.html"><span class="ico">♙</span>Участники</a><a class="nav " href="/dashboard/roles.html"><span class="ico">♜</span>Роли и права</a><a class="nav " href="/dashboard/commands.html"><span class="ico">⌘</span>Команды</a><a class="nav " href="/dashboard/custom-commands.html"><span class="ico">⌘</span>Свои команды</a><a class="nav " href="/dashboard/ranking.html"><span class="ico">↗</span>Рейтинг</a><a class="nav " href="/dashboard/welcome.html"><span class="ico">✦</span>Приветствия</a><div class="nav-label">Безопасность и связь</div><a class="nav " href="/dashboard/moderation.html"><span class="ico">◆</span>Модерация</a><a class="nav " href="/dashboard/automod.html"><span class="ico">⛨</span>AutoMod</a><a class="nav " href="/dashboard/automations.html"><span class="ico">↯</span>Автоматизации</a><a class="nav " href="/dashboard/bridge.html"><span class="ico">↔</span>Bridge</a><a class="nav active" href="/dashboard/audit.html"><span class="ico">≡</span>Журнал событий</a><div class="nav-label">Администрирование</div><a class="nav " href="/dashboard/system.html"><span class="ico">⚙</span>Система</a><a class="nav " href="/dashboard/runtime.html"><span class="ico">●</span>Bot Runtime</a></nav>
+<div class="sidebar-foot">Modexa · Control Center<br><span class="auth-state">API-интеграция подключается отдельно</span></div>
+</aside>
+<main class="main">
+<header class="topbar"><div><div class="eyebrow">Control Center / Безопасность и связь</div><h1 class="page-title">Журнал событий</h1><div class="page-desc">Фильтрация действий модерации, изменений настроек и системных событий.</div></div><div class="top-actions"><select class="select" aria-label="Сообщество" data-api-field="selectedCommunity"><option value="">Выберите сообщество…</option></select><button class="btn" data-action="refresh" title="Обновить">↻</button></div></header>
+<div class="content"><article class="card"><div class="card-head"><h2>Фильтры журнала</h2><button class="btn" data-action="refresh">↻ Обновить</button></div><div class="form-grid"><div class="field"><label>Тип события</label><select class="select" data-api-field="auditType"><option value="all">Все события</option><option value="moderation">Модерация</option><option value="membership">Участники</option><option value="settings">Настройки</option><option value="system">Система</option></select></div><div class="field"><label>Поиск</label><input class="input" data-api-field="auditSearch" placeholder="Пользователь, действие или ID"></div><div class="field"><label>С даты</label><input class="input" type="date" data-api-field="auditFrom"></div><div class="field"><label>По дату</label><input class="input" type="date" data-api-field="auditTo"></div></div></article><article class="card"><div class="card-head"><h2>События</h2><span class="pill">Audit log</span></div><div class="table-wrap"><table><thead><tr><th>Время</th><th>Уровень</th><th>Событие</th><th>Актор</th><th>Сообщество</th><th>Результат</th></tr></thead><tbody><tr><td colspan="6" class="empty">События появятся после подключения API.</td></tr></tbody></table></div></article></div>
+</main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/assets/dashboard.js" defer></script>
+</body>
+</html>
