@@ -1344,7 +1344,6 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       url.pathname === "/api/runtime" ||
       url.pathname === "/api/runtime/logs" ||
       url.pathname === "/api/backup" ||
-      url.pathname === "/api/bridge" ||
       url.pathname === "/api/telegram/groups/pending" ||
       url.pathname === "/api/actions" ||
       url.pathname.startsWith("/api/actions/");
@@ -1676,20 +1675,42 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
     }
 
     if (url.pathname === "/api/bridge" && req.method === "GET") {
-      json(res, 200, {
-        endpoints: database.getBridgeEndpoints(),
-        links: database.getBridgeLinks()
-      });
+      const requestedCommunityId = url.searchParams.get("communityId") ?? "";
+      if (!authorized(req)) {
+        if (!requestedCommunityId || !(await canManageDiscordCommunity(req, requestedCommunityId))) {
+          json(res, 403, { error: "bridge_community_access_forbidden" }); return;
+        }
+        const endpoints = database.getBridgeEndpoints().filter((item) => item.communityId === requestedCommunityId);
+        const endpointIds = new Set(endpoints.map((item) => item.id));
+        const links = database.getBridgeLinks().filter((item) => endpointIds.has(item.sourceEndpointId) && endpointIds.has(item.targetEndpointId));
+        json(res, 200, { endpoints, links, communityId: requestedCommunityId, scope: "community" }); return;
+      }
+      if (requestedCommunityId) {
+        const endpoints = database.getBridgeEndpoints().filter((item) => item.communityId === requestedCommunityId);
+        const endpointIds = new Set(endpoints.map((item) => item.id));
+        json(res, 200, { endpoints, links: database.getBridgeLinks().filter((item) => endpointIds.has(item.sourceEndpointId) && endpointIds.has(item.targetEndpointId)), communityId: requestedCommunityId, scope: "community" }); return;
+      }
+      json(res, 200, { endpoints: database.getBridgeEndpoints(), links: database.getBridgeLinks(), scope: "owner" });
       return;
+    }
+
+    function bridgeCommunityAllowed(communityId: string): boolean {
+      return Boolean(communityId && database.getCommunitiesSnapshot().some((item) => item.id === communityId));
     }
 
     if (url.pathname === "/api/bridge/endpoints" && req.method === "POST") {
       const body = await readJsonBody(req);
+      const communityId = typeof body.communityId === "string" ? body.communityId : "";
+      if (!authorized(req) && (!bridgeCommunityAllowed(communityId) || !(await canManageDiscordCommunity(req, communityId)))) {
+        json(res, 403, { error: "bridge_community_access_forbidden" }); return;
+      }
       const required = ["platform", "communityExternalId", "communityName", "channelExternalId", "channelName"];
       if (required.some((key) => typeof body[key] !== "string" || !(body[key] as string).trim()) ||
           !["telegram", "discord"].includes(String(body.platform))) {
-        json(res, 400, { error: "invalid_bridge_endpoint" });
-        return;
+        json(res, 400, { error: "invalid_bridge_endpoint" }); return;
+      }
+      if (!authorized(req) && (body.platform !== "discord" || !database.getCommunityIdentitiesSnapshot(communityId).some((identity) => identity.platform === "discord" && identity.externalId === body.communityExternalId))) {
+        json(res, 403, { error: "bridge_endpoint_outside_community" }); return;
       }
       const endpoint = {
         id: typeof body.id === "string" && body.id.trim() ? body.id : `endpoint-${randomUUID()}`,
@@ -1698,43 +1719,45 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
         communityName: (body.communityName as string).trim(),
         channelExternalId: (body.channelExternalId as string).trim(),
         channelName: (body.channelName as string).trim(),
-        ...(typeof body.communityId === "string" ? { communityId: body.communityId } : {}),
+        ...(communityId ? { communityId } : {}),
         ...(typeof body.channelId === "string" ? { channelId: body.channelId } : {}),
         updatedAt: new Date()
       };
       database.upsertBridgeEndpoint(endpoint);
-      json(res, 201, { item: endpoint });
-      return;
+      json(res, 201, { item: endpoint }); return;
     }
 
-    const bridgeEndpointMatch = url.pathname.match(/^\/api\/bridge\/endpoints\/([^/]+)$/);
+    const bridgeEndpointMatch = url.pathname.match(/^\\/api\\/bridge\\/endpoints\\/([^/]+)$/);
     if (bridgeEndpointMatch && ["PUT", "DELETE"].includes(req.method ?? "")) {
       const id = decodeURIComponent(bridgeEndpointMatch[1]!);
       const existing = database.getBridgeEndpoints().find((item) => item.id === id);
       if (!existing) { json(res, 404, { error: "bridge_endpoint_not_found" }); return; }
+      const body = req.method === "PUT" ? await readJsonBody(req) : {};
+      const communityId = typeof body.communityId === "string" ? body.communityId : (existing.communityId ?? "");
+      if (!authorized(req) && (!communityId || existing.communityId !== communityId || !(await canManageDiscordCommunity(req, communityId)))) {
+        json(res, 403, { error: "bridge_community_access_forbidden" }); return;
+      }
       if (req.method === "DELETE") {
         database.deleteBridgeEndpoint(id);
         json(res, 200, { deleted: true, id }); return;
       }
-      const body = await readJsonBody(req);
       const platform = body.platform ?? existing.platform;
       const communityExternalId = body.communityExternalId ?? existing.communityExternalId;
       const communityName = body.communityName ?? existing.communityName;
       const channelExternalId = body.channelExternalId ?? existing.channelExternalId;
       const channelName = body.channelName ?? existing.channelName;
-      if (!["telegram", "discord"].includes(String(platform)) ||
+      if (!["discord", "telegram"].includes(String(platform)) ||
           [communityExternalId, communityName, channelExternalId, channelName].some((value) => typeof value !== "string" || !value.trim())) {
         json(res, 400, { error: "invalid_bridge_endpoint" }); return;
       }
+      if (!authorized(req) && (platform !== "discord" || !database.getCommunityIdentitiesSnapshot(communityId).some((identity) => identity.platform === "discord" && identity.externalId === String(communityExternalId)))) {
+        json(res, 403, { error: "bridge_endpoint_outside_community" }); return;
+      }
       const updated = {
-        ...existing,
-        platform: platform as "telegram" | "discord",
-        communityExternalId: String(communityExternalId).trim(),
-        communityName: String(communityName).trim(),
-        channelExternalId: String(channelExternalId).trim(),
-        channelName: String(channelName).trim(),
-        ...(typeof body.communityId === "string" ? { communityId: body.communityId } : {}),
-        ...(typeof body.channelId === "string" ? { channelId: body.channelId } : {}),
+        ...existing, platform: platform as "telegram" | "discord",
+        communityExternalId: String(communityExternalId).trim(), communityName: String(communityName).trim(),
+        channelExternalId: String(channelExternalId).trim(), channelName: String(channelName).trim(),
+        communityId, ...(typeof body.channelId === "string" ? { channelId: body.channelId } : {}),
         updatedAt: new Date()
       };
       database.upsertBridgeEndpoint(updated);
@@ -1745,36 +1768,43 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       const body = await readJsonBody(req);
       const sourceEndpointId = typeof body.sourceEndpointId === "string" ? body.sourceEndpointId : "";
       const targetEndpointId = typeof body.targetEndpointId === "string" ? body.targetEndpointId : "";
+      const communityId = typeof body.communityId === "string" ? body.communityId : "";
       const endpoints = database.getBridgeEndpoints();
-      if (!sourceEndpointId || !targetEndpointId || sourceEndpointId === targetEndpointId ||
-          !endpoints.some((item) => item.id === sourceEndpointId) ||
-          !endpoints.some((item) => item.id === targetEndpointId)) {
-        json(res, 400, { error: "invalid_bridge_link_endpoints" });
-        return;
+      const source = endpoints.find((item) => item.id === sourceEndpointId);
+      const target = endpoints.find((item) => item.id === targetEndpointId);
+      if (!sourceEndpointId || !targetEndpointId || sourceEndpointId === targetEndpointId || !source || !target) {
+        json(res, 400, { error: "invalid_bridge_link_endpoints" }); return;
+      }
+      if (!authorized(req) && (!bridgeCommunityAllowed(communityId) || !(await canManageDiscordCommunity(req, communityId)) || source.communityId !== communityId || target.communityId !== communityId)) {
+        json(res, 403, { error: "bridge_community_access_forbidden" }); return;
       }
       const existing = database.getBridgeLinks().find((item) =>
-        item.sourceEndpointId === sourceEndpointId && item.targetEndpointId === targetEndpointId
+        (item.sourceEndpointId === sourceEndpointId && item.targetEndpointId === targetEndpointId) ||
+        (item.sourceEndpointId === targetEndpointId && item.targetEndpointId === sourceEndpointId)
       );
       if (existing) { json(res, 200, { item: existing, existing: true }); return; }
       const now = new Date();
       const link = { id: `bridge-${randomUUID()}`, sourceEndpointId, targetEndpointId, createdAt: now, updatedAt: now };
-      try {
-        database.upsertBridgeLink(link);
-        json(res, 201, { item: link });
-      } catch {
-        json(res, 400, { error: "bridge_link_create_failed" });
-      }
+      try { database.upsertBridgeLink(link); json(res, 201, { item: link }); }
+      catch { json(res, 400, { error: "bridge_link_create_failed" }); }
       return;
     }
 
-    const bridgeLinkMatch = url.pathname.match(/^\/api\/bridge\/links\/([^/]+)$/);
+    const bridgeLinkMatch = url.pathname.match(/^\\/api\\/bridge\\/links\\/([^/]+)$/);
     if (bridgeLinkMatch && req.method === "DELETE") {
       const id = decodeURIComponent(bridgeLinkMatch[1]!);
-      const exists = database.getBridgeLinks().some((item) => item.id === id);
-      if (!exists) { json(res, 404, { error: "bridge_link_not_found" }); return; }
+      const link = database.getBridgeLinks().find((item) => item.id === id);
+      if (!link) { json(res, 404, { error: "bridge_link_not_found" }); return; }
+      if (!authorized(req)) {
+        const communityId = url.searchParams.get("communityId") ?? "";
+        const endpoints = database.getBridgeEndpoints();
+        if (!communityId || !(await canManageDiscordCommunity(req, communityId)) ||
+            ![link.sourceEndpointId, link.targetEndpointId].every((endpointId) => endpoints.some((item) => item.id === endpointId && item.communityId === communityId))) {
+          json(res, 403, { error: "bridge_community_access_forbidden" }); return;
+        }
+      }
       database.deleteBridgeLink(id);
-      json(res, 200, { deleted: true, id });
-      return;
+      json(res, 200, { deleted: true, id }); return;
     }
 
     const automodRulesMatch = url.pathname.match(/^\/api\/communities\/([^/]+)\/automod\/rules$/);
