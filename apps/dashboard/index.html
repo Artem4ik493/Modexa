@@ -676,9 +676,21 @@ async function reapplySelectedModerationCase(){
  const x=selectedModerationCase;
  if(!confirm('Повторно назначить действие '+x.action+' для пользователя '+x.userExternalId+'?'))return;
  try{
-  await post('/api/moderation/cases',{action:x.action,platform:x.platform,actorUserId:x.actorUserId,targetUserId:x.targetUserId,communityId:selectedCommunity,communityExternalId:x.communityExternalId,userExternalId:x.userExternalId,reason:document.getElementById('modReapplyReason')?.value.trim()||x.reason||'Повторно назначено из панели',...(x.durationSeconds?{durationSeconds:x.durationSeconds}:{})});
-  toast('Действие назначено повторно');await loadModeration();await loadAudit();
+  const result=await post('/api/moderation/cases',{action:x.action,platform:x.platform,actorUserId:discordUser?.id||x.actorUserId,targetUserId:x.targetUserId,communityId:selectedCommunity,communityExternalId:x.communityExternalId,userExternalId:x.userExternalId,reason:document.getElementById('modReapplyReason')?.value.trim()||x.reason||'Повторно назначено из панели',...(x.durationSeconds?{durationSeconds:x.durationSeconds}:{})});
+  toast('Наказание поставлено в очередь. Статус обновится после ответа бота.');await loadModeration();await loadAudit();
+  if(result?.execution?.actionId)void waitForModerationAction(result.execution.actionId);
  }catch(e){toast('Не удалось повторить действие: '+e.message)}
+}
+async function waitForModerationAction(actionId){
+ for(let attempt=0;attempt<24;attempt++){
+  await new Promise(resolve=>setTimeout(resolve,1500));
+  try{
+   const result=await get('/api/actions/'+encodeURIComponent(actionId)),item=result.item;
+   if(item?.status==='succeeded'){toast('Наказание применено успешно');await loadModeration();await loadAudit();return}
+   if(item?.status==='failed'){toast('Бот не смог применить наказание: '+(item.error||'ошибка адаптера'));await loadModeration();await loadAudit();return}
+  }catch(e){/* transient polling failure; the action remains visible in the API queue */}
+ }
+ toast('Действие всё ещё ожидает выполнения. Проверьте, запущен ли Modexa Runner.');
 }
 function exportCommunityLogs(){
  if(!selectedCommunity)return toast('Сначала выберите сообщество');
