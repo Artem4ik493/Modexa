@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080b13">
+<title>Modexa — Bot Runtime</title>
+<link rel="icon" href="/assets/logo.ico">
+<link rel="apple-touch-icon" href="/assets/logo.png">
+<link rel="stylesheet" href="/assets/dashboard.css">
+</head>
+<body data-page="runtime">
+<div class="layout">
+<aside class="sidebar">
+<a class="brand" href="/dashboard/"><img class="brand-mark" src="/assets/logo.png" alt=""><span><strong>Modexa</strong><small>Community OS</small></span></a>
+<div class="workspace"><small>ТЕКУЩЕЕ СООБЩЕСТВО</small><strong data-community-name>Выберите сообщество в API</strong></div>
+<nav><div class="nav-label">Главное</div><a class="nav " href="/dashboard/"><span class="ico">◈</span>Обзор</a><a class="nav " href="/dashboard/communities.html"><span class="ico">▦</span>Сообщества</a><div class="nav-label">Управление</div><a class="nav " href="/dashboard/members.html"><span class="ico">♙</span>Участники</a><a class="nav " href="/dashboard/roles.html"><span class="ico">♜</span>Роли и права</a><a class="nav " href="/dashboard/commands.html"><span class="ico">⌘</span>Команды</a><a class="nav " href="/dashboard/custom-commands.html"><span class="ico">⌘</span>Свои команды</a><a class="nav " href="/dashboard/ranking.html"><span class="ico">↗</span>Рейтинг</a><a class="nav " href="/dashboard/welcome.html"><span class="ico">✦</span>Приветствия</a><div class="nav-label">Безопасность и связь</div><a class="nav " href="/dashboard/moderation.html"><span class="ico">◆</span>Модерация</a><a class="nav " href="/dashboard/automod.html"><span class="ico">⛨</span>AutoMod</a><a class="nav " href="/dashboard/automations.html"><span class="ico">↯</span>Автоматизации</a><a class="nav " href="/dashboard/bridge.html"><span class="ico">↔</span>Bridge</a><a class="nav " href="/dashboard/audit.html"><span class="ico">≡</span>Журнал событий</a><div class="nav-label">Администрирование</div><a class="nav " href="/dashboard/system.html"><span class="ico">⚙</span>Система</a><a class="nav active" href="/dashboard/runtime.html"><span class="ico">●</span>Bot Runtime</a></nav>
+<div class="sidebar-foot">Modexa · Control Center<br><span class="auth-state">API-интеграция подключается отдельно</span></div>
+</aside>
+<main class="main">
+<header class="topbar"><div><div class="eyebrow">Control Center / Администрирование</div><h1 class="page-title">Bot Runtime</h1><div class="page-desc">Состояние процессов, управление запуском и журнал выполнения.</div></div><div class="top-actions"><select class="select" aria-label="Сообщество" data-api-field="selectedCommunity"><option value="">Выберите сообщество…</option></select><button class="btn" data-action="refresh" title="Обновить">↻</button></div></header>
+<div class="content"><article class="card"><div class="card-head"><h2>Состояние Runner</h2><span class="pill">Runtime</span></div><div class="grid three"><div class="metric"><div class="metric-label">DISCORD</div><div class="metric-value">—</div><div class="hint">Статус процесса</div></div><div class="metric"><div class="metric-label">TELEGRAM</div><div class="metric-value">—</div><div class="hint">Статус процесса</div></div><div class="metric"><div class="metric-label">QUEUE</div><div class="metric-value">—</div><div class="hint">Ожидающие действия</div></div></div><div class="page-actions"><button class="btn" data-action="refresh">↻ Обновить</button><button class="btn primary" data-action="save">Применить настройки</button></div></article><article class="card"><div class="card-head"><h2>Политика запуска</h2></div><div class="form-grid"><div class="field"><label>Режим</label><select class="select" data-api-field="runtimeMode"><option value="managed">Управляемый</option><option value="manual">Ручной</option></select></div><div class="field"><label>Повторные попытки</label><input class="input" type="number" min="0" max="20" data-api-field="runtimeRetries" value="3"></div><div class="field"><label>Задержка повтора (сек.)</label><input class="input" type="number" min="1" max="3600" data-api-field="runtimeRetryDelay" value="30"></div></div><div class="setting"><div><label>Автоматический перезапуск</label><div class="muted small">Перезапуск после сбоя процесса</div></div><input class="switch" type="checkbox" data-api-field="runtimeAutoRestart" checked></div></article><article class="card"><div class="card-head"><h2>Журнал Runner</h2><button class="btn" data-action="refresh">↻ Обновить</button></div><div class="notice">Логи будут загружаться из защищённого API endpoint.</div></article></div>
+</main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/assets/dashboard.js" defer></script>
+</body>
+</html>
