@@ -204,3 +204,7 @@ html[data-theme="light"] .login-card p{color:#68718a}
 html[data-theme="light"] .telegram-link-help,html[data-theme="light"] .notice{background:#f7f8fd;color:#46516d;border-color:var(--line)}
 @media(max-width:760px){body>.app{z-index:1}.top-actions #themeToggle,.top-actions #languageToggle{flex:1}}
 @media(prefers-reduced-motion:reduce){.mx-ready .nav.active:after{display:none!important}.mx-motion-ready .page.active .card{animation:none!important}}
+
+/* Keep authentication and notifications as overlays above the animated background */
+body>.login{position:fixed;inset:0;z-index:100}
+body>.toast{position:fixed;right:18px;bottom:18px;z-index:150}
