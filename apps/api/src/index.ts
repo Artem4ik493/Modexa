@@ -1278,14 +1278,8 @@ const server = createServer((req, res) => {
       );
 
       const communities = database.getCommunityIdentitiesSnapshot();
-      const botGuildIds = new Set(
-        communities
-          .filter((item) => item.platform === "discord")
-          .map((item) => item.externalId)
-      );
-
+      const botToken = process.env.DISCORD_BOT_TOKEN ?? "";
       const manageableGuilds = guilds.flatMap((guild) => {
-        // Discord may return permissions_new instead of the legacy permissions field.
         const rawPermissions = guild.permissions_new ?? guild.permissions ?? "0";
         let permissions = 0n;
         try { permissions = BigInt(rawPermissions); } catch {}
@@ -1295,23 +1289,24 @@ const server = createServer((req, res) => {
         return canManageGuild ? [{ guild, canManageGuild }] : [];
       });
 
-      json(res, 200, {
-        items: manageableGuilds.map(({ guild, canManageGuild }) => {
-            const botInstalled = botGuildIds.has(guild.id);
-            return {
-              id: guild.id,
-              name: guild.name,
-              icon: guild.icon,
-              owner: guild.owner,
-              botInstalled,
-              canManageBot: botInstalled && canManageGuild,
-              canInviteBot: !botInstalled && canManageGuild,
-              communityId: communities.find(
-                (item) => item.platform === "discord" && item.externalId === guild.id
-              )?.communityId
-            };
-          })
-      });
+      const items = await Promise.all(manageableGuilds.map(async ({ guild, canManageGuild }) => {
+        let botInstalled = false;
+        if (botToken) {
+          try {
+            const response = await fetch("https://discord.com/api/v10/guilds/" + encodeURIComponent(guild.id), {
+              headers: { Authorization: "Bot " + botToken }
+            });
+            botInstalled = response.ok;
+          } catch { botInstalled = false; }
+        }
+        return {
+          id: guild.id, name: guild.name, icon: guild.icon, owner: guild.owner,
+          botInstalled, canManageBot: botInstalled && canManageGuild,
+          canInviteBot: !botInstalled && canManageGuild,
+          communityId: communities.find((item) => item.platform === "discord" && item.externalId === guild.id)?.communityId
+        };
+      }));
+      json(res, 200, { items });
       return;
     }
 
