@@ -798,22 +798,27 @@ async function unlinkTelegramGroup(chatId){
 
 let bridgeDraft=[];
 async function loadBridge(){
- if(!authKey){
-  document.getElementById('bridgeEndpoints').innerHTML='<div class="empty">Управление мостами доступно владельцу Modexa. Вы можете привязать Telegram-группу через код ниже.</div>';
-  document.getElementById('bridgeList').innerHTML='<div class="empty">Владелец Modexa может управлять мостами после подключения чатов.</div>';
-  document.getElementById('bridgeEndpointChoices').innerHTML='<div class="empty">Для создания мостов войдите с правами владельца.</div>';
+ const selected=selectedModexaCommunity();
+ const communityId=selected?.communityId||selected?.id||'';
+ const canManage=authKey||Boolean(selected&&selected.canManageBot===true&&communityId);
+ if(!canManage){
+  document.getElementById('bridgeEndpoints').innerHTML='<div class="empty">Выберите Discord-сервер, которым вы управляете. Мосты доступны администраторам подключённого сервера.</div>';
+  document.getElementById('bridgeList').innerHTML='<div class="empty">После выбора сервера здесь появятся активные связи.</div>';
+  document.getElementById('bridgeEndpointChoices').innerHTML='<div class="empty">Сначала выберите управляемый Discord-сервер и подключите Telegram-группу через код.</div>';
+  document.getElementById('bridgeEndpoints').dataset.communityId='';
   loadPendingTelegramGroups();return;
  }
  try{
-  bridgeCache=await get('/api/bridge');
+  bridgeCache=await get('/api/bridge'+(!authKey?'?communityId='+encodeURIComponent(communityId):''));
   const endpoints=bridgeCache.endpoints||[],links=bridgeCache.links||[];
-  const selected=new Set(bridgeDraft);
-  document.getElementById('bridgeEndpointChoices').innerHTML=endpoints.map(x=>'<label class="bridge-endpoint-option"><input type="checkbox" value="'+esc(x.id)+'" '+(selected.has(x.id)?'checked':'')+' onchange="updateBridgeDraft(this)"><span class="bridge-endpoint-icon">'+(x.platform==='telegram'?'TG':'DC')+'</span><span class="grow"><b>'+esc(x.channelName)+'</b><span class="meta">'+esc(x.platform.toUpperCase())+' · '+esc(x.communityName)+'</span></span></label>').join('')||'<div class="empty">Чаты пока не подключены. Сначала привяжите Telegram-группу или добавьте Discord endpoint.</div>';
-  document.getElementById('bridgeEndpoints').innerHTML=endpoints.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.platform==='telegram'?'Telegram':'Discord')+' · '+esc(x.channelName)+'</div><div class="meta">'+esc(x.communityName)+' · ID '+esc(x.channelExternalId)+'</div></div>'+(authKey?'<button class="btn" onclick="editBridgeEndpoint(\''+esc(x.id)+'\')">Изменить</button><button class="btn danger" onclick="deleteBridgeEndpoint(\''+esc(x.id)+'\')">Удалить</button>':'')+'</div>').join('')||'<div class="empty">Нет подключённых чатов.</div>';
+  document.getElementById('bridgeEndpoints').dataset.communityId=communityId;
+  const selectedIds=new Set(bridgeDraft);
+  document.getElementById('bridgeEndpointChoices').innerHTML=endpoints.map(x=>'<label class="bridge-endpoint-option"><input type="checkbox" value="'+esc(x.id)+'" '+(selectedIds.has(x.id)?'checked':'')+' onchange="updateBridgeDraft(this)"><span class="bridge-endpoint-icon">'+(x.platform==='telegram'?'TG':'DC')+'</span><span class="grow"><b>'+esc(x.channelName)+'</b><span class="meta">'+esc(x.platform.toUpperCase())+' · '+esc(x.communityName)+'</span></span></label>').join('')||'<div class="empty">Чаты пока не подключены. Сначала подключите бота Discord и привяжите Telegram-группу.</div>';
+  document.getElementById('bridgeEndpoints').innerHTML=endpoints.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.platform==='telegram'?'Telegram':'Discord')+' · '+esc(x.channelName)+'</div><div class="meta">'+esc(x.communityName)+' · ID '+esc(x.channelExternalId)+'</div></div>'+(authKey?'<button class="btn" onclick="editBridgeEndpoint(\''+esc(x.id)+'\')">Изменить</button><button class="btn danger" onclick="deleteBridgeEndpoint(\''+esc(x.id)+'\')">Удалить</button>':'<span class="pill">Подключён</span>')+'</div>').join('')||'<div class="empty">Нет подключённых чатов. Убедитесь, что бот добавлен на сервер и Telegram-группа привязана.</div>';
   const validLinks=links.filter(x=>endpoints.some(e=>e.id===x.sourceEndpointId)&&endpoints.some(e=>e.id===x.targetEndpointId));
-  document.getElementById('bridgeList').innerHTML=validLinks.map(x=>{const a=endpoints.find(e=>e.id===x.sourceEndpointId),b=endpoints.find(e=>e.id===x.targetEndpointId);return '<div class="row"><div class="grow"><div class="name">'+esc(a.channelName)+' ↔ '+esc(b.channelName)+'</div><div class="meta">'+esc(a.platform.toUpperCase()+' · '+a.communityName)+' ↔ '+esc(b.platform.toUpperCase()+' · '+b.communityName)+'</div></div><button class="btn danger" onclick="deleteBridgeLink(\''+esc(x.id)+'\')">Удалить связь</button></div>'}).join('')||'<div class="empty">Мостов пока нет. Выберите чаты выше и создайте первый мост.</div>';
+  document.getElementById('bridgeList').innerHTML=validLinks.map(x=>{const a=endpoints.find(e=>e.id===x.sourceEndpointId),b=endpoints.find(e=>e.id===x.targetEndpointId);return '<div class="row"><div class="grow"><div class="name">'+esc(a.channelName)+' ↔ '+esc(b.channelName)+'</div><div class="meta">'+esc(a.platform.toUpperCase()+' · '+a.communityName)+' ↔ '+esc(b.platform.toUpperCase()+' · '+b.communityName)+'</div></div><button class="btn danger" onclick="deleteBridgeLink(\''+esc(x.id)+'\')">Удалить связь</button></div>'}).join('')||'<div class="empty">Связей пока нет. Выберите минимум два подключённых чата и создайте мост.</div>';
   await loadPendingTelegramGroups();
- }catch(e){toast(e.message)}
+ }catch(e){toast(e.message||'Не удалось загрузить мосты')}
 }
 function updateBridgeDraft(input){if(input.checked){if(!bridgeDraft.includes(input.value))bridgeDraft.push(input.value)}else bridgeDraft=bridgeDraft.filter(id=>id!==input.value)}
 function prepareBridgeCreation(){
@@ -831,6 +836,7 @@ function prepareBridgeCreation(){
 function updateBridgeConfirmState(){const checks=[...document.querySelectorAll('.bridge-confirm-check')],checked=checks.filter(x=>x.checked).length;document.getElementById('bridgeConfirmCount').textContent=checked+'/'+checks.length;document.getElementById('bridgeConfirmCreate').disabled=checks.length<2||checked!==checks.length}
 function cancelBridgeCreation(){bridgeDraft=[];document.getElementById('bridgeConfirmCard').hidden=true;loadBridge()}
 async function confirmAndCreateBridge(){
+ const community=selectedModexaCommunity();if(!authKey&&(!community||community.canManageBot!==true))return toast('Выберите Discord-сервер, которым вы управляете');
  const ids=[...new Set(bridgeDraft)],checks=[...document.querySelectorAll('.bridge-confirm-check')];
  if(ids.length<2||checks.length!==ids.length||checks.some(x=>!x.checked))return toast('Подтвердите каждую выбранную сторону');
  const endpoints=ids.map(id=>bridgeCache.endpoints.find(x=>x.id===id)).filter(Boolean);
@@ -838,7 +844,7 @@ async function confirmAndCreateBridge(){
  if(!confirm('Создать мост между '+endpoints.length+' чатами? Сообщения будут пересылаться между всеми выбранными местами.'))return;
  try{
   const pairs=[];for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++)pairs.push([ids[i],ids[j]]);
-  for(const [sourceEndpointId,targetEndpointId] of pairs)await post('/api/bridge/links',{sourceEndpointId,targetEndpointId});
+  for(const [sourceEndpointId,targetEndpointId] of pairs)await post('/api/bridge/links',{sourceEndpointId,targetEndpointId,...(!authKey?{communityId:selectedModexaCommunity()?.communityId||selectedModexaCommunity()?.id}: {})});
   toast('Мост создан: '+endpoints.length+' чата связаны');bridgeDraft=[];document.getElementById('bridgeConfirmCard').hidden=true;await loadBridge();
  }catch(e){toast('Не удалось создать все связи. Проверьте список мостов и повторите: '+e.message);await loadBridge()}
 }
@@ -849,7 +855,7 @@ async function saveBridgeEndpoint(existing){
 async function editBridgeEndpoint(id){const x=bridgeCache.endpoints.find(e=>e.id===id);if(!x)return;document.getElementById('bridgePlatform').value=x.platform;document.getElementById('bridgeCommunityName').value=x.communityName;document.getElementById('bridgeCommunityExternalId').value=x.communityExternalId;document.getElementById('bridgeChannelName').value=x.channelName;document.getElementById('bridgeChannelExternalId').value=x.channelExternalId;const save=document.querySelector('#bridge .btn.primary');save.textContent='Сохранить endpoint';save.onclick=()=>{save.onclick=()=>saveBridgeEndpoint();save.textContent='Создать endpoint';saveBridgeEndpoint(x)};document.getElementById('bridgePlatform').scrollIntoView({behavior:'smooth',block:'center'})}
 async function deleteBridgeEndpoint(id){if(!confirm('Удалить endpoint? Связанные мосты могут быть удалены.'))return;try{await request('/api/bridge/endpoints/'+encodeURIComponent(id),{method:'DELETE'});toast('Endpoint удалён');await loadBridge()}catch(e){toast(e.message)}}
 async function createBridgeLink(){const sourceEndpointId=document.getElementById('bridgeSource').value,targetEndpointId=document.getElementById('bridgeTarget').value;if(!sourceEndpointId||!targetEndpointId)return toast('Выберите оба endpoint');try{await post('/api/bridge/links',{sourceEndpointId,targetEndpointId});toast('Связь создана');await loadBridge()}catch(e){toast(e.message)}}
-async function deleteBridgeLink(id){if(!confirm('Удалить связь Bridge?'))return;try{await request('/api/bridge/links/'+encodeURIComponent(id),{method:'DELETE'});toast('Связь удалена');await loadBridge()}catch(e){toast(e.message)}}
+async function deleteBridgeLink(id){if(!confirm('Удалить связь Bridge?'))return;try{const communityId=selectedModexaCommunity()?.communityId||selectedModexaCommunity()?.id||'';await request('/api/bridge/links/'+encodeURIComponent(id)+(!authKey?'?communityId='+encodeURIComponent(communityId):''),{method:'DELETE'});toast('Связь удалена');await loadBridge()}catch(e){toast(e.message)}}
 
 async function loadSystem(){try{const [s,c,h]=await Promise.all([get('/api/system'),get('/api/config'),get('/health')]);maintenance=s.maintenanceMode;document.getElementById('maintenanceSwitch').classList.toggle('on',maintenance);document.getElementById('systemHealth').textContent=h.status;document.getElementById('systemOAuth').textContent=c.oauth?.discord?'configured':'not configured'}catch(e){toast(e.message)}}
 async function toggleMaintenance(){try{maintenance=!maintenance;await post('/api/system',{maintenanceMode:maintenance});document.getElementById('maintenanceSwitch').classList.toggle('on',maintenance);toast('Maintenance mode '+(maintenance?'включён':'выключен'));loadAll()}catch(e){maintenance=!maintenance;toast(e.message)}}
