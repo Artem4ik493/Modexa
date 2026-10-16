@@ -441,7 +441,15 @@ nav{min-height:0;padding-bottom:18px}
 </section>
 
 <section class="page" id="moderation">
-  <div class="card"><div class="section"><h2>Moderation cases</h2><span class="pill">SQLite</span></div><div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Действие</th><th>Платформа</th><th>Статус</th><th>Причина</th><th>Target</th></tr></thead><tbody id="modTable"><tr><td colspan="6" class="empty">Выберите сервер.</td></tr></tbody></table></div></div>
+  <div class="card">
+    <div class="section"><div><h2>Moderation cases</h2><div class="meta">Нажмите на кейс, чтобы посмотреть детали и доступные действия.</div></div><div class="top-actions"><button class="btn" onclick="exportCommunityLogs()">Выгрузить логи (.txt)</button><span class="pill">SQLite</span></div></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Действие</th><th>Платформа</th><th>Статус</th><th>Причина</th><th>Target</th></tr></thead><tbody id="modTable"><tr><td colspan="6" class="empty">Выберите сервер.</td></tr></tbody></table></div>
+  </div>
+  <div class="card" id="moderationCaseDetails" hidden style="margin-top:14px">
+    <div class="section"><div><h2 id="modDetailTitle">Кейс модерации</h2><div class="meta" id="modDetailSubtitle"></div></div><button class="btn" onclick="closeModerationCase()">Закрыть</button></div>
+    <div id="modDetailBody" class="form"></div>
+    <div class="top-actions" style="margin-top:14px"><button class="btn danger" id="modRevokeButton" onclick="revokeSelectedModerationCase()">Отозвать действие</button><button class="btn primary" onclick="reapplySelectedModerationCase()">Назначить повторно</button></div>
+  </div>
 </section>
 
 <section class="page" id="automations">
@@ -611,7 +619,42 @@ async function setMode(mode){if(!selectedCommunity)return toast('Сначала 
 async function loadCommands(){if(!selectedCommunity){document.getElementById('commandList').innerHTML='<div class="empty">Выберите сервер сверху.</div>';return}try{const d=await get('/api/commands?communityId='+encodeURIComponent(selectedCommunity));document.getElementById('commandCount').textContent=d.items.length+' команд';const groups={basic:'Основные',members:'Участники',moderation:'Модерация',settings:'Настройки',other:'Другое'};const names=['help','menu','info','server','user','stats','account','members','member','role','warn','mute','kick','ban','unmute','unban','warns','warnings','mutes','clear','command','settings','system'];const html=d.items.map(c=>{const cat=names.includes(c.name)?(c.name==='warn'||c.name==='mute'||c.name==='kick'||c.name==='ban'||c.name==='unmute'||c.name==='unban'||c.name==='warns'||c.name==='warnings'||c.name==='mutes'?'moderation':c.name==='member'||c.name==='members'||c.name==='user'||c.name==='role'?'members':c.name==='settings'||c.name==='command'||c.name==='system'?'settings':'basic'):'other';return '<div class="command"><div class="grow"><div class="command-name">/'+esc(c.name)+'</div><div class="command-desc">'+esc(c.descriptions?.ru||c.descriptions?.en||'Без описания')+'</div><div class="meta">'+groups[cat]+'</div></div><button class="switch '+(c.enabled?'on':'')+'" onclick="toggleCommand(\''+esc(c.name)+'\','+(c.enabled?'false':'true')+',this)"></button></div>'}).join('');document.getElementById('commandList').innerHTML=html}catch(e){document.getElementById('commandList').innerHTML='<div class="empty">Не удалось загрузить команды: '+esc(e.message)+'</div>'}}
 async function toggleCommand(name,enabled,button){try{await post('/api/command-settings',{communityId:selectedCommunity,commandName:name,enabled});button.classList.toggle('on',enabled);toast('/'+name+' '+(enabled?'включена':'отключена'))}catch(e){toast(e.message)}}
 
-async function loadModeration(){if(!selectedCommunity)return;try{const d=await get('/api/moderation?communityId='+encodeURIComponent(selectedCommunity));document.getElementById('modTable').innerHTML=d.items.map(x=>'<tr><td>'+esc(String(x.id).slice(0,14))+'</td><td>'+esc(x.action)+'</td><td>'+esc(x.platform)+'</td><td class="'+(x.status==='active'?'warn':'')+'">'+esc(x.status)+'</td><td>'+esc(x.reason||'—')+'</td><td>'+esc(x.targetUserId||'—')+'</td></tr>').join('')||'<tr><td colspan="6" class="empty">Кейсов нет.</td></tr>'}catch(e){toast(e.message)}}
+let moderationCases=[],selectedModerationCase=null;
+async function loadModeration(){
+ if(!selectedCommunity){document.getElementById('modTable').innerHTML='<tr><td colspan="6" class="empty">Выберите сервер.</td></tr>';return}
+ try{
+  const d=await get('/api/moderation?communityId='+encodeURIComponent(selectedCommunity));moderationCases=d.items||[];
+  document.getElementById('modTable').innerHTML=moderationCases.map((x,i)=>'<tr class="mod-case-row" tabindex="0" role="button" onclick="openModerationCase('+i+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openModerationCase('+i+')}"><td>'+esc(String(x.id).slice(0,14))+'</td><td>'+esc(x.action)+'</td><td>'+esc(x.platform)+'</td><td class="'+(x.status==='active'?'warn':'')+'">'+esc(x.status)+'</td><td>'+esc(x.reason||'—')+'</td><td>'+esc(x.targetUserId||'—')+'</td></tr>').join('')||'<tr><td colspan="6" class="empty">Кейсов нет.</td></tr>';
+ }catch(e){toast(e.message)}
+}
+function openModerationCase(index){
+ selectedModerationCase=moderationCases[index];if(!selectedModerationCase)return;
+ const x=selectedModerationCase,box=document.getElementById('moderationCaseDetails');box.hidden=false;
+ document.getElementById('modDetailTitle').textContent='Кейс '+String(x.id);
+ document.getElementById('modDetailSubtitle').textContent=(x.platform||'')+' · '+(x.action||'')+' · '+(x.status||'');
+ document.getElementById('modDetailBody').innerHTML='<div class="form-grid"><div><div class="meta">Кто выдал</div><b>'+esc(x.actorUserId||'—')+'</b></div><div><div class="meta">Цель</div><b>'+esc(x.targetUserId||'—')+'</b></div><div><div class="meta">Сообщество</div><b>'+esc(x.communityExternalId||selectedCommunity)+'</b></div><div><div class="meta">Пользователь на платформе</div><b>'+esc(x.userExternalId||'—')+'</b></div><div><div class="meta">Создан</div><b>'+esc(x.createdAt||'—')+'</b></div><div><div class="meta">Причина</div><b>'+esc(x.reason||'Не указана')+'</b></div></div><label class="field">Причина для повторного назначения<input class="input" id="modReapplyReason" maxlength="1000" placeholder="Например: нарушение повторилось"></label><div class="notice">Отзыв зависит от платформы и статуса кейса. Предупреждение можно отметить как отозванное; снятие mute/ban выполняется только если адаптер поддерживает обратное действие.</div>';
+ document.getElementById('modRevokeButton').disabled=x.status!=='active';
+ box.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function closeModerationCase(){document.getElementById('moderationCaseDetails').hidden=true;selectedModerationCase=null}
+async function revokeSelectedModerationCase(){
+ if(!selectedModerationCase)return;
+ if(!confirm('Отозвать это действие модерации?'))return;
+ try{await post('/api/moderation/revoke',{caseId:selectedModerationCase.id});toast('Запрос на отзыв обработан');await loadModeration();closeModerationCase()}catch(e){toast('Не удалось отозвать кейс: '+e.message)}
+}
+async function reapplySelectedModerationCase(){
+ if(!selectedModerationCase)return;
+ const x=selectedModerationCase;
+ if(!confirm('Повторно назначить действие '+x.action+' для пользователя '+x.userExternalId+'?'))return;
+ try{
+  await post('/api/moderation/cases',{action:x.action,platform:x.platform,actorUserId:x.actorUserId,targetUserId:x.targetUserId,communityId:selectedCommunity,communityExternalId:x.communityExternalId,userExternalId:x.userExternalId,reason:document.getElementById('modReapplyReason')?.value.trim()||x.reason||'Повторно назначено из панели',...(x.durationSeconds?{durationSeconds:x.durationSeconds}:{})});
+  toast('Действие назначено повторно');await loadModeration();await loadAudit();
+ }catch(e){toast('Не удалось повторить действие: '+e.message)}
+}
+function exportCommunityLogs(){
+ if(!selectedCommunity)return toast('Сначала выберите сообщество');
+ window.location.href='/api/audit/export?communityId='+encodeURIComponent(selectedCommunity)+'&includeModeration=true';
+}
 async function loadAudit(){if(!selectedCommunity)return;try{const d=await get('/api/audit?communityId='+encodeURIComponent(selectedCommunity));document.getElementById('auditTable').innerHTML=d.items.map(x=>'<tr><td>'+esc(new Date(x.createdAt).toLocaleString('ru-RU'))+'</td><td>'+esc(x.action)+'</td><td>'+esc(x.actorUserId||'—')+'</td><td>'+esc(x.targetUserId||'—')+'</td><td>'+esc(x.reason||'—')+'</td></tr>').join('')||'<tr><td colspan="5" class="empty">Событий нет.</td></tr>'}catch(e){toast(e.message)}}
 
 async function loadAutomations(){if(!selectedCommunity){document.getElementById('automationList').innerHTML='<div class="empty">Выберите сервер.</div>';return}try{const d=await get('/api/automations?communityId='+encodeURIComponent(selectedCommunity));document.getElementById('automationList').innerHTML=d.items.map(a=>'<div class="row"><div class="grow"><div class="name">'+esc(a.name)+'</div><div class="meta">'+esc(a.trigger.type)+' → '+esc(a.action.type)+' · '+(a.enabled?'активна':'выключена')+'</div></div><button class="switch '+(a.enabled?'on':'')+'" onclick="toggleAutomation(\''+esc(a.id)+'\','+(a.enabled?'false':'true')+',this)"></button></div>').join('')||'<div class="empty">Автоматизаций нет.</div>'}catch(e){toast(e.message)}}
