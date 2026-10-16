@@ -223,3 +223,17 @@ button.switch:after{display:block!important}
 html[data-theme="light"] button.switch{background:#d4d9e7}
 html[data-theme="light"] button.switch.on{background:linear-gradient(120deg,#9b6cf1,#d946ef)}
 html[data-theme="light"] button.switch:after{background:#fff;box-shadow:0 1px 3px #20243a25}
+
+/* Bridge wizard: make endpoint selection and per-destination consent obvious */
+.bridge-endpoint-choices,.bridge-confirm-list{display:grid;gap:10px}
+.bridge-endpoint-option,.bridge-confirm-option{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--card);cursor:pointer;transition:border-color .18s ease,background .18s ease,transform .18s ease}
+.bridge-endpoint-option:hover,.bridge-confirm-option:hover{border-color:var(--accent);transform:translateY(-1px)}
+.bridge-endpoint-option input,.bridge-confirm-option input{width:18px;height:18px;accent-color:var(--accent);flex:0 0 auto}
+.bridge-endpoint-option .grow,.bridge-confirm-option>span{display:flex;flex-direction:column;gap:4px;min-width:0}
+.bridge-endpoint-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#a78bfa20;color:var(--accent);font-size:12px;font-weight:800;flex:0 0 auto}
+.bridge-confirm-option{align-items:flex-start}
+#bridgeConfirmCard[hidden]{display:none!important}
+#bridgeConfirmCard{scroll-margin-top:18px}
+#bridgeConfirmCreate:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.5)}
+html[data-theme="light"] .bridge-endpoint-option,html[data-theme="light"] .bridge-confirm-option{background:#fff;border-color:#dce2ef}
+html[data-theme="light"] .bridge-endpoint-option:hover,html[data-theme="light"] .bridge-confirm-option:hover{border-color:#a996ed;background:#faf8ff}
