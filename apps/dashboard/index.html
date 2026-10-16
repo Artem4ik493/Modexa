@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -806,10 +806,68 @@ initAuth().then(ok=>{if(ok)loadAll()});setInterval(()=>{if(authKey||discordUser)
 </script>
 
 <script>
-(()=>{const root=document.documentElement,key="modexa.theme";const saved=localStorage.getItem(key);root.dataset.theme=saved==="light"?"light":"dark";
-function init(){const top=document.querySelector(".top-actions");if(top&&!document.getElementById("themeToggle")){const b=document.createElement("button");b.type="button";b.id="themeToggle";b.className="btn";const paint=()=>{const light=root.dataset.theme==="light";b.textContent=light?"☾ Тёмная тема":"☼ Светлая тема";b.setAttribute("aria-pressed",String(light));b.title="Переключить оформление"};b.addEventListener("click",()=>{root.dataset.theme=root.dataset.theme==="light"?"dark":"light";localStorage.setItem(key,root.dataset.theme);paint()});paint();top.append(b)}
-if(!matchMedia("(prefers-reduced-motion: reduce)").matches){document.body.classList.add("mx-motion-ready");document.querySelectorAll(".card").forEach((el,i)=>{el.style.setProperty("--mx-delay",Math.min(i*35,280)+"ms");el.addEventListener("pointermove",e=>{const r=el.getBoundingClientRect();el.style.setProperty("--mx-px",(e.clientX-r.left)+"px");el.style.setProperty("--mx-py",(e.clientY-r.top)+"px")},{passive:true})});document.addEventListener("click",e=>{const target=e.target.closest(".btn,.nav");if(!target)return;const r=target.getBoundingClientRect(),dot=document.createElement("span");dot.className="mx-ripple";dot.style.left=(e.clientX-r.left)+"px";dot.style.top=(e.clientY-r.top)+"px";target.append(dot);setTimeout(()=>dot.remove(),750)})}}
-if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init()})();
+(()=>{"use strict";
+const root=document.documentElement,themeKey="modexa.theme",localeKey="modexa.locale";
+const translations={
+"Главное":"Workspace","Обзор":"Overview","Состояние Modexa и выбранного сообщества.":"A quick look at your community and bot status.","Сообщества":"Communities","Управление":"Manage","Участники":"Members","Роли и права":"Roles & permissions","Команды":"Commands","Свои команды":"Custom commands","Рейтинг":"Levels & XP","Приветствия":"Welcome messages","Безопасность и связь":"Safety & integrations","Модерация":"Moderation","AutoMod":"AutoMod","Автоматизации":"Automations","Bridge":"Bridge","Журнал событий":"Audit log","OWNER FUNCTIONS":"OWNER TOOLS","Система":"System","Bot Runtime":"Bot runtime","Авторизован":"Signed in","Выйти":"Sign out","Control Center":"Control center","Выберите сервер…":"Select a community…","Выберите сообщество…":"Select a community…","СООБЩЕСТВА":"COMMUNITIES","подключено к Modexa":"connected to Modexa","АКТИВНЫЕ":"ACTIVE","публичные сообщества":"active communities","всего кейсов":"total moderation cases","текущее состояние ботов":"current bot status","Подключённые сервера":"Connected communities","Система":"System","API":"API","Runner":"Runner","Maintenance":"Maintenance","OAuth Discord":"Discord OAuth","Discord-сервера":"Discord servers","Подключить Telegram-группу":"Connect a Telegram group","Привяжите группу к выбранному сообществу Modexa без ручного ввода ID.":"Link a group to this community without entering IDs manually.","Откройте Telegram":"Open Telegram","В нужной группе выполните":"In the group, run","Скопируйте код":"Copy the code","Подтвердите связь":"Confirm the link","Код привязки из Telegram":"Telegram link code","Привязать группу":"Link group","Обновить":"Refresh","Управление командами":"Manage commands","Переключатели изменяют реальные настройки выбранного сообщества.":"Switches update settings for the selected community.","Участники сообщества":"Community members","Участники, статусы и привязанные identity из Core.":"Members, statuses, and linked accounts.","Поиск по имени или ID":"Search by name or ID","Все статусы":"All statuses","Активные":"Active","Покинули":"Left","Заблокированы":"Banned","Пользователь":"User","Статус":"Status","Identity":"Linked accounts","С даты":"Since","Страница 1":"Page 1","Роли сообщества":"Community roles","Создать роль":"Create a role","Название роли":"Role name","Разрешения":"Permissions","Просмотр сообщества":"View community","Управление сообществом":"Manage community","Просмотр участников":"View members","Управление участниками":"Manage members","Просмотр модерации":"View moderation","Предупреждения":"Warnings","Мут":"Mute","Кик":"Kick","Бан":"Ban","Очистка":"Clear messages","Использование команд":"Use commands","Управление командами":"Manage commands","Просмотр Bridge":"View Bridge","Управление Bridge":"Manage Bridge","Создать роль":"Create role","Настройки рейтинга":"Level settings","Рейтинг включён":"Levels enabled","XP за сообщение":"XP per message","XP за минуту голосового канала":"XP per voice minute","Cooldown (секунды)":"Cooldown (seconds)","Сохранить настройки":"Save settings","Топ участников":"Top members","Приветствие и уход":"Join & leave messages","Приветствия включены":"Welcome messages enabled","Текст приветствия":"Welcome message","Сообщение об уходе":"Leave message","Текст при уходе":"Leave message text","ID канала (необязательно)":"Channel ID (optional)","Сохранить":"Save","Правила":"Rules","Добавить":"Add","Удалить":"Delete","Включено":"Enabled","Выключено":"Disabled","Выберите сообщество.":"Select a community.","Загрузка…":"Loading…","Нет данных.":"No data available.","Правил пока нет.":"No rules yet.","API недоступен. Запусти Modexa API и открой панель через http://localhost:3000/dashboard/":"API unavailable. Start the Modexa API and open http://localhost:3000/dashboard/.","Светлая тема":"Light theme","Тёмная тема":"Dark theme","Язык":"Language","English":"English","Русский":"Русский","Войти через Discord":"Continue with Discord","Войти по API-ключу":"Sign in with API key","Управляйте подключёнными сообществами, командами, модерацией, автоматизациями и Runner из одной панели.":"Manage communities, commands, moderation, automations, and the bot runner in one place.","или":"or","Вход":"Sign in","Подключение к API":"API connection","Проверка…":"Checking…","Проверяем сессию и доступные данные.":"Checking your session and available data.","Выйти":"Sign out","Данные API":"API data","полей":"fields","Поле":"Field","Значение":"Value","Выберите Discord-сообщество, где установлен бот Modexa.":"Select a Discord community where the Modexa bot is installed.","Ваши Discord-серверы":"Your Discord servers","Здесь показаны серверы, которыми вы управляете. Подключите бота или привяжите сервер к сообществу Modexa.":"Servers you manage appear here. Add the bot or link a server to a Modexa community.","Сервер":"Server","Состояние":"Status","Действие":"Action","Бот подключён":"Bot connected","Бот не подключён":"Bot not connected","Уже подключён":"Already linked","Добавить бота":"Add bot","Недостаточно прав":"Missing permissions","Не найдено серверов, где у вас есть права управления.":"No servers found where you have management permissions.","Чтобы подключить сервер: добавьте бота, вернитесь сюда и нажмите «Привязать». Вы можете управлять только серверами, где у вас есть соответствующие права.":"To connect a server, add the bot, return here, and select “Link”. You can manage only servers where you have permission."
+};
+const exact=new Map(Object.entries(translations));
+function translateTextNode(node,locale){
+ if(locale!=="en") {if(node.__mxOriginal!==undefined)node.nodeValue=node.__mxOriginal;return}
+ const original=node.__mxOriginal!==undefined?node.__mxOriginal:node.nodeValue;
+ if(node.__mxOriginal===undefined)node.__mxOriginal=original;
+ const trimmed=original.trim();
+ if(!trimmed)return;
+ const translated=exact.get(trimmed);
+ if(translated)node.nodeValue=original.replace(trimmed,translated);
+}
+function applyLocale(locale){
+ root.lang=locale;
+ document.documentElement.dataset.locale=locale;
+ document.querySelectorAll("[data-i18n]").forEach(el=>{const key=el.dataset.i18n;if(translations[key])el.textContent=locale==="en"?translations[key]:key});
+ const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
+ while(walker.nextNode())translateTextNode(walker.currentNode,locale);
+ document.querySelectorAll("input[placeholder],textarea[placeholder]").forEach(el=>{
+  const original=el.dataset.mxPlaceholder||(el.dataset.mxPlaceholder=el.placeholder);
+  el.placeholder=locale==="en"?(exact.get(original)||original):original;
+ });
+ const langButton=document.getElementById("languageToggle");
+ if(langButton){langButton.textContent=locale==="en"?"EN · Русский":"RU · English";langButton.setAttribute("aria-label",locale==="en"?"Switch language to Russian":"Switch language to English");langButton.title=locale==="en"?"Switch language":"Переключить язык"}
+ const themeButton=document.getElementById("themeToggle");
+ if(themeButton)paintTheme(themeButton);
+}
+function paintTheme(button){
+ const light=root.dataset.theme==="light",locale=root.dataset.locale||"en";
+ button.textContent=locale==="en"?(light?"☾ Dark":"☼ Light"):(light?"☾ Тёмная":"☼ Светлая");
+ button.setAttribute("aria-pressed",String(light));
+ button.setAttribute("aria-label",locale==="en"?(light?"Switch to dark theme":"Switch to light theme"):(light?"Переключить на тёмную тему":"Переключить на светлую тему"));
+ button.title=locale==="en"?"Change appearance":"Изменить оформление";
+}
+function addControls(){
+ const top=document.querySelector(".top-actions");if(!top)return;
+ let theme=document.getElementById("themeToggle");
+ if(!theme){theme=document.createElement("button");theme.type="button";theme.id="themeToggle";theme.className="btn";theme.addEventListener("click",()=>{root.dataset.theme=root.dataset.theme==="light"?"dark":"light";localStorage.setItem(themeKey,root.dataset.theme);paintTheme(theme)});top.append(theme)}
+ let lang=document.getElementById("languageToggle");
+ if(!lang){lang=document.createElement("button");lang.type="button";lang.id="languageToggle";lang.className="btn";lang.addEventListener("click",()=>{const next=(root.dataset.locale||"en")==="en"?"ru":"en";localStorage.setItem(localeKey,next);applyLocale(next)});top.append(lang)}
+ paintTheme(theme);applyLocale(root.dataset.locale||"en");
+}
+function initMotion(){
+ if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+ document.body.classList.add("mx-motion-ready");
+ document.querySelectorAll(".card").forEach((el,i)=>{el.style.setProperty("--mx-delay",Math.min(i*28,240)+"ms")});
+ const observer=new MutationObserver(records=>{const locale=root.dataset.locale||"en";for(const record of records){if(record.type==="childList"){record.addedNodes.forEach(node=>{if(node.nodeType===Node.TEXT_NODE)translateTextNode(node,locale);else if(node.nodeType===Node.ELEMENT_NODE){const walker=document.createTreeWalker(node,NodeFilter.SHOW_TEXT);while(walker.nextNode())translateTextNode(walker.currentNode,locale)}})}else if(record.type==="characterData")translateTextNode(record.target,locale)}});
+ observer.observe(document.body,{subtree:true,childList:true,characterData:true});
+ document.addEventListener("click",event=>{const target=event.target.closest(".btn,.nav");if(!target)return;const rect=target.getBoundingClientRect(),ripple=document.createElement("span");ripple.className="mx-ripple";ripple.style.left=(event.clientX-rect.left)+"px";ripple.style.top=(event.clientY-rect.top)+"px";target.append(ripple);setTimeout(()=>ripple.remove(),700)});
+}
+function init(){
+ root.dataset.theme=localStorage.getItem(themeKey)==="light"?"light":"dark";
+ root.dataset.locale=localStorage.getItem(localeKey)==="ru"?"ru":"en";
+ document.documentElement.lang=root.dataset.locale;
+ addControls();initMotion();
+ document.body.classList.add("mx-ready");
+}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
+})();
 </script>
 
 </body>
