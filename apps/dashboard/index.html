@@ -820,7 +820,8 @@ function translateTextNode(node,locale){
  const trimmed=original.trim();
  if(!trimmed)return;
  const translated=exact.get(trimmed);
- const next=translated?original.replace(trimmed,translated):original;\n if(node.nodeValue!==next)node.nodeValue=next;
+ const next=translated?original.replace(trimmed,translated):original;
+ if(node.nodeValue!==next)node.nodeValue=next;
 }
 function applyLocale(locale){
  root.lang=locale;
