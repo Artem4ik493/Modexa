@@ -804,5 +804,13 @@ function mxUpdateProgress(){const root=document.documentElement,max=root.scrollH
 window.addEventListener('scroll',mxUpdateProgress,{passive:true});window.addEventListener('resize',mxUpdateProgress);mxUpdateProgress();
 initAuth().then(ok=>{if(ok)loadAll()});setInterval(()=>{if(authKey||discordUser)loadAll()},30000);
 </script>
+
+<script>
+(()=>{const root=document.documentElement,key="modexa.theme";const saved=localStorage.getItem(key);root.dataset.theme=saved==="light"?"light":"dark";
+function init(){const top=document.querySelector(".top-actions");if(top&&!document.getElementById("themeToggle")){const b=document.createElement("button");b.type="button";b.id="themeToggle";b.className="btn";const paint=()=>{const light=root.dataset.theme==="light";b.textContent=light?"☾ Тёмная тема":"☼ Светлая тема";b.setAttribute("aria-pressed",String(light));b.title="Переключить оформление"};b.addEventListener("click",()=>{root.dataset.theme=root.dataset.theme==="light"?"dark":"light";localStorage.setItem(key,root.dataset.theme);paint()});paint();top.append(b)}
+if(!matchMedia("(prefers-reduced-motion: reduce)").matches){document.body.classList.add("mx-motion-ready");document.querySelectorAll(".card").forEach((el,i)=>{el.style.setProperty("--mx-delay",Math.min(i*35,280)+"ms");el.addEventListener("pointermove",e=>{const r=el.getBoundingClientRect();el.style.setProperty("--mx-px",(e.clientX-r.left)+"px");el.style.setProperty("--mx-py",(e.clientY-r.top)+"px")},{passive:true})});document.addEventListener("click",e=>{const target=e.target.closest(".btn,.nav");if(!target)return;const r=target.getBoundingClientRect(),dot=document.createElement("span");dot.className="mx-ripple";dot.style.left=(e.clientX-r.left)+"px";dot.style.top=(e.clientY-r.top)+"px";target.append(dot);setTimeout(()=>dot.remove(),750)})}}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init()})();
+</script>
+
 </body>
 </html>
