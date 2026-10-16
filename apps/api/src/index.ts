@@ -873,6 +873,25 @@ const server = createServer((req, res) => {
       return;
     }
 
+    if (url.pathname.startsWith("/dashboard/pages/")) {
+      const pageName = url.pathname.slice("/dashboard/pages/".length);
+      const pages = new Set(["overview.html","communities.html","members.html","roles.html","commands.html","custom-commands.html","ranking.html","welcome.html","moderation.html","automod.html","automations.html","bridge.html","audit.html","system.html","runtime.html"]);
+      if (!pages.has(pageName)) {
+        res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+        res.end("Dashboard page not found");
+        return;
+      }
+      try {
+        const page = readFileSync(resolve(process.cwd(), "apps/dashboard/pages", pageName), "utf8");
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+        res.end(page);
+      } catch {
+        res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+        res.end("Dashboard page not found");
+      }
+      return;
+    }
+
     if (url.pathname === "/" || url.pathname === "/dashboard") {
       const html = readFileSync(dashboardPath, "utf8");
       res.writeHead(200, {
