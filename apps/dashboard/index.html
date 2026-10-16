@@ -574,12 +574,12 @@ async function post(path,body){return request(path,{method:'POST',headers:{'cont
 async function send(path,method,body){return request(path,{method,headers:{'content-type':'application/json'},body:JSON.stringify(body)})}
 
 async function discordLogin(){try{const c=await fetch('/api/config').then(r=>r.json());if(!c.oauth?.discord){showLogin('Discord OAuth не настроен. Проверьте DISCORD_CLIENT_ID и DISCORD_CLIENT_SECRET.');return}location.href='/auth/discord'}catch{showLogin('API недоступен.');}}
-async function login(){const key=document.getElementById('apiKey').value.trim();if(!key)return;try{const response=await fetch('/api/auth',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',cache:'no-store',body:JSON.stringify({key})});if(!response.ok)throw new Error(response.status===401?'Неверный API-ключ.':'Не удалось выполнить вход.');const result=await response.json();if(!result.authenticated||result.role!=='owner')throw new Error('Сервер не подтвердил права владельца.');authKey=OWNER_COOKIE_SESSION;discordUser=null;document.getElementById('apiKey').value='';document.getElementById('login').classList.add('hidden');await loadAll()}catch(e){showLogin(e.message||'Не удалось выполнить вход.')}} 
+async function login(){const key=document.getElementById('apiKey').value.trim();if(!key)return;try{const response=await fetch('/api/auth',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',cache:'no-store',body:JSON.stringify({key})});if(!response.ok)throw new Error(response.status===401?'Неверный API-ключ.':'Не удалось выполнить вход.');const result=await response.json();if(!result.authenticated||result.role!=='owner')throw new Error('Сервер не подтвердил права владельца.');authKey=OWNER_COOKIE_SESSION;discordUser=null;document.getElementById('apiKey').value='';document.getElementById('profile').style.display='block';document.getElementById('profileName').textContent='Владелец Modexa';document.querySelector('#profile .profile-sub').textContent='Владелец платформы';document.getElementById('login').classList.add('hidden');await loadAll()}catch(e){showLogin(e.message||'Не удалось выполнить вход.')}} 
 async function initAuth(){
   try{
     const ownerResponse=await fetch('/api/auth',{credentials:'same-origin',cache:'no-store'});
     const owner=ownerResponse.ok?await ownerResponse.json():{authenticated:false};
-    if(owner.authenticated&&owner.role==='owner'){authKey=OWNER_COOKIE_SESSION;discordUser=null;document.getElementById('login').classList.add('hidden');return true}
+    if(owner.authenticated&&owner.role==='owner'){authKey=OWNER_COOKIE_SESSION;discordUser=null;document.getElementById('profile').style.display='block';document.getElementById('profileName').textContent='Владелец Modexa';document.querySelector('#profile .profile-sub').textContent='Владелец платформы';document.getElementById('login').classList.add('hidden');return true}
     const params=new URLSearchParams(location.search);
     const handoff=params.get('discord_handoff');
     if(handoff){
@@ -600,7 +600,7 @@ async function initAuth(){
     return true
   }catch(error){showLogin(error.message||'Не удалось восстановить сессию.');return false}
 }
-async function logout(){try{await fetch('/api/auth/discord',{method:'DELETE',credentials:'same-origin'});await fetch('/api/auth',{method:'DELETE',credentials:'same-origin'})}catch{}authKey='';location.reload()}
+async function logout(){try{await fetch('/api/auth/discord',{method:'DELETE',credentials:'same-origin'});await fetch('/api/auth',{method:'DELETE',credentials:'same-origin'})}catch{}authKey='';discordUser=null;location.href='/login'}
 
 function showPage(id){if(['system','runtime'].includes(id)&&!authKey){toast('Этот раздел доступен только владельцу Modexa.');return}document.querySelectorAll('.page').forEach(e=>e.classList.toggle('active',e.id===id));document.querySelectorAll('.nav').forEach(e=>e.classList.toggle('active',e.dataset.page===id));document.getElementById('pageTitle').textContent=titles[id][0];document.getElementById('pageSubtitle').textContent=titles[id][1];if(id==='servers')loadPendingTelegramGroups();if(id==='commands')loadCommands();if(id==='members')loadMembers();if(id==='roles')loadRoles();if(id==='ranking')loadRanking();if(id==='welcome')loadWelcome();if(id==='custom')loadCustomCommands();if(id==='automod')loadAutoMod();if(id==='moderation')loadModeration();if(id==='automations')loadAutomations();if(id==='bridge')loadBridge();if(id==='audit'){loadAudit();loadAuditSettings();}if(id==='system')loadSystem();if(id==='runtime')loadRuntime()}
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
