@@ -501,6 +501,17 @@ nav{min-height:0;padding-bottom:18px}
     <div id="bridgeConfirmList" class="form"></div>
     <div class="top-actions" style="margin-top:14px"><button class="btn" onclick="cancelBridgeCreation()">Отмена</button><button class="btn primary" id="bridgeConfirmCreate" onclick="confirmAndCreateBridge()" disabled>Создать мост</button></div>
   </div>
+  <div class="card" id="bridgeSettingsCard">
+    <div class="section"><div><h2>Настройки доставки</h2><div class="meta">Применяются ко всем мостам выбранного Discord-сообщества.</div></div><span class="pill">Настройки сообщества</span></div>
+    <div class="form">
+      <label class="row"><input type="checkbox" id="bridgeEnabled" checked><span><b>Мост включён</b><span class="meta">При выключении сообщения временно не пересылаются, связи сохраняются.</span></span></label>
+      <label class="row"><input type="checkbox" id="bridgeSyncEdits" checked><span><b>Синхронизировать редактирование</b><span class="meta">Изменения исходного сообщения обновляют копию в других чатах.</span></span></label>
+      <label class="row"><input type="checkbox" id="bridgeSyncDeletes" checked><span><b>Синхронизировать удаление</b><span class="meta">Удаление исходного сообщения удаляет связанные копии, если платформа это разрешает.</span></span></label>
+      <label class="row"><input type="checkbox" id="bridgeIncludeMedia" checked><span><b>Пересылать медиа</b><span class="meta">Разрешить передачу поддерживаемых фото, GIF и видео.</span></span></label>
+      <div class="top-actions"><button class="btn" onclick="loadBridgeSettings()">Загрузить настройки</button><button class="btn primary" onclick="saveBridgeSettings()">Сохранить настройки</button></div>
+      <div class="meta" id="bridgeSettingsStatus">Выберите сообщество для настройки Bridge.</div>
+    </div>
+  </div>
   <div class="card">
     <div class="section"><div><h2>Активные мосты</h2><div class="meta">Все созданные связи между чатами.</div></div><button class="btn" onclick="loadBridge()">↻ Обновить</button></div>
     <div id="bridgeList"><div class="empty">Загрузка мостов…</div></div>
@@ -797,6 +808,35 @@ async function unlinkTelegramGroup(chatId){
 }
 
 let bridgeDraft=[];
+async function loadBridgeSettings(){
+ const selected=selectedModexaCommunity(),communityId=selected?.communityId||selected?.id||'';
+ const status=document.getElementById('bridgeSettingsStatus');
+ if(!communityId){if(status)status.textContent='Сначала выберите Discord-сервер.';return}
+ try{
+  const x=await get('/api/bridge/settings?communityId='+encodeURIComponent(communityId));
+  document.getElementById('bridgeEnabled').checked=x.enabled!==false;
+  document.getElementById('bridgeSyncEdits').checked=x.syncEdits!==false;
+  document.getElementById('bridgeSyncDeletes').checked=x.syncDeletes!==false;
+  document.getElementById('bridgeIncludeMedia').checked=x.includeMedia!==false;
+  if(status)status.textContent='Настройки загружены для выбранного сообщества.';
+ }catch(e){if(status)status.textContent=e.message||'Не удалось загрузить настройки.'}
+}
+async function saveBridgeSettings(){
+ const selected=selectedModexaCommunity(),communityId=selected?.communityId||selected?.id||'';
+ const status=document.getElementById('bridgeSettingsStatus');
+ if(!communityId)return toast('Сначала выберите Discord-сервер');
+ if(!authKey&&selected?.canManageBot!==true)return toast('Нужны права управления выбранным Discord-сервером');
+ try{
+  await request('/api/bridge/settings',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({
+   communityId,enabled:document.getElementById('bridgeEnabled').checked,
+   syncEdits:document.getElementById('bridgeSyncEdits').checked,
+   syncDeletes:document.getElementById('bridgeSyncDeletes').checked,
+   includeMedia:document.getElementById('bridgeIncludeMedia').checked
+  })});
+  if(status)status.textContent='Настройки сохранены.';
+  toast('Настройки Bridge сохранены');
+ }catch(e){if(status)status.textContent=e.message||'Не удалось сохранить настройки.';toast(e.message)}
+}
 async function loadBridge(){
  const selected=selectedModexaCommunity();
  const communityId=selected?.communityId||selected?.id||'';
@@ -809,6 +849,7 @@ async function loadBridge(){
   loadPendingTelegramGroups();return;
  }
  try{
+  await loadBridgeSettings();
   bridgeCache=await get('/api/bridge'+(!authKey?'?communityId='+encodeURIComponent(communityId):''));
   const endpoints=bridgeCache.endpoints||[],links=bridgeCache.links||[];
   document.getElementById('bridgeEndpoints').dataset.communityId=communityId;
