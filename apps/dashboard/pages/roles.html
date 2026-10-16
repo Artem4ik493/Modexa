@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080b13">
+<title>Modexa — Роли и права</title>
+<link rel="icon" href="/assets/logo.ico">
+<link rel="apple-touch-icon" href="/assets/logo.png">
+<link rel="stylesheet" href="/assets/dashboard.css">
+</head>
+<body data-page="roles">
+<div class="layout">
+<aside class="sidebar">
+<a class="brand" href="/dashboard/"><img class="brand-mark" src="/assets/logo.png" alt=""><span><strong>Modexa</strong><small>Community OS</small></span></a>
+<div class="workspace"><small>ТЕКУЩЕЕ СООБЩЕСТВО</small><strong data-community-name>Выберите сообщество в API</strong></div>
+<nav><div class="nav-label">Главное</div><a class="nav " href="/dashboard/"><span class="ico">◈</span>Обзор</a><a class="nav " href="/dashboard/communities.html"><span class="ico">▦</span>Сообщества</a><div class="nav-label">Управление</div><a class="nav " href="/dashboard/members.html"><span class="ico">♙</span>Участники</a><a class="nav active" href="/dashboard/roles.html"><span class="ico">♜</span>Роли и права</a><a class="nav " href="/dashboard/commands.html"><span class="ico">⌘</span>Команды</a><a class="nav " href="/dashboard/custom-commands.html"><span class="ico">⌘</span>Свои команды</a><a class="nav " href="/dashboard/ranking.html"><span class="ico">↗</span>Рейтинг</a><a class="nav " href="/dashboard/welcome.html"><span class="ico">✦</span>Приветствия</a><div class="nav-label">Безопасность и связь</div><a class="nav " href="/dashboard/moderation.html"><span class="ico">◆</span>Модерация</a><a class="nav " href="/dashboard/automod.html"><span class="ico">⛨</span>AutoMod</a><a class="nav " href="/dashboard/automations.html"><span class="ico">↯</span>Автоматизации</a><a class="nav " href="/dashboard/bridge.html"><span class="ico">↔</span>Bridge</a><a class="nav " href="/dashboard/audit.html"><span class="ico">≡</span>Журнал событий</a><div class="nav-label">Администрирование</div><a class="nav " href="/dashboard/system.html"><span class="ico">⚙</span>Система</a><a class="nav " href="/dashboard/runtime.html"><span class="ico">●</span>Bot Runtime</a></nav>
+<div class="sidebar-foot">Modexa · Control Center<br><span class="auth-state">API-интеграция подключается отдельно</span></div>
+</aside>
+<main class="main">
+<header class="topbar"><div><div class="eyebrow">Control Center / Управление</div><h1 class="page-title">Роли и права</h1><div class="page-desc">Настройка ролей Modexa, разрешений и иерархии модерации.</div></div><div class="top-actions"><select class="select" aria-label="Сообщество" data-api-field="selectedCommunity"><option value="">Выберите сообщество…</option></select><button class="btn" data-action="refresh" title="Обновить">↻</button></div></header>
+<div class="content"><div class="grid two"><article class="card"><div class="card-head"><h2>Роли сообщества</h2><button class="btn" data-action="add-row" data-target="#roleRows">＋ Добавить роль</button></div><div id="roleRows"><div class="list-row"><div class="avatar">O</div><div class="grow"><b>OWNER</b><div class="muted small">Владелец сообщества · максимальный уровень</div></div><span class="tag">400</span></div><div class="list-row"><div class="avatar">A</div><div class="grow"><b>ADMIN</b><div class="muted small">Администратор</div></div><span class="tag">300</span></div><div class="list-row"><div class="avatar">M</div><div class="grow"><b>MODERATOR</b><div class="muted small">Модератор</div></div><span class="tag">200</span></div><div class="list-row"><div class="avatar">U</div><div class="grow"><b>MEMBER</b><div class="muted small">Участник</div></div><span class="tag">100</span></div></div></article><article class="card"><div class="card-head"><h2>Права выбранной роли</h2><span class="pill">Permission matrix</span></div><div class="setting"><label>Управление сообществом</label><input class="switch" type="checkbox" data-api-field="permission0" checked></div><div class="setting"><label>Управление участниками</label><input class="switch" type="checkbox" data-api-field="permission1" checked></div><div class="setting"><label>Выдача ролей</label><input class="switch" type="checkbox" data-api-field="permission2" checked></div><div class="setting"><label>Предупреждения</label><input class="switch" type="checkbox" data-api-field="permission3" ></div><div class="setting"><label>Мут и снятие мута</label><input class="switch" type="checkbox" data-api-field="permission4" ></div><div class="setting"><label>Кик и бан</label><input class="switch" type="checkbox" data-api-field="permission5" ></div><div class="setting"><label>Настройка команд</label><input class="switch" type="checkbox" data-api-field="permission6" ></div><div class="setting"><label>Настройка автоматизаций</label><input class="switch" type="checkbox" data-api-field="permission7" ></div><div class="page-actions"><button class="btn primary" data-action="save">Сохранить права</button></div></article></div></div>
+</main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/assets/dashboard.js" defer></script>
+</body>
+</html>
