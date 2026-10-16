@@ -469,26 +469,48 @@ async function sendConfiguredAuditLog(item: QueuedApiAction, succeeded: boolean,
   const settings = database.getRuntimeState<Record<string, unknown>>(`api.audit_settings.${item.communityId}`) ?? {};
   const channelId = typeof settings.channelId === "string" ? settings.channelId.trim() : "";
   const actions = Array.isArray(settings.actions) ? settings.actions as string[] : [];
-  if (settings.enabled !== true || !/^\d{15,25}$/.test(channelId) || (actions.length > 0 && !actions.includes(sourceCategory))) return;
+  if (settings.enabled !== true) {
+    logger.info("audit.channel_delivery_skipped", { reason: "disabled", communityId: item.communityId, actionId: item.id });
+    return;
+  }
+  if (!/^\d{15,25}$/.test(channelId)) {
+    logger.warn("audit.channel_delivery_skipped", { reason: "invalid_or_missing_channel_id", communityId: item.communityId, actionId: item.id });
+    return;
+  }
+  if (actions.length > 0 && !actions.includes(sourceCategory)) {
+    logger.info("audit.channel_delivery_skipped", { reason: "category_not_selected", sourceCategory, selectedActions: actions, communityId: item.communityId, actionId: item.id });
+    return;
+  }
   const discord = adapters.find((candidate) => candidate.platform === "discord");
-  if (!discord) return;
+  if (!discord) {
+    logger.error("audit.channel_delivery_failed", { reason: "discord_adapter_not_running", communityId: item.communityId, channelId, actionId: item.id });
+    return;
+  }
   const actionType = typeof item.action.type === "string" ? item.action.type : "unknown";
   const lines = [
-    `**Modexa · ${sourceCategory === "moderation" ? "Moderation log" : "Panel action"}**`,
-    `Status: ${succeeded ? "SUCCESS" : "FAILED"}`,
-    `Action: ${actionType}`,
-    `Community ID: ${item.communityId}`,
-    `Source: ${item.source}`,
-    ...(error ? [`Error: ${error.slice(0, 500)}`] : []),
-    `Time: ${new Date().toISOString()}`
+    "**Modexa · журнал модерации**",
+    `Результат: ${succeeded ? "УСПЕШНО" : "ОШИБКА"}`,
+    `Действие: ${actionType}`,
+    `Сообщество: ${item.communityId}`,
+    `Источник: ${item.source}`,
+    ...(error ? [`Ошибка: ${error.slice(0, 500)}`] : []),
+    `Время: ${new Date().toISOString()}`
   ];
-  try {
-    await discord.sendAction({ type: "message.send", platform: "discord", channelExternalId: channelId, content: lines.join("\n") });
-  } catch (logError) {
-    logger.error("audit.channel_delivery_failed", { communityId: item.communityId, channelId, actionId: item.id }, logError);
+  const content = lines.join("\n");
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      await discord.sendAction({ type: "message.send", platform: "discord", channelExternalId: channelId, content });
+      logger.info("audit.channel_delivery_succeeded", { communityId: item.communityId, channelId, actionId: item.id, attempt });
+      return;
+    } catch (deliveryError) {
+      lastError = deliveryError;
+      logger.warn("audit.channel_delivery_retry", { communityId: item.communityId, channelId, actionId: item.id, attempt, error: deliveryError instanceof Error ? deliveryError.message : String(deliveryError) });
+      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+    }
   }
+  logger.error("audit.channel_delivery_failed", { communityId: item.communityId, channelId, actionId: item.id, error: lastError instanceof Error ? lastError.message : String(lastError) });
 }
-
 async function processPendingApiActions(): Promise<void> {
   if (processingApiActions || stopping) return;
   processingApiActions = true;
