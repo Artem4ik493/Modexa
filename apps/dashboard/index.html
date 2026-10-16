@@ -852,11 +852,11 @@ function addControls(){
  paintTheme(theme);applyLocale(root.dataset.locale||"en");
 }
 function initMotion(){
+ const observer=new MutationObserver(records=>{const locale=root.dataset.locale||"en";for(const record of records){if(record.type==="childList"){record.addedNodes.forEach(node=>{if(node.nodeType===Node.TEXT_NODE)translateTextNode(node,locale);else if(node.nodeType===Node.ELEMENT_NODE){const walker=document.createTreeWalker(node,NodeFilter.SHOW_TEXT);while(walker.nextNode())translateTextNode(walker.currentNode,locale)}})}else if(record.type==="characterData")translateTextNode(record.target,locale)}});
+ observer.observe(document.body,{subtree:true,childList:true,characterData:true});
  if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;
  document.body.classList.add("mx-motion-ready");
  document.querySelectorAll(".card").forEach((el,i)=>{el.style.setProperty("--mx-delay",Math.min(i*28,240)+"ms")});
- const observer=new MutationObserver(records=>{const locale=root.dataset.locale||"en";for(const record of records){if(record.type==="childList"){record.addedNodes.forEach(node=>{if(node.nodeType===Node.TEXT_NODE)translateTextNode(node,locale);else if(node.nodeType===Node.ELEMENT_NODE){const walker=document.createTreeWalker(node,NodeFilter.SHOW_TEXT);while(walker.nextNode())translateTextNode(walker.currentNode,locale)}})}else if(record.type==="characterData")translateTextNode(record.target,locale)}});
- observer.observe(document.body,{subtree:true,childList:true,characterData:true});
  document.addEventListener("click",event=>{const target=event.target.closest(".btn,.nav");if(!target)return;const rect=target.getBoundingClientRect(),ripple=document.createElement("span");ripple.className="mx-ripple";ripple.style.left=(event.clientX-rect.left)+"px";ripple.style.top=(event.clientY-rect.top)+"px";target.append(ripple);setTimeout(()=>ripple.remove(),700)});
 }
 function init(){
