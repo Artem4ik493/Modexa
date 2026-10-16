@@ -450,6 +450,8 @@ export class BridgeService {
     sourceMessageExternalId?: string,
     media?: InteractionMedia
   ): Promise<void> {
+    const settings = source.communityId ? this.database?.getRuntimeState<Record<string, unknown>>(`api.bridge.settings.${source.communityId}`) : undefined;
+    if (settings?.enabled === false || (media && settings?.includeMedia === false)) return;
     if (!this.gateway || (!content.trim() && !media)) {
       return;
     }
@@ -529,6 +531,8 @@ export class BridgeService {
     content: string,
     media?: InteractionMedia
   ): Promise<void> {
+    const settings = source.communityId ? this.database?.getRuntimeState<Record<string, unknown>>(`api.bridge.settings.${source.communityId}`) : undefined;
+    if (settings?.enabled === false || settings?.syncEdits === false) return;
     if (!this.gateway) return;
 
     const targets = this.getLinkedEndpoints(source.id);
@@ -580,6 +584,8 @@ export class BridgeService {
     source: BridgeEndpoint,
     sourceMessageExternalId: string
   ): Promise<void> {
+    const settings = source.communityId ? this.database?.getRuntimeState<Record<string, unknown>>(`api.bridge.settings.${source.communityId}`) : undefined;
+    if (settings?.enabled === false || settings?.syncDeletes === false) return;
     if (!this.gateway) return;
 
     const targets = this.getLinkedEndpoints(source.id);
