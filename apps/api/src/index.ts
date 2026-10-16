@@ -122,171 +122,6 @@ let runnerProcess: ChildProcess | undefined;
 let runnerStartedAt: string | undefined;
 let runnerLastExit: { code: number | null; signal: string | null; at: string } | undefined;
 const runnerLogs: Array<{ at: string; stream: "stdout" | "stderr"; message: string }> = [];
-const AUDIT_ACTIONS = new Set<string>(["message.delete","message.edit","message.clear","member.join","member.leave","member.ban","member.unban","member.kick","member.mute","member.unmute","member.warn","member.unwarn","member.roles","member.nickname","channel.create","channel.update","channel.delete","role.create","role.update","role.delete","role.assign","role.remove","automation.trigger","automod.trigger","system","moderation.case.revoke"]);
-type AuditExportEntry = {
-  id: string; communityId: string; action: string; actorUserId?: string;
-  targetUserId?: string; channelId?: string; messageId?: string; reason?: string;
-  metadata?: Record<string, unknown>; createdAt: Date;
-};
-function auditEntryText(entry: AuditExportEntry): string {
-  const metadata = entry.metadata ? JSON.stringify(entry.metadata) : "{}";
-  return [
-    "[" + entry.createdAt.toISOString() + "] " + entry.action,
-    "ID: " + entry.id,
-    "Community: " + entry.communityId,
-    "Actor: " + (entry.actorUserId ?? "—"),
-    "Target: " + (entry.targetUserId ?? "—"),
-    "Channel: " + (entry.channelId ?? "—"),
-    "Message: " + (entry.messageId ?? "—"),
-    "Reason: " + (entry.reason ?? "—"),
-    "Metadata: " + metadata
-  ].join("\n");
-}
-async function deliverDiscordAudit(entry: AuditExportEntry, communityId: string): Promise<void> {
-  if (database.getCommunitySetting(communityId, "audit.discord.enabled") !== "true") return;
-  const channelId = database.getCommunitySetting(communityId, "audit.discord.channel_id")?.trim();
-  const token = process.env.DISCORD_BOT_TOKEN;
-  if (!channelId || !token) return;
-
-  const selectedRaw = database.getCommunitySetting(communityId, "audit.events");
-  let selected: string[] = [];
-  try { selected = selectedRaw ? JSON.parse(selectedRaw) as string[] : []; } catch { selected = []; }
-  if (selected.length > 0 && !selected.includes(entry.action)) return;
-
-  const metadata = entry.metadata ?? {};
-  const platform = String(metadata.platform ?? "discord");
-  const targetId = String(metadata.targetExternalId ?? metadata.userExternalId ?? entry.targetUserId ?? "");
-  const channelExternalId = String(entry.channelId ?? metadata.channelExternalId ?? "");
-  const messageExternalId = String(entry.messageId ?? metadata.messageExternalId ?? "");
-  const communityExternalId = String(metadata.communityExternalId ?? "");
-  const target = targetId ? (platform === "discord" ? `<@${targetId}>` : targetId) : String(metadata.username ?? "—");
-  const channel = channelExternalId ? (platform === "discord" ? `<#${channelExternalId}>` : channelExternalId) : "—";
-  const jumpUrl = platform === "discord" && communityExternalId && channelExternalId && messageExternalId
-    ? `https://discord.com/channels/${communityExternalId}/${channelExternalId}/${messageExternalId}`
-    : undefined;
-
-  const actionDetails: Record<string, { title: string; color: number; description: string; icon: string }> = {
-    "message.delete": { title: "Сообщение удалено", color: 0xED4245, description: "Удалённое сообщение участника.", icon: "🗑️" },
-    "message.edit": { title: "Сообщение изменено", color: 0xFEE75C, description: "Участник отредактировал сообщение.", icon: "✏️" },
-    "message.clear": { title: "Сообщения очищены", color: 0xED4245, description: "В канале была выполнена очистка сообщений.", icon: "🧹" },
-    "member.join": { title: "Участник присоединился", color: 0x57F287, description: "Новый участник присоединился к серверу.", icon: "📥" },
-    "member.leave": { title: "Участник покинул сервер", color: 0x747F8D, description: "Участник покинул сервер.", icon: "📤" },
-    "member.ban": { title: "Участник заблокирован", color: 0xED4245, description: "Участник был заблокирован на сервере.", icon: "🔨" },
-    "member.unban": { title: "Блокировка снята", color: 0x57F287, description: "Блокировка участника была снята.", icon: "🔓" },
-    "member.kick": { title: "Участник исключён", color: 0xED4245, description: "Участник был исключён с сервера.", icon: "👢" },
-    "member.mute": { title: "Участник ограничен", color: 0xFEE75C, description: "Участнику ограничили возможность отправлять сообщения.", icon: "🔇" },
-    "member.unmute": { title: "Ограничение снято", color: 0x57F287, description: "Ограничение участника было снято.", icon: "🔊" },
-    "member.warn": { title: "Предупреждение выдано", color: 0xFEE75C, description: "Участнику выдано предупреждение.", icon: "⚠️" },
-    "member.unwarn": { title: "Предупреждение снято", color: 0x57F287, description: "Предупреждение участника было снято.", icon: "✅" },
-    "member.roles": { title: "Роли участника изменены", color: 0x5865F2, description: "Изменён список ролей участника.", icon: "🎭" },
-    "member.nickname": { title: "Никнейм изменён", color: 0x5865F2, description: "Изменён никнейм участника.", icon: "📝" },
-    "channel.create": { title: "Канал создан", color: 0x57F287, description: "На сервере создан канал.", icon: "➕" },
-    "channel.update": { title: "Канал изменён", color: 0xFEE75C, description: "Изменены настройки канала.", icon: "🛠️" },
-    "channel.delete": { title: "Канал удалён", color: 0xED4245, description: "На сервере удалён канал.", icon: "🗑️" },
-    "role.create": { title: "Роль создана", color: 0x57F287, description: "На сервере создана роль.", icon: "➕" },
-    "role.update": { title: "Роль изменена", color: 0xFEE75C, description: "Изменены настройки роли.", icon: "🛠️" },
-    "role.delete": { title: "Роль удалена", color: 0xED4245, description: "На сервере удалена роль.", icon: "🗑️" },
-    "automation.trigger": { title: "Автоматизация сработала", color: 0x5865F2, description: "Выполнено действие автоматизации.", icon: "⚙️" },
-    "automod.trigger": { title: "Автомодерация сработала", color: 0xFEE75C, description: "Сработало правило автомодерации.", icon: "🛡️" },
-    "system": { title: "Системное событие", color: 0x5865F2, description: "Зафиксировано системное событие Modexa.", icon: "ℹ️" }
-  };
-  const detail = actionDetails[entry.action] ?? {
-    title: entry.action.split(".").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" • "),
-    color: 0x5865F2,
-    description: "Зафиксировано событие аудита.",
-    icon: "📋"
-  };
-
-  const fields: Array<{ name: string; value: string; inline?: boolean }> = [];
-  if (target !== "—") fields.push({ name: "Участник", value: target.slice(0, 1024), inline: true });
-  if (channel !== "—") fields.push({ name: "Канал", value: channel.slice(0, 1024), inline: true });
-  const actorIdentity = entry.actorUserId
-    ? database.getUserIdentities(entry.actorUserId).find((identity) => identity.platform === platform)
-    : undefined;
-  const actorExternalId = String(
-    metadata.actorExternalId ??
-    metadata.moderatorExternalId ??
-    metadata.executorExternalId ??
-    actorIdentity?.externalId ??
-    ""
-  );
-  const actorUsername = String(
-    metadata.actorUsername ??
-    metadata.moderatorUsername ??
-    metadata.executorUsername ??
-    actorIdentity?.username ??
-    actorIdentity?.displayName ??
-    ""
-  );
-  const actorValue = actorExternalId
-    ? (platform === "discord" ? `<@${actorExternalId}>` : actorExternalId)
-    : actorUsername || "";
-  if (actorValue) fields.push({ name: "Модератор", value: actorValue.slice(0, 1024), inline: true });
-  if (entry.reason) fields.push({ name: "Причина", value: entry.reason.slice(0, 1024), inline: false });
-
-  const messageContent = typeof metadata.content === "string" ? metadata.content : "";
-  if (messageContent && (entry.action === "message.delete" || entry.action === "message.edit")) {
-    fields.push({ name: entry.action === "message.delete" ? "Содержимое удалённого сообщения" : "Текущее содержимое", value: messageContent.slice(0, 1024) || "*(пустое сообщение)*", inline: false });
-  }
-  if (typeof metadata.username === "string" && !targetId) {
-    fields.push({ name: "Имя пользователя", value: metadata.username.slice(0, 1024), inline: true });
-  }
-  if (jumpUrl) fields.push({ name: "Сообщение", value: `[Перейти к сообщению](${jumpUrl})`, inline: false });
-
-  const description = [
-    detail.description,
-    `**Платформа:** ${platform === "discord" ? "Discord" : platform === "telegram" ? "Telegram" : platform}`,
-    `**Время:** <t:${Math.floor(entry.createdAt.getTime() / 1000)}:F> · <t:${Math.floor(entry.createdAt.getTime() / 1000)}:R>`
-  ].join("\n");
-
-  const embed = {
-    title: `${detail.icon} ${detail.title}`.slice(0, 256),
-    color: detail.color,
-    description: description.slice(0, 4000),
-    fields: fields.slice(0, 25),
-    footer: { text: `Modexa Audit • ID: ${entry.id}` },
-    timestamp: entry.createdAt.toISOString()
-  };
-  const response = await fetch("https://discord.com/api/v10/channels/" + encodeURIComponent(channelId) + "/messages", {
-    method: "POST",
-    headers: { Authorization: "Bot " + token, "Content-Type": "application/json" },
-    body: JSON.stringify({ embeds: [embed], allowed_mentions: { parse: [] } }),
-    signal: AbortSignal.timeout(8000)
-  });
-  if (!response.ok) {
-    const detail = (await response.text()).slice(0, 300);
-    throw new Error(`Discord API ${response.status}: ${detail}`);
-  }
-}
-let auditDispatchInFlight = false;
-async function dispatchPendingAuditEntries(): Promise<void> {
-  if (auditDispatchInFlight || !process.env.DISCORD_BOT_TOKEN) return;
-  auditDispatchInFlight = true;
-  try {
-    const seen = database.getRuntimeState<string[]>("api.audit_discord_seen") ?? [];
-    const seenSet = new Set(seen);
-    for (const community of database.getCommunitiesSnapshot()) {
-      const channelId = database.getCommunitySetting(community.id, "audit.discord.channel_id")?.trim();
-      if (database.getCommunitySetting(community.id, "audit.discord.enabled") !== "true" || !channelId) continue;
-      const entries = database.getAuditEntries(community.id, 10000)
-        .filter((item) => !seenSet.has(item.id))
-        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-      for (const entry of entries) {
-        try {
-          await deliverDiscordAudit(entry, community.id);
-          seenSet.add(entry.id);
-        } catch (error) {
-          console.error("[Modexa Audit] Discord delivery error", error);
-          break;
-        }
-      }
-    }
-    database.setRuntimeState("api.audit_discord_seen", [...seenSet].slice(-5000));
-  } finally {
-    auditDispatchInFlight = false;
-  }
-}
-
 function appendRunnerLog(stream: "stdout" | "stderr", chunk: Buffer | string): void {
   for (const line of String(chunk).split(/\\r?\\n/).filter(Boolean)) {
     runnerLogs.push({ at: new Date().toISOString(), stream, message: line.slice(0, 4000) });
@@ -675,7 +510,7 @@ function isCommunityScopedReadPath(path: string, method: string): boolean {
   if (method !== "GET" && method !== "HEAD") return false;
   if (path === "/api/commands" || path === "/api/command-settings" ||
       path === "/api/analytics" || path === "/api/audit" ||
-      path === "/api/moderation" || path === "/api/audit/settings" || path === "/api/audit/export" || path === "/api/custom-commands" ||
+      path === "/api/moderation" || path === "/api/custom-commands" ||
       path === "/api/automations") return true;
   if (/^\/api\/communities\/[^/]+(?:\/.*)?$/.test(path)) return true;
   return false;
@@ -683,7 +518,6 @@ function isCommunityScopedReadPath(path: string, method: string): boolean {
 
 function isCommunityScopedMutationPath(path: string, method: string): boolean {
   if (method === "POST" && ["/api/automations", "/api/custom-commands", "/api/moderation/cases", "/api/moderation/revoke"].includes(path)) return true;
-  if (method === "PUT" && path === "/api/audit/settings") return true;
   if (method === "PUT" && path === "/api/command-settings") return true;
   if (/^\/api\/automations\/[^/]+$/.test(path) && ["POST", "PUT", "PATCH", "DELETE"].includes(method)) return true;
   if (/^\/api\/custom-commands\/[^/]+$/.test(path) && ["PUT", "PATCH", "DELETE"].includes(method)) return true;
@@ -845,11 +679,11 @@ const server = createServer((req, res) => {
         ".png": "image/png",
         ".ico": "image/x-icon",
         ".svg": "image/svg+xml",
+        ".css": "text/css; charset=utf-8",
+        ".js": "text/javascript; charset=utf-8",
         ".webp": "image/webp",
         ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".css": "text/css; charset=utf-8",
-        ".js": "text/javascript; charset=utf-8"
+        ".jpeg": "image/jpeg"
       };
       const extension = assetName.slice(assetName.lastIndexOf(".")).toLowerCase();
       const contentType = assetTypes[extension];
@@ -941,6 +775,16 @@ const server = createServer((req, res) => {
 
     if (url.pathname === "/" || url.pathname === "/dashboard" || url.pathname === "/dashboard/") {
       const html = readFileSync(resolve(process.cwd(), "apps/dashboard/pages/overview.html"), "utf8");
+      res.writeHead(200, {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store"
+      });
+      res.end(html);
+      return;
+    }
+
+    if (url.pathname === "/" || url.pathname === "/dashboard") {
+      const html = readFileSync(dashboardPath, "utf8");
       res.writeHead(200, {
         "content-type": "text/html; charset=utf-8",
         "cache-control": "no-store"
@@ -1073,8 +917,6 @@ const server = createServer((req, res) => {
           ["/api/custom-commands", ["get", "post"]],
           ["/api/custom-commands/{id}", ["put", "patch", "delete"]],
           ["/api/audit", ["get"]],
-          ["/api/audit/settings", ["get", "put"]],
-          ["/api/audit/export", ["get"]],
           ["/api/moderation", ["get"]],
           ["/api/moderation/cases", ["post"]],
           ["/api/moderation/revoke", ["post"]],
@@ -2653,63 +2495,6 @@ const server = createServer((req, res) => {
       return;
     }
 
-    if (url.pathname === "/api/audit/settings" && ["GET", "PUT"].includes(req.method ?? "")) {
-      const communityId = url.searchParams.get("communityId") ?? (await readJsonBody(req)).communityId;
-      if (typeof communityId !== "string" || !communityId) { json(res, 400, { error: "communityId_required" }); return; }
-      if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) { json(res, 404, { error: "community_not_found" }); return; }
-      if (req.method === "GET") {
-        let actions: string[] = [];
-        try { actions = JSON.parse(database.getCommunitySetting(communityId, "audit.events") ?? "[]") as string[]; } catch { actions = []; }
-        json(res, 200, {
-          enabled: database.getCommunitySetting(communityId, "audit.discord.enabled") === "true",
-          channelId: database.getCommunitySetting(communityId, "audit.discord.channel_id") ?? "",
-          actions
-        });
-        return;
-      }
-      const body = await readJsonBody(req);
-      const channelId = typeof body.channelId === "string" ? body.channelId.trim() : "";
-      const enabled = body.enabled;
-      const actions = body.actions;
-      if (typeof enabled !== "boolean" || channelId.length > 32 || (channelId && !/^\d{15,25}$/.test(channelId)) ||
-          !Array.isArray(actions) || actions.length > AUDIT_ACTIONS.size || !actions.every((item) => typeof item === "string" && AUDIT_ACTIONS.has(item)) ||
-          new Set(actions).size !== actions.length) {
-        json(res, 400, { error: "invalid_audit_settings" }); return;
-      }
-      database.setCommunitySetting(communityId, "audit.discord.enabled", String(enabled));
-      database.setCommunitySetting(communityId, "audit.discord.channel_id", channelId);
-      database.setCommunitySetting(communityId, "audit.events", JSON.stringify(actions));
-      json(res, 200, { updated: true, enabled, channelId, actions });
-      return;
-    }
-
-    if (url.pathname === "/api/audit/export" && req.method === "GET") {
-      const communityId = url.searchParams.get("communityId");
-      if (!communityId) { json(res, 400, { error: "communityId_required" }); return; }
-      if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) { json(res, 404, { error: "community_not_found" }); return; }
-      database.deleteExpiredAuditEntries(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000));
-      const entries = database.getAuditEntries(communityId, 10000).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-      const body = [
-        "MODEXA AUDIT EXPORT",
-        "Community: " + communityId,
-        "Exported at: " + new Date().toISOString(),
-        "Retention: 5 days",
-        "Entries: " + entries.length,
-        "",
-        ...entries.map((entry) => auditEntryText(entry as AuditExportEntry)),
-        ""
-      ].join("\n----------------------------------------\n");
-      const safeId = communityId.replace(/[^a-zA-Z0-9_-]/g, "_");
-      res.writeHead(200, {
-        "content-type": "text/plain; charset=utf-8",
-        "content-disposition": 'attachment; filename="modexa-audit-' + safeId + '.txt"',
-        "cache-control": "no-store",
-        "x-content-type-options": "nosniff"
-      });
-      res.end(body);
-      return;
-    }
-
     if (url.pathname === "/api/audit" && req.method === "GET") {
       const communityId = url.searchParams.get("communityId");
       if (!communityId) { json(res, 400, { error: "communityId_required" }); return; }
@@ -2718,7 +2503,6 @@ const server = createServer((req, res) => {
       }
       const page = Math.max(1, Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
       const limit = Math.min(100, Math.max(1, Number.parseInt(url.searchParams.get("limit") ?? "25", 10) || 25));
-      database.deleteExpiredAuditEntries(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000));
       const items = database.getAuditEntries(communityId, 500);
       json(res, 200, { items: items.slice((page - 1) * limit, page * limit), pagination: { page, limit, total: items.length, pages: Math.ceil(items.length / limit) } });
       return;
@@ -2755,18 +2539,8 @@ const server = createServer((req, res) => {
           ...(typeof body.durationSeconds === "number" ? { durationSeconds: body.durationSeconds } : {}),
           ...(typeof body.reason === "string" ? { reason: body.reason.slice(0, 1000) } : {})
         });
-        const actorIdentity = runtimeServices.identityService.getUserIdentities(actorUserId)
-          .find((identity) => identity.platform === platform);
-        const actionWithMetadata = {
-          ...result.adapterAction,
-          metadata: {
-            ...result.adapterAction.metadata,
-            ...(actorIdentity ? { actorExternalId: actorIdentity.externalId } : {}),
-            moderationCaseId: result.case.id
-          }
-        };
-        const queued = enqueueAdapterAction(actionWithMetadata, communityId, `moderation:${result.case.id}`);
-        json(res, 201, { item: result.case, adapterAction: actionWithMetadata, execution: { status: "queued", actionId: queued.id } });
+        const queued = enqueueAdapterAction(result.adapterAction, communityId, `moderation:${result.case.id}`);
+        json(res, 201, { item: result.case, adapterAction: result.adapterAction, execution: { status: "queued", actionId: queued.id } });
       } catch (error) {
         json(res, 403, { error: error instanceof Error ? error.message : "moderation_create_failed" });
       }
@@ -2873,11 +2647,6 @@ const server = createServer((req, res) => {
 server.listen(port, host, () => {
   console.log(`Modexa API listening on http://${host}:${port}`);
   startRunner();
-  // Dispatch queued audit entries from the same SQLite database used by the runner.
-  void dispatchPendingAuditEntries();
-  setInterval(() => {
-    void dispatchPendingAuditEntries();
-  }, 5000).unref();
 });
 
 async function shutdown(): Promise<void> {
