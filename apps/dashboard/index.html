@@ -640,7 +640,7 @@ function closeModerationCase(){document.getElementById('moderationCaseDetails').
 async function revokeSelectedModerationCase(){
  if(!selectedModerationCase)return;
  if(!confirm('Отозвать это действие модерации?'))return;
- try{await post('/api/moderation/revoke',{caseId:selectedModerationCase.id});toast('Запрос на отзыв обработан');await loadModeration();closeModerationCase()}catch(e){toast('Не удалось отозвать кейс: '+e.message)}
+ try{await post('/api/moderation/revoke',{caseId:selectedModerationCase.id,actorUserId:discordUser?.id||selectedModerationCase.actorUserId});toast('Запрос на отзыв обработан');await loadModeration();closeModerationCase()}catch(e){toast('Не удалось отозвать кейс: '+e.message)}
 }
 async function reapplySelectedModerationCase(){
  if(!selectedModerationCase)return;
