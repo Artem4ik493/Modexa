@@ -847,7 +847,9 @@ const server = createServer((req, res) => {
         ".svg": "image/svg+xml",
         ".webp": "image/webp",
         ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg"
+        ".jpeg": "image/jpeg",
+        ".css": "text/css; charset=utf-8",
+        ".js": "text/javascript; charset=utf-8"
       };
       const extension = assetName.slice(assetName.lastIndexOf(".")).toLowerCase();
       const contentType = assetTypes[extension];
@@ -892,8 +894,8 @@ const server = createServer((req, res) => {
       return;
     }
 
-    if (url.pathname === "/" || url.pathname === "/dashboard") {
-      const html = readFileSync(dashboardPath, "utf8");
+    if (url.pathname === "/" || url.pathname === "/dashboard" || url.pathname === "/dashboard/") {
+      const html = readFileSync(resolve(process.cwd(), "apps/dashboard/pages/overview.html"), "utf8");
       res.writeHead(200, {
         "content-type": "text/html; charset=utf-8",
         "cache-control": "no-store"
