@@ -712,7 +712,7 @@ async function saveAuditSettings(){
  if(!selectedCommunity)return toast('Сначала выберите сообщество');
  const enabled=document.getElementById('auditLogsEnabled').checked;
  const channelId=document.getElementById('auditLogsChannelId').value.trim();
- if(enabled&&!/^\\d{15,25}$/.test(channelId))return toast('Укажите корректный ID канала или темы Discord');
+ if(enabled&&!/^\d{15,25}$/.test(channelId))return toast('Введите числовой Discord ID канала или темы (15–25 цифр)');
  const actions=[...document.querySelectorAll('.audit-action:checked')].map(el=>el.value);
  try{
   await request('/api/audit/settings',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({communityId:selectedCommunity,enabled,channelId,actions})});
