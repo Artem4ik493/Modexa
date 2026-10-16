@@ -510,6 +510,7 @@ function isCommunityScopedReadPath(path: string, method: string): boolean {
   if (method !== "GET" && method !== "HEAD") return false;
   if (path === "/api/commands" || path === "/api/command-settings" ||
       path === "/api/analytics" || path === "/api/audit" ||
+      path === "/api/audit/settings" || path === "/api/audit/export" ||
       path === "/api/moderation" || path === "/api/custom-commands" ||
       path === "/api/automations") return true;
   if (/^\/api\/communities\/[^/]+(?:\/.*)?$/.test(path)) return true;
@@ -518,7 +519,7 @@ function isCommunityScopedReadPath(path: string, method: string): boolean {
 
 function isCommunityScopedMutationPath(path: string, method: string): boolean {
   if (method === "POST" && ["/api/automations", "/api/custom-commands", "/api/moderation/cases", "/api/moderation/revoke"].includes(path)) return true;
-  if (method === "PUT" && path === "/api/command-settings") return true;
+  if (method === "PUT" && (path === "/api/command-settings" || path === "/api/audit/settings")) return true;
   if (/^\/api\/automations\/[^/]+$/.test(path) && ["POST", "PUT", "PATCH", "DELETE"].includes(method)) return true;
   if (/^\/api\/custom-commands\/[^/]+$/.test(path) && ["PUT", "PATCH", "DELETE"].includes(method)) return true;
   if (/^\/api\/communities\/[^/]+\/(roles(?:\/[^/]+)?|members\/[^/]+(?:\/roles)?|ranking|welcome(?:\/preview)?|automod\/rules(?:\/[^/]+)?)$/.test(path) &&
@@ -2482,6 +2483,70 @@ const server = createServer((req, res) => {
       }
       database.setCommandEnabled(communityId, commandName, enabled);
       json(res, 200, { updated: true });
+      return;
+    }
+
+    if (url.pathname === "/api/audit/settings" && ["GET", "PUT"].includes(req.method ?? "")) {
+      const communityId = url.searchParams.get("communityId") ?? (req.method === "PUT" ? "" : "");
+      if (req.method === "GET") {
+        if (!communityId) { json(res, 400, { error: "communityId_required" }); return; }
+        if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) {
+          json(res, 404, { error: "community_not_found" }); return;
+        }
+        const settings = database.getRuntimeState<Record<string, unknown>>(`api.audit_settings.${communityId}`) ?? {};
+        json(res, 200, { enabled: settings.enabled === true, channelId: typeof settings.channelId === "string" ? settings.channelId : "", actions: Array.isArray(settings.actions) ? settings.actions : [] });
+        return;
+      }
+      const body = await readJsonBody(req);
+      const targetCommunityId = typeof body.communityId === "string" ? body.communityId : communityId;
+      const enabled = body.enabled;
+      const channelId = typeof body.channelId === "string" ? body.channelId.trim() : "";
+      const actions = body.actions;
+      if (!targetCommunityId || !database.getCommunitiesSnapshot().some((item) => item.id === targetCommunityId)) {
+        json(res, 404, { error: "community_not_found" }); return;
+      }
+      if (typeof enabled !== "boolean" || channelId.length > 25 ||
+          (channelId && !/^\\d{15,25}$/.test(channelId)) ||
+          !Array.isArray(actions) || actions.length > 100 ||
+          actions.some((item) => typeof item !== "string" || item.length > 100)) {
+        json(res, 400, { error: "invalid_audit_settings" }); return;
+      }
+      const settings = { enabled, channelId, actions: [...new Set(actions as string[])] };
+      database.setRuntimeState(`api.audit_settings.${targetCommunityId}`, settings);
+      json(res, 200, { saved: true, ...settings });
+      return;
+    }
+
+    if (url.pathname === "/api/audit/export" && req.method === "GET") {
+      const communityId = url.searchParams.get("communityId") ?? "";
+      if (!communityId) { json(res, 400, { error: "communityId_required" }); return; }
+      if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) {
+        json(res, 404, { error: "community_not_found" }); return;
+      }
+      const items = database.getAuditEntries(communityId, 500);
+      const lines = [
+        `Modexa audit export`,
+        `Community: ${communityId}`,
+        `Exported at: ${new Date().toISOString()}`,
+        `Entries: ${items.length}`,
+        "",
+        ...items.map((item) => [
+          `[${item.createdAt}] ${item.action}`,
+          `  Actor: ${item.actorUserId ?? "—"}`,
+          `  Target: ${item.targetUserId ?? "—"}`,
+          `  Reason: ${item.reason ?? "—"}`,
+          `  Metadata: ${JSON.stringify(item.metadata ?? {})}`
+        ].join("\\n"))
+      ];
+      const body = lines.join("\\n");
+      res.writeHead(200, {
+        "content-type": "text/plain; charset=utf-8",
+        "content-disposition": `attachment; filename="modexa-audit-${communityId.replace(/[^a-zA-Z0-9_-]/g, "_")}.txt"`,
+        "content-length": Buffer.byteLength(body),
+        "cache-control": "no-store",
+        "x-content-type-options": "nosniff"
+      });
+      res.end(body);
       return;
     }
 
