@@ -1674,6 +1674,40 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       return;
     }
 
+    if (url.pathname === "/api/bridge/settings" && ["GET", "PUT"].includes(req.method ?? "")) {
+      const body = req.method === "PUT" ? await readJsonBody(req) : {};
+      const communityId = req.method === "GET"
+        ? (url.searchParams.get("communityId") ?? "")
+        : (typeof body.communityId === "string" ? body.communityId : "");
+      if (!communityId || !database.getCommunitiesSnapshot().some((item) => item.id === communityId)) {
+        json(res, 400, { error: "bridge_community_required" }); return;
+      }
+      if (!authorized(req) && !(await canManageDiscordCommunity(req, communityId))) {
+        json(res, 403, { error: "bridge_community_access_forbidden" }); return;
+      }
+      const key = `api.bridge.settings.${communityId}`;
+      if (req.method === "GET") {
+        const saved = database.getRuntimeState<Record<string, unknown>>(key) ?? {};
+        json(res, 200, { communityId, enabled: saved.enabled !== false, syncEdits: saved.syncEdits !== false, syncDeletes: saved.syncDeletes !== false, relayCommands: saved.relayCommands === true, includeMedia: saved.includeMedia !== false });
+        return;
+      }
+      for (const field of ["enabled", "syncEdits", "syncDeletes", "relayCommands", "includeMedia"]) {
+        if (body[field] !== undefined && typeof body[field] !== "boolean") {
+          json(res, 400, { error: "invalid_bridge_settings", field }); return;
+        }
+      }
+      const previous = database.getRuntimeState<Record<string, unknown>>(key) ?? {};
+      const settings = {
+        enabled: typeof body.enabled === "boolean" ? body.enabled : previous.enabled !== false,
+        syncEdits: typeof body.syncEdits === "boolean" ? body.syncEdits : previous.syncEdits !== false,
+        syncDeletes: typeof body.syncDeletes === "boolean" ? body.syncDeletes : previous.syncDeletes !== false,
+        relayCommands: typeof body.relayCommands === "boolean" ? body.relayCommands : previous.relayCommands === true,
+        includeMedia: typeof body.includeMedia === "boolean" ? body.includeMedia : previous.includeMedia !== false
+      };
+      database.setRuntimeState(key, settings);
+      json(res, 200, { saved: true, communityId, ...settings }); return;
+    }
+
     if (url.pathname === "/api/bridge" && req.method === "GET") {
       const requestedCommunityId = url.searchParams.get("communityId") ?? "";
       if (!authorized(req)) {
