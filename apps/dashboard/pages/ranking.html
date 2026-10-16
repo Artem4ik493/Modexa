@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080b13">
+<title>Modexa — Рейтинг</title>
+<link rel="icon" href="/assets/logo.ico">
+<link rel="apple-touch-icon" href="/assets/logo.png">
+<link rel="stylesheet" href="/assets/dashboard.css">
+</head>
+<body data-page="ranking">
+<div class="layout">
+<aside class="sidebar">
+<a class="brand" href="/dashboard/"><img class="brand-mark" src="/assets/logo.png" alt=""><span><strong>Modexa</strong><small>Community OS</small></span></a>
+<div class="workspace"><small>ТЕКУЩЕЕ СООБЩЕСТВО</small><strong data-community-name>Выберите сообщество в API</strong></div>
+<nav><div class="nav-label">Главное</div><a class="nav " href="/dashboard/"><span class="ico">◈</span>Обзор</a><a class="nav " href="/dashboard/communities.html"><span class="ico">▦</span>Сообщества</a><div class="nav-label">Управление</div><a class="nav " href="/dashboard/members.html"><span class="ico">♙</span>Участники</a><a class="nav " href="/dashboard/roles.html"><span class="ico">♜</span>Роли и права</a><a class="nav " href="/dashboard/commands.html"><span class="ico">⌘</span>Команды</a><a class="nav " href="/dashboard/custom-commands.html"><span class="ico">⌘</span>Свои команды</a><a class="nav active" href="/dashboard/ranking.html"><span class="ico">↗</span>Рейтинг</a><a class="nav " href="/dashboard/welcome.html"><span class="ico">✦</span>Приветствия</a><div class="nav-label">Безопасность и связь</div><a class="nav " href="/dashboard/moderation.html"><span class="ico">◆</span>Модерация</a><a class="nav " href="/dashboard/automod.html"><span class="ico">⛨</span>AutoMod</a><a class="nav " href="/dashboard/automations.html"><span class="ico">↯</span>Автоматизации</a><a class="nav " href="/dashboard/bridge.html"><span class="ico">↔</span>Bridge</a><a class="nav " href="/dashboard/audit.html"><span class="ico">≡</span>Журнал событий</a><div class="nav-label">Администрирование</div><a class="nav " href="/dashboard/system.html"><span class="ico">⚙</span>Система</a><a class="nav " href="/dashboard/runtime.html"><span class="ico">●</span>Bot Runtime</a></nav>
+<div class="sidebar-foot">Modexa · Control Center<br><span class="auth-state">API-интеграция подключается отдельно</span></div>
+</aside>
+<main class="main">
+<header class="topbar"><div><div class="eyebrow">Control Center / Управление</div><h1 class="page-title">Рейтинг</h1><div class="page-desc">Опыт, уровни, начисление баллов и защита от спама.</div></div><div class="top-actions"><select class="select" aria-label="Сообщество" data-api-field="selectedCommunity"><option value="">Выберите сообщество…</option></select><button class="btn" data-action="refresh" title="Обновить">↻</button></div></header>
+<div class="content"><article class="card"><div class="card-head"><h2>Основные параметры рейтинга</h2><span class="pill">Ranking</span></div><div class="form-grid"><div class="field"><label>Опыт за сообщение</label><input class="input" type="number" min="0" max="1000" data-api-field="xpPerMessage" value="5"></div><div class="field"><label>Задержка начисления (сек.)</label><input class="input" type="number" min="0" max="3600" data-api-field="xpCooldown" value="60"></div><div class="field"><label>Множитель опыта</label><input class="input" type="range" min="0" max="5" step=".1" data-api-field="xpMultiplier" value="1" data-unit="×"><div class="range-line"><span>0×</span><b data-range-output="xpMultiplier">1×</b><span>5×</span></div></div><div class="field"><label>Опыт за голосовую активность</label><input class="input" type="number" min="0" max="1000" data-api-field="voiceXp" value="0"></div></div><div class="setting"><div><label>Включить рейтинг</label><div class="muted small">Начислять опыт участникам</div></div><input class="switch" type="checkbox" data-api-field="rankingEnabled" checked></div><div class="setting"><div><label>Защита от коротких сообщений</label><div class="muted small">Не начислять опыт за сообщения короче порога</div></div><input class="switch" type="checkbox" data-api-field="rankingAntiSpam" checked></div><div class="page-actions"><button class="btn primary" data-action="save">Сохранить параметры</button></div></article></div>
+</main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/assets/dashboard.js" defer></script>
+</body>
+</html>
