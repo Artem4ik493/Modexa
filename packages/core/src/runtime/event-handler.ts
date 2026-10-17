@@ -873,7 +873,17 @@ async function handleMessage(
         }
         deps.auditService?.record({ communityId: automodCommunity.id, action: "automod.trigger", actorUserId: executionContext.user.id, channelId: message.channel?.externalId, messageId: message.externalId, reason, metadata: { platform: deps.platform, ruleId: rule.id, ruleType: rule.type, action: rule.action, matched: true } });
       } catch (error) {
-        deps.logger.warn("automod.action.failed", { platform: deps.platform, communityId: automodCommunity.id, ruleId: rule.id, ruleType: rule.type, action: rule.action }, error);
+        const failure = error instanceof Error ? error.message : String(error);
+        deps.logger.warn("automod.action.failed", { platform: deps.platform, communityId: automodCommunity.id, ruleId: rule.id, ruleType: rule.type, action: rule.action, failure }, error);
+        deps.auditService?.record({
+          communityId: automodCommunity.id,
+          action: "automod.trigger",
+          actorUserId: executionContext.user.id,
+          channelId: message.channel?.externalId,
+          messageId: message.externalId,
+          reason: reason + " — действие не выполнено",
+          metadata: { platform: deps.platform, ruleId: rule.id, ruleType: rule.type, action: rule.action, matched: true, success: false, failure: failure.slice(0, 500) }
+        });
       }
       return;
     }
