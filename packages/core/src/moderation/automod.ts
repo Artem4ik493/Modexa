@@ -12,8 +12,24 @@ export interface AutoModRule {
 export interface AutoModDecision { matched: boolean; rule?: AutoModRule; reason?: string; }
 
 function wildcard(value: string, pattern: string): boolean {
+  const escaped = pattern.replace(/[|\\{}()[\\]^$+?.]/g, "\\function wildcard(value: string, pattern: string): boolean {
   const escaped = pattern.replaceAll(".", "\\.").replaceAll("+", "\\+").replaceAll("?", "\\?");
   return new RegExp("^" + escaped.replaceAll("*", ".*") + "$", "i").test(value);
+}").replaceAll("*", ".*");
+  return new RegExp("^" + escaped + "$", "i").test(value);
+}
+
+function isWhitelistedLink(link: string, patterns: string[]): boolean {
+  let hostname = "";
+  try { hostname = new URL(link.startsWith("www.") ? "https://" + link : link).hostname.toLowerCase(); } catch { /* compare the raw value below */ }
+  return patterns.some((pattern) => {
+    const candidate = pattern.trim().toLowerCase();
+    if (!candidate) return false;
+    if (wildcard(link.toLowerCase(), candidate)) return true;
+    const domainPattern = candidate.replace(/^(?:https?:\\/\\/)?/, "").replace(/^www\\./, "").split(/[/?#]/, 1)[0] ?? "";
+    const domain = hostname.replace(/^www\\./, "");
+    return Boolean(domainPattern && domain && (domain === domainPattern || domain.endsWith("." + domainPattern) || wildcard(domain, domainPattern)));
+  });
 }
 
 export class AutoModService {
@@ -35,7 +51,7 @@ export class AutoModService {
       }
       if (rule.type === "link" && /(?:https?:\/\/|www\.)[^\s]+/i.test(content)) {
         const links = content.match(/(?:https?:\/\/|www\.)[^\s]+/gi) ?? [];
-        if (links.some((link) => !(rule.whitelist ?? []).some((pattern) => wildcard(link, pattern)))) return { matched: true, rule, reason: "link" };
+        if (links.some((link) => !isWhitelistedLink(link, rule.whitelist ?? []))) return { matched: true, rule, reason: "link" };
       }
       if (rule.type === "invite" && /(?:discord(?:app)?\.com\/invite\/|discord\.gg\/)[a-z0-9-]+/i.test(content)) return { matched: true, rule, reason: "discord invite" };
       if (rule.type === "scam" && /(?:free\s+(?:nitro|gift)|steam\s+gift|claim\s+(?:your\s+)?gift|verify\s+(?:your\s+)?account)/i.test(content) && /https?:\/\//i.test(content)) return { matched: true, rule, reason: "scam/phishing" };
