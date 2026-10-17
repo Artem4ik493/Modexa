@@ -1824,8 +1824,11 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       if (!authorized(req) && (!bridgeCommunityAllowed(communityId) || !(await canManageDiscordCommunity(req, communityId)) || sourceInput.communityId !== communityId || targetInput.communityId !== communityId)) {
         json(res, 403, { error: "bridge_community_access_forbidden" }); return;
       }
+      if (sourceInput.platform === targetInput.platform) {
+        json(res, 400, { error: "bridge_requires_telegram_and_discord" }); return;
+      }
       // Normalize legacy panel-created endpoint IDs to the same stable IDs used by live platform events.
-      const canonicalize = (input: typeof sourceInput) => {
+      const canonicalize = (input: NonNullable<typeof sourceInput>) => {
         const id = [input.platform, input.communityExternalId, input.channelExternalId].join(":");
         const endpoint = { ...input, id };
         if (!endpoints.some((item) => item.id === id)) database.upsertBridgeEndpoint(endpoint);
