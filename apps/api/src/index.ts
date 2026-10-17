@@ -1836,12 +1836,12 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       const queue = database.getRuntimeState<Array<Record<string, unknown>>>("api.action_queue") ?? [];
       const notice = "🔗 Создан мост Modexa между \"" + source.channelName + "\" (" + source.platform.toUpperCase() + ") и \"" + target.channelName + "\" (" + target.platform.toUpperCase() + ").";
       const existing = database.getBridgeLinks().find((item) =>
-        (item.sourceEndpointId === sourceEndpointId && item.targetEndpointId === targetEndpointId) ||
-        (item.sourceEndpointId === targetEndpointId && item.targetEndpointId === sourceEndpointId)
+        (item.sourceEndpointId === source.id && item.targetEndpointId === target.id) ||
+        (item.sourceEndpointId === target.id && item.targetEndpointId === source.id)
       );
       if (existing) { json(res, 200, { item: existing, existing: true }); return; }
       const now = new Date();
-      const link = { id: `bridge-${randomUUID()}`, sourceEndpointId, targetEndpointId, createdAt: now, updatedAt: now };
+      const link = { id: `bridge-${randomUUID()}`, sourceEndpointId: source.id, targetEndpointId: target.id, createdAt: now, updatedAt: now };
       try {
         database.upsertBridgeLink(link);
         for (const endpoint of [source, target]) {
