@@ -31,7 +31,8 @@ import {
   createModerationRestoreCommands,
   createPublicFeatureCommands,
   type MemberDirectory,
-  type AuditService
+  type AuditService,
+  type AutoModService
 } from "@modexa/core";
 
 import {
@@ -108,6 +109,7 @@ export interface CreateDiscordAdapterOptions {
     import("@modexa/core").CommandSettingsService;
 
   auditService?: AuditService;
+  autoModService?: AutoModService;
 }
 
 export function createDiscordAdapter(
@@ -462,7 +464,8 @@ export function createDiscordAdapter(
       membershipService:
         options.membershipService,
       communityService:
-        options.communityService
+        options.communityService,
+      autoModService: options.autoModService
   });
   adapter.onEvent(async (event) => {
     const externalCommunityId =
