@@ -431,13 +431,18 @@ nav{min-height:0;padding-bottom:18px}
 </section>
 
 <section class="page" id="automod">
-  <div class="two">
-    <div class="card"><div class="section"><h2>Правила AutoMod</h2><button class="btn" onclick="loadAutoMod()">↻</button></div><div id="autoModList"></div></div>
-    <div class="card"><div class="section"><h2>Новое правило</h2><span class="pill">AutoMod</span></div>
-      <div class="form"><select id="autoModType" class="select2"><option value="keyword">Ключевые слова</option><option value="link">Ссылки</option><option value="invite">Приглашения</option><option value="scam">Скам</option><option value="caps">Капс</option><option value="flood">Флуд</option><option value="repeated_text">Повтор текста</option><option value="emotes">Эмодзи</option><option value="mentions">Упоминания</option><option value="zalgo">Zalgo</option></select>
-      <input id="autoModValue" class="input" placeholder="Слово / шаблон (если нужно)"><select id="autoModAction" class="select2"><option value="delete">Удалить сообщение</option><option value="warn">Предупредить</option><option value="mute">Мут</option><option value="kick">Кик</option><option value="ban">Бан</option></select><button class="btn primary" onclick="createAutoModRule()">Добавить правило</button><div class="meta">Правила сохраняются в Core. Исполнение на входящих сообщениях ещё требует подключения обработчиков адаптеров.</div></div>
-    </div>
-  </div>
+ <div class="card"><div class="section"><div><h2>AutoMod</h2><div class="meta">Автоматическая модерация сообщений. Настройки сохраняются отдельно для каждого сообщества.</div></div><div class="top-actions"><span class="pill" id="autoModSummary">—</span><button class="btn" onclick="loadAutoMod()">↻ Обновить</button></div></div>
+ <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px" id="autoModFilters"><div class="empty">Выберите сообщество.</div></div></div>
+ <div class="card" id="autoModEditor" hidden><div class="section"><div><h2 id="autoModEditorTitle">Настройки фильтра</h2><div class="meta" id="autoModEditorDescription"></div></div><button class="btn" onclick="closeAutoModEditor()">Закрыть</button></div>
+ <div class="form"><input type="hidden" id="autoModEditId"><input type="hidden" id="autoModEditType">
+ <label for="autoModValue">Слова, фразы или шаблоны</label><textarea id="autoModValue" class="input" rows="3" placeholder="Каждое значение с новой строки"></textarea><div class="meta" id="autoModValueHelp"></div>
+ <div class="form-grid"><div class="form"><label for="autoModAction">Действие при нарушении</label><select id="autoModAction" class="select2"><option value="delete">Удалить сообщение</option><option value="warn">Предупредить</option><option value="mute">Ограничить участника</option><option value="kick">Исключить участника</option><option value="ban">Заблокировать участника</option></select></div>
+ <div class="form"><label for="autoModThreshold">Порог срабатывания</label><input id="autoModThreshold" class="input" type="number" min="1" max="100" value="5"><div class="meta" id="autoModThresholdHelp"></div></div>
+ <div class="form"><label for="autoModWindow">Временное окно (секунды)</label><input id="autoModWindow" class="input" type="number" min="1" max="86400" value="10"></div></div>
+ <label for="autoModWhitelist">Исключения / разрешённые домены</label><textarea id="autoModWhitelist" class="input" rows="3" placeholder="example.org"></textarea><div class="meta">Для фильтра ссылок перечислите разрешённые домены или шаблоны, по одному на строку.</div>
+ <label class="row"><input type="checkbox" id="autoModEnabled"><span><b>Фильтр включён</b><span class="meta">Выключенный фильтр не реагирует на сообщения.</span></span></label>
+ <div class="top-actions"><button class="btn" onclick="closeAutoModEditor()">Отмена</button><button class="btn primary" onclick="saveAutoModRule()">Сохранить настройки</button></div></div></div>
+ <div class="card"><div class="section"><div><h2>Как работают фильтры</h2><div class="meta">Управление полностью через панель — команды настройки не нужны.</div></div></div><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px"><div class="metric"><div class="label">ПОРОГИ</div><div class="hint">Для флуда, Caps Lock, эмодзи и упоминаний можно задать порог срабатывания.</div></div><div class="metric"><div class="label">ИСКЛЮЧЕНИЯ</div><div class="hint">Для ссылок можно задать разрешённые домены и шаблоны.</div></div><div class="metric"><div class="label">ДЕЙСТВИЯ</div><div class="hint">Удаление, предупреждение или наказание — с учётом прав и возможностей платформы.</div></div></div></div>
 </section>
 
 <section class="page" id="moderation">
@@ -998,16 +1003,48 @@ async function createCustomCommand(){
   try{await post('/api/custom-commands',{communityId:selectedCommunity,name,description,actions:[{type:'message',content}],aliases:[],enabled:true});document.getElementById('customName').value='';document.getElementById('customDescription').value='';document.getElementById('customContent').value='';toast('Команда создана');loadCustomCommands()}catch(e){toast(e.message)}
 }
 async function deleteCustomCommand(id){if(!confirm('Удалить пользовательскую команду?'))return;try{await send('/api/custom-commands/'+encodeURIComponent(id),'DELETE');toast('Команда удалена');loadCustomCommands()}catch(e){toast(e.message)}}
+const autoModDefinitions=[
+{type:'link',title:'Ссылки',description:'Нежелательные ссылки',icon:'↗',help:'Оставьте пустым, чтобы проверять все ссылки.'},
+{type:'invite',title:'Приглашения',description:'Приглашения на серверы Discord',icon:'⇧',help:'Ищет стандартные ссылки-приглашения Discord.'},
+{type:'scam',title:'Скам и фишинг',description:'Подозрительные предложения и ссылки',icon:'⚠',help:'Ищет типовые фразы о подарках и подозрительные ссылки.'},
+{type:'keyword',title:'Плохие слова',description:'Запрещённые слова и выражения',icon:'✕',help:'Укажите запрещённые слова или фразы, каждое с новой строки.'},
+{type:'repeated_text',title:'Повторяемый текст',description:'Повтор одного сообщения',icon:'⟳',help:'Срабатывает при повторе сообщения в пределах временного окна.'},
+{type:'flood',title:'Флуд',description:'Слишком частые сообщения',icon:'≋',help:'Порог — число сообщений за заданное время.'},
+{type:'caps',title:'Caps Lock',description:'Избыточные заглавные буквы',icon:'Aa',help:'Порог — доля заглавных букв от 0.1 до 1, например 0.7 = 70%.'},
+{type:'emotes',title:'Эмодзи',description:'Чрезмерное количество эмодзи',icon:'☺',help:'Минимальное количество эмодзи в одном сообщении.'},
+{type:'mentions',title:'Упоминания',description:'Массовые упоминания пользователей',icon:'@',help:'Минимальное количество упоминаний в сообщении.'},
+{type:'zalgo',title:'Zalgo',description:'Комбинируемые символы',icon:'≋',help:'Порог количества комбинируемых символов.'}
+];
+let autoModRules=[];
+function autoModRuleFor(type){return autoModRules.find(r=>r.type===type)}
+function autoModDefault(type){return {type,enabled:false,action:'delete',value:'',threshold:type==='caps'?0.7:(type==='emotes'?8:(type==='zalgo'?12:5)),windowSeconds:10,whitelist:[]}}
 async function loadAutoMod(){
-  if(!selectedCommunity){document.getElementById('autoModList').innerHTML='<div class="empty">Выберите сообщество.</div>';return}
-  try{const d=await get('/api/communities/'+encodeURIComponent(selectedCommunity)+'/automod/rules');document.getElementById('autoModList').innerHTML=d.items.map(r=>'<div class="row"><div class="grow"><div class="name">'+esc(r.type)+' · '+esc(r.action)+'</div><div class="meta">'+esc(r.value||'без значения')+' · '+(r.enabled?'включено':'выключено')+'</div></div><button class="btn danger" onclick="deleteAutoModRule(\''+esc(r.id)+'\')">Удалить</button></div>').join('')||'<div class="empty">Правил пока нет.</div>'}catch(e){toast(e.message)}
+ const root=document.getElementById('autoModFilters');
+ if(!selectedCommunity){root.innerHTML='<div class="empty">Выберите сообщество.</div>';document.getElementById('autoModSummary').textContent='—';return}
+ try{
+ const d=await get('/api/communities/'+encodeURIComponent(selectedCommunity)+'/automod/rules');autoModRules=d.items||[];
+ const count=autoModDefinitions.filter(x=>autoModRuleFor(x.type)?.enabled).length;document.getElementById('autoModSummary').textContent=count+' из '+autoModDefinitions.length+' включено';
+ root.innerHTML=autoModDefinitions.map(def=>{const r=autoModRuleFor(def.type)||autoModDefault(def.type);return '<article class="card" style="margin:0"><div class="section"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:24px">'+def.icon+'</span><div><div class="name">'+esc(def.title)+'</div><div class="meta">'+esc(def.description)+'</div></div></div><label class="row"><input type="checkbox" '+(r.enabled?'checked':'')+' onchange="toggleAutoModFilter(\''+def.type+'\',this.checked)" aria-label="Включить '+esc(def.title)+'"></label></div><div class="meta">'+(r.id?'Настроено':'Настройки по умолчанию')+' · '+(r.enabled?'Активен':'Выключен')+'</div><div class="top-actions"><button class="btn" onclick="openAutoModEditor(\''+def.type+'\')">⚙ Настроить</button></div></article>'}).join('');
+ }catch(e){root.innerHTML='<div class="empty">Не удалось загрузить фильтры: '+esc(e.message)+'</div>';toast(e.message)}
 }
-async function createAutoModRule(){
-  if(!selectedCommunity)return toast('Выберите сообщество');
-  const type=document.getElementById('autoModType').value,value=document.getElementById('autoModValue').value.trim(),action=document.getElementById('autoModAction').value;
-  try{await post('/api/communities/'+encodeURIComponent(selectedCommunity)+'/automod/rules',{type,value,action,enabled:true});document.getElementById('autoModValue').value='';toast('Правило добавлено');loadAutoMod()}catch(e){toast(e.message)}
+function openAutoModEditor(type){
+ const def=autoModDefinitions.find(x=>x.type===type);if(!def)return;const r=autoModRuleFor(type)||autoModDefault(type);
+ document.getElementById('autoModEditId').value=r.id||'';document.getElementById('autoModEditType').value=type;document.getElementById('autoModEditorTitle').textContent='Настройки: '+def.title;document.getElementById('autoModEditorDescription').textContent=def.description;document.getElementById('autoModValue').value=r.value||'';document.getElementById('autoModValueHelp').textContent=def.help;document.getElementById('autoModAction').value=r.action||'delete';
+ const threshold=document.getElementById('autoModThreshold');threshold.value=r.threshold??autoModDefault(type).threshold;threshold.step=type==='caps'?'0.05':'1';threshold.min=type==='caps'?'0.1':'1';threshold.max=type==='caps'?'1':'100';document.getElementById('autoModThresholdHelp').textContent=def.help;
+ document.getElementById('autoModWindow').value=r.windowSeconds??10;document.getElementById('autoModWhitelist').value=Array.isArray(r.whitelist)?r.whitelist.join('\n'):'';document.getElementById('autoModEnabled').checked=Boolean(r.enabled);document.getElementById('autoModEditor').hidden=false;document.getElementById('autoModEditor').scrollIntoView({behavior:'smooth',block:'start'});
 }
-async function deleteAutoModRule(id){if(!confirm('Удалить правило AutoMod?'))return;try{await send('/api/communities/'+encodeURIComponent(selectedCommunity)+'/automod/rules/'+encodeURIComponent(id),'DELETE');toast('Правило удалено');loadAutoMod()}catch(e){toast(e.message)}}
+function closeAutoModEditor(){document.getElementById('autoModEditor').hidden=true}
+async function saveAutoModRule(){
+ if(!selectedCommunity)return toast('Выберите сообщество');const type=document.getElementById('autoModEditType').value,old=autoModRuleFor(type),threshold=Number(document.getElementById('autoModThreshold').value),windowSeconds=Number(document.getElementById('autoModWindow').value);
+ if(!Number.isFinite(threshold)||threshold<(type==='caps'?0.1:1)||threshold>(type==='caps'?1:100))return toast('Проверьте порог срабатывания');if(!Number.isInteger(windowSeconds)||windowSeconds<1||windowSeconds>86400)return toast('Временное окно должно быть от 1 до 86400 секунд');
+ const body={...(old?.id?{id:old.id}:{}),type,enabled:document.getElementById('autoModEnabled').checked,action:document.getElementById('autoModAction').value,value:document.getElementById('autoModValue').value.split('\n').map(x=>x.trim()).filter(Boolean).join('|'),threshold,windowSeconds,whitelist:document.getElementById('autoModWhitelist').value.split('\n').map(x=>x.trim()).filter(Boolean)};
+ try{await post('/api/communities/'+encodeURIComponent(selectedCommunity)+'/automod/rules',body);toast('Настройки фильтра сохранены');closeAutoModEditor();await loadAutoMod()}catch(e){toast(e.message)}
+}
+async function toggleAutoModFilter(type,enabled){
+ if(!selectedCommunity)return toast('Выберите сообщество');const old=autoModRuleFor(type)||autoModDefault(type);
+ try{await post('/api/communities/'+encodeURIComponent(selectedCommunity)+'/automod/rules',{...old,enabled});await loadAutoMod()}catch(e){toast(e.message);await loadAutoMod()}
+}
+async function deleteAutoModRule(id){if(!confirm('Удалить настройки фильтра AutoMod?'))return;try{await send('/api/communities/'+encodeURIComponent(selectedCommunity)+'/automod/rules/'+encodeURIComponent(id),'DELETE');toast('Настройки удалены');await loadAutoMod()}catch(e){toast(e.message)}}
 
 let loadAllInFlight=false;
 async function loadAll(){if(loadAllInFlight)return;loadAllInFlight=true;try{document.body.classList.toggle('owner-mode',!!authKey);if(!authKey&&['system','runtime'].includes(document.querySelector('.page.active')?.id))showPage('overview');const [h,o,c]=await Promise.all([get('/health'),get('/api/overview'),get('/api/config')]);let r=null,s=null;if(authKey){[r,s]=await Promise.all([get('/api/runtime'),get('/api/system')]);}document.getElementById('apiDot').textContent='● online';document.getElementById('healthText').textContent=h.status;document.getElementById('mCommunities').textContent=o.communities;document.getElementById('mActive').textContent=o.activeCommunities;document.getElementById('mCases').textContent=o.moderationCases;document.getElementById('mRunner').textContent=r?(r.state==='running'?'ON':'OFF'):'—';document.getElementById('runnerText').textContent=r?r.state:'OWNER KEY REQUIRED';document.getElementById('maintenanceText').textContent=s?(s.maintenanceMode?'ON':'OFF'):'—';document.getElementById('oauthText').textContent=c.oauth?.discord?'OK':'OFF';document.getElementById('systemPill').textContent=r?(r.state==='running'?'Online':'Degraded'):'Restricted';if(s){maintenance=s.maintenanceMode;document.getElementById('maintenanceSwitch').classList.toggle('on',maintenance);}if(discordUser){try{const g=await getDiscordGuilds();communities=(g.items||[]).filter(c=>c.canManageBot===true||c.canInviteBot===true).sort((a,b)=>serverRank(a)-serverRank(b)||String(a.name||'').localeCompare(String(b.name||''),'ru'));}catch(e){document.getElementById('serverList').insertAdjacentHTML('afterbegin','<div class="empty">Не удалось обновить список Discord-серверов: '+esc(e.message||'неизвестная ошибка')+'. Показаны последние загруженные данные.</div>');toast('Не удалось обновить Discord-серверы: '+(e.message||'ошибка API'))}}else if(authKey===OWNER_COOKIE_SESSION){const local=await get('/api/communities');communities=(local.items||[]).map(c=>({id:c.id,communityId:c.id,name:c.name,botInstalled:true,canManageBot:true,canInviteBot:false})).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ru'));}else{communities=[];}renderCommunitySelect();renderServers();await renderSelected();await loadRuntime();}catch(e){document.getElementById('apiDot').textContent='● offline';if(e.message!=='unauthorized')toast(e.message||'Не удалось обновить Dashboard')}finally{loadAllInFlight=false}}
