@@ -889,9 +889,10 @@ function updateBridgeDraft(input){if(input.checked){if(!bridgeDraft.includes(inp
 function prepareBridgeCreation(){
  const name=document.getElementById('bridgeName').value.trim();
  const ids=[...new Set(bridgeDraft)];
- if(ids.length<2)return toast('Выберите минимум два чата');
+ if(ids.length!==2)return toast('Выберите одну Telegram-группу и один Discord-канал');
  const endpoints=ids.map(id=>bridgeCache.endpoints.find(x=>x.id===id)).filter(Boolean);
- if(endpoints.length<2)return toast('Не удалось найти выбранные чаты');
+ if(endpoints.length!==2)return toast('Не удалось найти выбранные чаты');
+ if(endpoints.filter(x=>x.platform==='telegram').length!==1||endpoints.filter(x=>x.platform==='discord').length!==1)return toast('Мост связывает одну Telegram-группу и один Discord-канал. Выберите по одному чату каждой платформы.');
  const duplicates=endpoints.some((x,i)=>endpoints.slice(i+1).some(y=>x.id===y.id));
  if(duplicates)return toast('В списке есть повторяющиеся чаты');
  document.getElementById('bridgeConfirmCard').hidden=false;
@@ -903,12 +904,12 @@ function cancelBridgeCreation(){bridgeDraft=[];document.getElementById('bridgeCo
 async function confirmAndCreateBridge(){
  const community=selectedModexaCommunity();if(!authKey&&(!community||community.canManageBot!==true))return toast('Выберите Discord-сервер, которым вы управляете');
  const ids=[...new Set(bridgeDraft)],checks=[...document.querySelectorAll('.bridge-confirm-check')];
- if(ids.length<2||checks.length!==ids.length||checks.some(x=>!x.checked))return toast('Подтвердите каждую выбранную сторону');
+ if(ids.length!==2||checks.length!==2||checks.some(x=>!x.checked))return toast('Подтвердите Telegram-группу и Discord-канал');
  const endpoints=ids.map(id=>bridgeCache.endpoints.find(x=>x.id===id)).filter(Boolean);
  if(endpoints.length!==ids.length)return toast('Список чатов изменился. Обновите страницу и повторите.');
  if(!confirm('Создать мост между '+endpoints.length+' чатами? Сообщения будут пересылаться между всеми выбранными местами.'))return;
  try{
-  const pairs=[];for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++)pairs.push([ids[i],ids[j]]);
+  const pairs=[[ids[0],ids[1]]];
   for(const [sourceEndpointId,targetEndpointId] of pairs)await post('/api/bridge/links',{sourceEndpointId,targetEndpointId,communityId:selectedModexaCommunity()?.communityId||selectedModexaCommunity()?.id});
   toast('Мост создан: '+endpoints.length+' чата связаны');bridgeDraft=[];document.getElementById('bridgeConfirmCard').hidden=true;await loadBridge();
  }catch(e){toast('Не удалось создать все связи. Проверьте список мостов и повторите: '+e.message);await loadBridge()}
