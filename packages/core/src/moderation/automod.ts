@@ -5,7 +5,8 @@ export type AutoModRuleType =
 export interface AutoModRule {
   id: string; communityId: string; type: AutoModRuleType; enabled: boolean;
   value?: string; threshold?: number; windowSeconds?: number; whitelist?: string[];
-  ignoredUserIds?: string[]; ignoredChannelIds?: string[];\n  action: "warn" | "mute" | "kick" | "ban" | "delete";
+  ignoredUserIds?: string[]; ignoredChannelIds?: string[];
+  action: "warn" | "mute" | "kick" | "ban" | "delete";
 }
 
 export interface AutoModDecision { matched: boolean; rule?: AutoModRule; reason?: string; }
