@@ -1946,7 +1946,8 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
           (body.durationSeconds !== undefined && (!Number.isInteger(body.durationSeconds) || Number(body.durationSeconds) < 1 || Number(body.durationSeconds) > 2_592_000)) ||
           (body.whitelist !== undefined && (!Array.isArray(body.whitelist) || !body.whitelist.every((v) => typeof v === "string" && v.length <= 300))) ||
           (body.ignoredUserIds !== undefined && (!Array.isArray(body.ignoredUserIds) || !body.ignoredUserIds.every((v) => typeof v === "string" && v.length <= 100))) ||
-          (body.ignoredChannelIds !== undefined && (!Array.isArray(body.ignoredChannelIds) || !body.ignoredChannelIds.every((v) => typeof v === "string" && v.length <= 100)))) {
+          (body.ignoredChannelIds !== undefined && (!Array.isArray(body.ignoredChannelIds) || !body.ignoredChannelIds.every((v) => typeof v === "string" && v.length <= 100))) ||
+          (body.ignoredRoleIds !== undefined && (!Array.isArray(body.ignoredRoleIds) || body.ignoredRoleIds.length > 500 || !body.ignoredRoleIds.every((v) => typeof v === "string" && v.length <= 100)))) {
         json(res, 400, { error: "invalid_automod_rule" }); return;
       }
       const all = database.getRuntimeState<Array<Record<string, unknown>>>("api.automod_rules") ?? [];
@@ -1962,6 +1963,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
         ...(Array.isArray(body.whitelist) ? { whitelist: body.whitelist } : {}),
         ...(Array.isArray(body.ignoredUserIds) ? { ignoredUserIds: body.ignoredUserIds } : {}),
         ...(Array.isArray(body.ignoredChannelIds) ? { ignoredChannelIds: body.ignoredChannelIds } : {}),
+        ...(Array.isArray(body.ignoredRoleIds) ? { ignoredRoleIds: body.ignoredRoleIds } : {}),
         action: body.action
       };
       const existing = all.findIndex((rule) => rule.id === item.id);
