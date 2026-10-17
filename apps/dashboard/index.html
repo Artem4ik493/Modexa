@@ -443,6 +443,7 @@ nav{min-height:0;padding-bottom:18px}
  <div class="form-grid"><div class="form"><label for="autoModIgnoredUsers">Исключить пользователей (ID)</label><textarea id="autoModIgnoredUsers" class="input" rows="2" placeholder="ID пользователя, каждый с новой строки"></textarea></div><div class="form"><label for="autoModIgnoredChannels">Исключить каналы / чаты (ID)</label><textarea id="autoModIgnoredChannels" class="input" rows="2" placeholder="ID канала или чата, каждый с новой строки"></textarea></div></div>
  <label class="row"><input type="checkbox" id="autoModEnabled"><span><b>Фильтр включён</b><span class="meta">Выключенный фильтр не реагирует на сообщения.</span></span></label>
  <div class="top-actions"><button class="btn" onclick="closeAutoModEditor()">Отмена</button><button class="btn primary" onclick="saveAutoModRule()">Сохранить настройки</button></div></div></div>
+ <div class="card"><div class="section"><div><h2>Журнал срабатываний AutoMod</h2><div class="meta">Последние действия фильтров для выбранного сообщества.</div></div><button class="btn" onclick="loadAutoModLogs()">↻ Обновить</button></div><div class="table-wrap"><table class="table"><thead><tr><th>Время</th><th>Правило</th><th>Действие</th><th>Платформа</th><th>Результат</th></tr></thead><tbody id="autoModLogRows"><tr><td colspan="5" class="empty">Выберите сообщество.</td></tr></tbody></table></div></div>
  <div class="card"><div class="section"><div><h2>Как работают фильтры</h2><div class="meta">Управление полностью через панель — команды настройки не нужны.</div></div></div><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px"><div class="metric"><div class="label">ПОРОГИ</div><div class="hint">Для флуда, Caps Lock, эмодзи и упоминаний можно задать порог срабатывания.</div></div><div class="metric"><div class="label">ИСКЛЮЧЕНИЯ</div><div class="hint">Для ссылок можно задать разрешённые домены и шаблоны.</div></div><div class="metric"><div class="label">ДЕЙСТВИЯ</div><div class="hint">Удаление, предупреждение или наказание — с учётом прав и возможностей платформы.</div></div></div></div>
 </section>
 
@@ -1019,12 +1020,16 @@ const autoModDefinitions=[
 let autoModRules=[];
 function autoModRuleFor(type){return autoModRules.find(r=>r.type===type)}
 function autoModDefault(type){return {type,enabled:false,action:'delete',value:'',threshold:type==='caps'?0.7:(type==='emotes'?8:(type==='zalgo'?12:5)),windowSeconds:10,whitelist:[]}}
+async function loadAutoModLogs(){
+ const root=document.getElementById('autoModLogRows');if(!selectedCommunity){root.innerHTML='<tr><td colspan="5" class="empty">Выберите сообщество.</td></tr>';return}
+ try{const d=await get('/api/audit?communityId='+encodeURIComponent(selectedCommunity)+'&limit=100');const items=(d.items||[]).filter(x=>x.action==='automod.trigger');root.innerHTML=items.map(x=>{const m=x.metadata||{};return '<tr><td>'+esc(x.createdAt||'')+'</td><td>'+esc(m.ruleType||x.reason||'AutoMod')+'</td><td>'+esc(m.action||'—')+'</td><td>'+esc(m.platform||'—')+'</td><td>'+((m.success===false)?'Ошибка':'Сработало')+'</td></tr>'}).join('')||'<tr><td colspan="5" class="empty">Срабатываний пока нет.</td></tr>'}catch(e){root.innerHTML='<tr><td colspan="5" class="empty">Не удалось загрузить журнал.</td></tr>';toast(e.message)}
+}
 async function loadAutoMod(){
  const root=document.getElementById('autoModFilters');
  if(!selectedCommunity){root.innerHTML='<div class="empty">Выберите сообщество.</div>';document.getElementById('autoModSummary').textContent='—';return}
  try{
  const d=await get('/api/communities/'+encodeURIComponent(selectedCommunity)+'/automod/rules');autoModRules=d.items||[];
- const count=autoModDefinitions.filter(x=>autoModRuleFor(x.type)?.enabled).length;document.getElementById('autoModSummary').textContent=count+' из '+autoModDefinitions.length+' включено';
+ const count=autoModDefinitions.filter(x=>autoModRuleFor(x.type)?.enabled).length;document.getElementById('autoModSummary').textContent=count+' из '+autoModDefinitions.length+' включено';await loadAutoModLogs();
  root.innerHTML=autoModDefinitions.map(def=>{const r=autoModRuleFor(def.type)||autoModDefault(def.type);return '<article class="card" style="margin:0"><div class="section"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:24px">'+def.icon+'</span><div><div class="name">'+esc(def.title)+'</div><div class="meta">'+esc(def.description)+'</div></div></div><label class="row"><input type="checkbox" '+(r.enabled?'checked':'')+' onchange="toggleAutoModFilter(\''+def.type+'\',this.checked)" aria-label="Включить '+esc(def.title)+'"></label></div><div class="meta">'+(r.id?'Настроено':'Настройки по умолчанию')+' · '+(r.enabled?'Активен':'Выключен')+'</div><div class="top-actions"><button class="btn" onclick="openAutoModEditor(\''+def.type+'\')">⚙ Настроить</button></div></article>'}).join('');
  }catch(e){root.innerHTML='<div class="empty">Не удалось загрузить фильтры: '+esc(e.message)+'</div>';toast(e.message)}
 }
