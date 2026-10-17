@@ -1398,10 +1398,11 @@ export class DiscordAdapter
         createdAt:
           message.createdAt,
 
-        metadata:
-          bridgeMedia
-            ? { bridgeMedia }
-            : undefined
+        metadata: {
+          ...(bridgeMedia ? { bridgeMedia } : {}),
+          mentionCount: message.mentions.users.size + message.mentions.roles.size + (message.mentions.everyone ? 1 : 0),
+          authorRoleIds: message.member ? [...message.member.roles.cache.keys()].filter((roleId) => roleId !== message.guild?.id) : []
+        }
       }
     };
   }
