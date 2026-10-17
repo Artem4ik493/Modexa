@@ -1943,7 +1943,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
           (body.value !== undefined && (typeof body.value !== "string" || body.value.length > 500)) ||
           (body.threshold !== undefined && (!Number.isFinite(body.threshold) || Number(body.threshold) < (body.type === "caps" ? 0.1 : 1) || Number(body.threshold) > (body.type === "caps" ? 1 : 100))) ||
           (body.windowSeconds !== undefined && (!Number.isInteger(body.windowSeconds) || Number(body.windowSeconds) < 1 || Number(body.windowSeconds) > 86400)) ||
-          (body.whitelist !== undefined && (!Array.isArray(body.whitelist) || !body.whitelist.every((v) => typeof v === "string" && v.length <= 300)) ||
+          (body.whitelist !== undefined && (!Array.isArray(body.whitelist) || !body.whitelist.every((v) => typeof v === "string" && v.length <= 300))) ||
           (body.ignoredUserIds !== undefined && (!Array.isArray(body.ignoredUserIds) || !body.ignoredUserIds.every((v) => typeof v === "string" && v.length <= 100))) ||
           (body.ignoredChannelIds !== undefined && (!Array.isArray(body.ignoredChannelIds) || !body.ignoredChannelIds.every((v) => typeof v === "string" && v.length <= 100)))) {
         json(res, 400, { error: "invalid_automod_rule" }); return;
