@@ -1816,14 +1816,23 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       const targetEndpointId = typeof body.targetEndpointId === "string" ? body.targetEndpointId : "";
       const communityId = typeof body.communityId === "string" ? body.communityId : "";
       const endpoints = database.getBridgeEndpoints();
-      const source = endpoints.find((item) => item.id === sourceEndpointId);
-      const target = endpoints.find((item) => item.id === targetEndpointId);
-      if (!sourceEndpointId || !targetEndpointId || sourceEndpointId === targetEndpointId || !source || !target) {
+      const sourceInput = endpoints.find((item) => item.id === sourceEndpointId);
+      const targetInput = endpoints.find((item) => item.id === targetEndpointId);
+      if (!sourceEndpointId || !targetEndpointId || sourceEndpointId === targetEndpointId || !sourceInput || !targetInput) {
         json(res, 400, { error: "invalid_bridge_link_endpoints" }); return;
       }
-      if (!authorized(req) && (!bridgeCommunityAllowed(communityId) || !(await canManageDiscordCommunity(req, communityId)) || source.communityId !== communityId || target.communityId !== communityId)) {
+      if (!authorized(req) && (!bridgeCommunityAllowed(communityId) || !(await canManageDiscordCommunity(req, communityId)) || sourceInput.communityId !== communityId || targetInput.communityId !== communityId)) {
         json(res, 403, { error: "bridge_community_access_forbidden" }); return;
       }
+      // Normalize legacy panel-created endpoint IDs to the same stable IDs used by live platform events.
+      const canonicalize = (input: typeof sourceInput) => {
+        const id = [input.platform, input.communityExternalId, input.channelExternalId].join(":");
+        const endpoint = { ...input, id };
+        if (!endpoints.some((item) => item.id === id)) database.upsertBridgeEndpoint(endpoint);
+        return endpoint;
+      };
+      const source = canonicalize(sourceInput);
+      const target = canonicalize(targetInput);
       const queue = database.getRuntimeState<Array<Record<string, unknown>>>("api.action_queue") ?? [];
       const notice = "🔗 Создан мост Modexa между \"" + source.channelName + "\" (" + source.platform.toUpperCase() + ") и \"" + target.channelName + "\" (" + target.platform.toUpperCase() + ").";
       const existing = database.getBridgeLinks().find((item) =>
