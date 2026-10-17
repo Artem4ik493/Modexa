@@ -851,6 +851,7 @@ async function handleMessage(
       communityId: automodCommunity.id,
       userId: message.author.externalId,
       channelId: message.channel?.externalId,
+      roleIds: Array.isArray(message.metadata?.authorRoleIds) ? message.metadata.authorRoleIds.filter((value): value is string => typeof value === "string") : [],
       content: message.content,
       mentionCount: Number.isFinite(mentionCount) ? mentionCount : 0,
       now: message.createdAt
