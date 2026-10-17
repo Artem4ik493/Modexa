@@ -32,7 +32,8 @@ import {
   AccessControlService,
   ModexaDatabase,
   type MemberDirectory,
-  type AuditService
+  type AuditService,
+  type AutoModService
 } from "@modexa/core";
 
 import {
@@ -96,6 +97,7 @@ export interface CreateTelegramAdapterOptions {
     CommandSettingsService;
 
   auditService?: AuditService;
+  autoModService?: AutoModService;
 }
 
 export function createTelegramAdapter(
@@ -523,6 +525,7 @@ export function createTelegramAdapter(
         options.membershipService,
       communityService:
         options.communityService,
+      autoModService: options.autoModService,
       database:
         options.database
   });
