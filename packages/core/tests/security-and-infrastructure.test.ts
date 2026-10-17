@@ -93,6 +93,11 @@ describe("Modexa security and infrastructure", () => {
     expect(auto.inspect({ communityId: "c", userId: "u", content: "this is a scam phrase" }).matched).toBe(true);
     expect(auto.inspect({ communityId: "c", userId: "trusted-user", content: "badword" }).matched).toBe(false);
     expect(auto.inspect({ communityId: "c", userId: "u", channelId: "trusted-channel", content: "badword" }).matched).toBe(false);
+    auto.upsertRule({
+      id: "role-exception", communityId: "c", type: "keyword",
+      value: "badword", enabled: true, action: "delete", ignoredRoleIds: ["trusted-role"]
+    });
+    expect(auto.inspect({ communityId: "c", userId: "u", roleIds: ["trusted-role"], content: "badword" }).matched).toBe(false);
   });
 
   it("scopes interaction tokens and expires them", () => {
