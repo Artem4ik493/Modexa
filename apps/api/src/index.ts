@@ -1842,8 +1842,25 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       if (!sourceEndpointId || !targetEndpointId || sourceEndpointId === targetEndpointId || !sourceInput || !targetInput) {
         json(res, 400, { error: "invalid_bridge_link_endpoints" }); return;
       }
-      if (!authorized(req) && (!bridgeCommunityAllowed(communityId) || !(await canManageDiscordCommunity(req, communityId)) || sourceInput.communityId !== communityId || targetInput.communityId !== communityId)) {
-        json(res, 403, { error: "bridge_community_access_forbidden" }); return;
+      if (!authorized(req)) {
+        if (!bridgeCommunityAllowed(communityId) || !(await canManageDiscordCommunity(req, communityId))) {
+          json(res, 403, { error: "bridge_community_access_forbidden" }); return;
+        }
+        // Permission is granted by management rights on the selected Discord server.
+        // The Telegram endpoint is validated separately against its linked group identity,
+        // because legacy group links may carry an older communityId.
+        const discordEndpoint = sourceInput.platform === "discord" ? sourceInput : targetInput;
+        const telegramEndpoint = sourceInput.platform === "telegram" ? sourceInput : targetInput;
+        const discordIdentity = database.getCommunityIdentitiesSnapshot(communityId)
+          .find((identity) => identity.platform === "discord");
+        if (!discordIdentity || discordEndpoint.communityExternalId !== discordIdentity.externalId) {
+          json(res, 403, { error: "bridge_endpoint_outside_community" }); return;
+        }
+        const telegramIdentity = database.getCommunityIdentitiesSnapshot()
+          .find((identity) => identity.platform === "telegram" && identity.externalId === telegramEndpoint.communityExternalId);
+        if (!telegramIdentity || telegramIdentity.communityId !== communityId) {
+          json(res, 403, { error: "bridge_telegram_group_not_linked_to_community" }); return;
+        }
       }
       if (sourceInput.platform === targetInput.platform) {
         json(res, 400, { error: "bridge_requires_telegram_and_discord" }); return;
