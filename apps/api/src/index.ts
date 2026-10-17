@@ -1943,7 +1943,9 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
           (body.value !== undefined && (typeof body.value !== "string" || body.value.length > 500)) ||
           (body.threshold !== undefined && (!Number.isFinite(body.threshold) || Number(body.threshold) < (body.type === "caps" ? 0.1 : 1) || Number(body.threshold) > (body.type === "caps" ? 1 : 100))) ||
           (body.windowSeconds !== undefined && (!Number.isInteger(body.windowSeconds) || Number(body.windowSeconds) < 1 || Number(body.windowSeconds) > 86400)) ||
-          (body.whitelist !== undefined && (!Array.isArray(body.whitelist) || !body.whitelist.every((v) => typeof v === "string" && v.length <= 300)))) {
+          (body.whitelist !== undefined && (!Array.isArray(body.whitelist) || !body.whitelist.every((v) => typeof v === "string" && v.length <= 300)) ||
+          (body.ignoredUserIds !== undefined && (!Array.isArray(body.ignoredUserIds) || !body.ignoredUserIds.every((v) => typeof v === "string" && v.length <= 100))) ||
+          (body.ignoredChannelIds !== undefined && (!Array.isArray(body.ignoredChannelIds) || !body.ignoredChannelIds.every((v) => typeof v === "string" && v.length <= 100)))) {
         json(res, 400, { error: "invalid_automod_rule" }); return;
       }
       const all = database.getRuntimeState<Array<Record<string, unknown>>>("api.automod_rules") ?? [];
@@ -1956,6 +1958,8 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
         ...(typeof body.threshold === "number" ? { threshold: body.threshold } : {}),
         ...(typeof body.windowSeconds === "number" ? { windowSeconds: body.windowSeconds } : {}),
         ...(Array.isArray(body.whitelist) ? { whitelist: body.whitelist } : {}),
+        ...(Array.isArray(body.ignoredUserIds) ? { ignoredUserIds: body.ignoredUserIds } : {}),
+        ...(Array.isArray(body.ignoredChannelIds) ? { ignoredChannelIds: body.ignoredChannelIds } : {}),
         action: body.action
       };
       const existing = all.findIndex((rule) => rule.id === item.id);
