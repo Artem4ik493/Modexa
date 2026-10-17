@@ -5,7 +5,7 @@ export type AutoModRuleType =
 export interface AutoModRule {
   id: string; communityId: string; type: AutoModRuleType; enabled: boolean;
   value?: string; threshold?: number; windowSeconds?: number; whitelist?: string[];
-  action: "warn" | "mute" | "kick" | "ban" | "delete";
+  ignoredUserIds?: string[]; ignoredChannelIds?: string[];\n  action: "warn" | "mute" | "kick" | "ban" | "delete";
 }
 
 export interface AutoModDecision { matched: boolean; rule?: AutoModRule; reason?: string; }
@@ -19,13 +19,13 @@ export class AutoModService {
   private readonly rules = new Map<string, AutoModRule>();
   private readonly recentMessages = new Map<string, Array<{ content: string; at: number }>>();
 
-  upsertRule(rule: AutoModRule): void { this.rules.set(rule.id, { ...rule, whitelist: rule.whitelist ? [...rule.whitelist] : undefined }); }
+  upsertRule(rule: AutoModRule): void { this.rules.set(rule.id, { ...rule, whitelist: rule.whitelist ? [...rule.whitelist] : undefined, ignoredUserIds: rule.ignoredUserIds ? [...rule.ignoredUserIds] : undefined, ignoredChannelIds: rule.ignoredChannelIds ? [...rule.ignoredChannelIds] : undefined }); }
   removeRule(ruleId: string): void { this.rules.delete(ruleId); }
   listRules(communityId: string): AutoModRule[] { return [...this.rules.values()].filter((rule) => rule.communityId === communityId); }
 
-  inspect(input: { communityId: string; userId: string; content: string; mentionCount?: number; now?: Date }): AutoModDecision {
+  inspect(input: { communityId: string; userId: string; channelId?: string; content: string; mentionCount?: number; now?: Date }): AutoModDecision {
     const now = input.now ?? new Date();
-    for (const rule of this.listRules(input.communityId).filter((item) => item.enabled)) {
+    for (const rule of this.listRules(input.communityId).filter((item) => item.enabled)) {\n      if ((rule.ignoredUserIds ?? []).includes(input.userId) || (input.channelId && (rule.ignoredChannelIds ?? []).includes(input.channelId))) continue;
       const content = input.content.trim();
       const lower = content.toLowerCase();
       if (rule.type === "keyword" && rule.value) {
