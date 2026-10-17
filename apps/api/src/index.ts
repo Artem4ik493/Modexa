@@ -1761,7 +1761,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       json(res, 201, { item: endpoint }); return;
     }
 
-    const bridgeEndpointMatch = url.pathname.match(/^\\/api\\/bridge\\/endpoints\\/([^/]+)$/);
+    const bridgeEndpointMatch = url.pathname.match(/^\/api\/bridge\/endpoints\/([^/]+)$/);
     if (bridgeEndpointMatch && ["PUT", "DELETE"].includes(req.method ?? "")) {
       const id = decodeURIComponent(bridgeEndpointMatch[1]!);
       const existing = database.getBridgeEndpoints().find((item) => item.id === id);
@@ -1824,7 +1824,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       return;
     }
 
-    const bridgeLinkMatch = url.pathname.match(/^\\/api\\/bridge\\/links\\/([^/]+)$/);
+    const bridgeLinkMatch = url.pathname.match(/^\/api\/bridge\/links\/([^/]+)$/);
     if (bridgeLinkMatch && req.method === "DELETE") {
       const id = decodeURIComponent(bridgeLinkMatch[1]!);
       const link = database.getBridgeLinks().find((item) => item.id === id);
