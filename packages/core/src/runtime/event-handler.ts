@@ -84,6 +84,8 @@ import type {
   CommunityService
 } from "../communities/service.js";
 
+import type { AutoModService } from "../moderation/automod.js";
+
 const EMPTY_CONTENT_FALLBACK =
   "…";
 
@@ -136,6 +138,8 @@ export interface PlatformEventHandlerDeps {
 
   communityService?:
     CommunityService;
+
+  autoModService?: AutoModService;
 
   renderMetadata(
     response: BoundInteractionResponse
@@ -838,6 +842,42 @@ async function handleMessage(
     message,
     executionContext
   );
+
+  // AutoMod runs before bridge relay and command handling.
+  const automodCommunity = executionContext.community;
+  if (deps.autoModService && automodCommunity && message.content.trim() && !message.content.startsWith("/")) {
+    const mentionCount = Number(message.metadata?.mentionCount ?? 0);
+    const decision = deps.autoModService.inspect({
+      communityId: automodCommunity.id,
+      userId: message.author.externalId,
+      channelId: message.channel?.externalId,
+      content: message.content,
+      mentionCount: Number.isFinite(mentionCount) ? mentionCount : 0,
+      now: message.createdAt
+    });
+    if (decision.matched && decision.rule) {
+      const rule = decision.rule;
+      const reason = `AutoMod: ${rule.type} (${decision.reason ?? "matched"})`;
+      try {
+        if (rule.action === "delete") {
+          await deps.responder.sendAction({ type: "message.delete", platform: deps.platform, channelExternalId: message.destinationExternalId, messageExternalId: message.externalId });
+        } else if (rule.action === "warn") {
+          await deps.responder.sendAction({ type: "member.warn", platform: deps.platform, communityExternalId: message.community?.externalId ?? "", userExternalId: message.author.externalId, reason });
+          await deps.responder.sendAction({ type: "message.send", platform: deps.platform, channelExternalId: message.destinationExternalId, content: `Please follow this community's rules, ${message.author.username ?? message.author.displayName ?? "member"}.` });
+        } else if (rule.action === "mute") {
+          await deps.responder.sendAction({ type: "member.mute", platform: deps.platform, communityExternalId: message.community?.externalId ?? "", userExternalId: message.author.externalId, durationSeconds: 600, reason });
+        } else if (rule.action === "kick") {
+          await deps.responder.sendAction({ type: "member.kick", platform: deps.platform, communityExternalId: message.community?.externalId ?? "", userExternalId: message.author.externalId, reason });
+        } else if (rule.action === "ban") {
+          await deps.responder.sendAction({ type: "member.ban", platform: deps.platform, communityExternalId: message.community?.externalId ?? "", userExternalId: message.author.externalId, reason });
+        }
+        deps.auditService?.record({ communityId: automodCommunity.id, action: "automod.trigger", actorUserId: executionContext.user.id, channelId: message.channel?.externalId, messageId: message.externalId, reason, metadata: { platform: deps.platform, ruleId: rule.id, ruleType: rule.type, action: rule.action, matched: true } });
+      } catch (error) {
+        deps.logger.warn("automod.action.failed", { platform: deps.platform, communityId: automodCommunity.id, ruleId: rule.id, ruleType: rule.type, action: rule.action }, error);
+      }
+      return;
+    }
+  }
 
   if (
     deps.bridgeService &&
