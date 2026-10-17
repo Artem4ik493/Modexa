@@ -865,7 +865,7 @@ async function handleMessage(
           await deps.responder.sendAction({ type: "member.warn", platform: deps.platform, communityExternalId: message.community?.externalId ?? "", userExternalId: message.author.externalId, reason });
           await deps.responder.sendAction({ type: "message.send", platform: deps.platform, channelExternalId: message.destinationExternalId, content: `Please follow this community's rules, ${message.author.username ?? message.author.displayName ?? "member"}.` });
         } else if (rule.action === "mute") {
-          await deps.responder.sendAction({ type: "member.mute", platform: deps.platform, communityExternalId: message.community?.externalId ?? "", userExternalId: message.author.externalId, durationSeconds: 600, reason });
+          await deps.responder.sendAction({ type: "member.mute", platform: deps.platform, communityExternalId: message.community?.externalId ?? "", userExternalId: message.author.externalId, durationSeconds: rule.durationSeconds ?? 600, reason });
         } else if (rule.action === "kick") {
           await deps.responder.sendAction({ type: "member.kick", platform: deps.platform, communityExternalId: message.community?.externalId ?? "", userExternalId: message.author.externalId, reason });
         } else if (rule.action === "ban") {
