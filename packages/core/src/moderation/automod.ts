@@ -4,7 +4,7 @@ export type AutoModRuleType =
 
 export interface AutoModRule {
   id: string; communityId: string; type: AutoModRuleType; enabled: boolean;
-  value?: string; threshold?: number; windowSeconds?: number; whitelist?: string[];
+  value?: string; threshold?: number; windowSeconds?: number; durationSeconds?: number; whitelist?: string[];
   ignoredUserIds?: string[]; ignoredChannelIds?: string[];
   action: "warn" | "mute" | "kick" | "ban" | "delete";
 }
