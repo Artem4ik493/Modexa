@@ -79,6 +79,18 @@ describe("Modexa security and infrastructure", () => {
     expect(auto.inspect({ communityId: "c", userId: "u", content: "3", now: new Date(now.getTime()+2000) }).matched).toBe(true);
   });
 
+  it("supports multiple AutoMod keywords and per-user/channel exclusions", () => {
+    const auto = new AutoModService();
+    auto.upsertRule({
+      id: "keywords", communityId: "c", type: "keyword",
+      value: "badword|scam phrase", enabled: true, action: "delete",
+      ignoredUserIds: ["trusted-user"], ignoredChannelIds: ["trusted-channel"]
+    });
+    expect(auto.inspect({ communityId: "c", userId: "u", content: "this is a scam phrase" }).matched).toBe(true);
+    expect(auto.inspect({ communityId: "c", userId: "trusted-user", content: "badword" }).matched).toBe(false);
+    expect(auto.inspect({ communityId: "c", userId: "u", channelId: "trusted-channel", content: "badword" }).matched).toBe(false);
+  });
+
   it("scopes interaction tokens and expires them", () => {
     const store = new InteractionActionStore({ ttlMs: 1000 });
     const now = new Date("2026-10-03T10:00:00Z");
