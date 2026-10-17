@@ -1856,10 +1856,18 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
         if (!discordIdentity || discordEndpoint.communityExternalId !== discordIdentity.externalId) {
           json(res, 403, { error: "bridge_endpoint_outside_community" }); return;
         }
+        // A Telegram group becomes eligible only through the verified group-claim
+        // flow, which writes both its Bridge endpoint and communityId. Older installs
+        // may have the endpoint but a missing/legacy community identity record, so do
+        // not reject a valid claimed endpoint solely because that secondary record is absent.
         const telegramIdentity = database.getCommunityIdentitiesSnapshot()
           .find((identity) => identity.platform === "telegram" && identity.externalId === telegramEndpoint.communityExternalId);
-        if (!telegramIdentity || telegramIdentity.communityId !== communityId) {
-          json(res, 403, { error: "bridge_telegram_group_not_linked_to_community" }); return;
+        if (telegramEndpoint.communityId !== communityId ||
+            (telegramIdentity && telegramIdentity.communityId !== communityId)) {
+          json(res, 403, {
+            error: "bridge_telegram_group_not_linked_to_community",
+            message: "Сначала привяжите Telegram-группу к этому Discord-сообществу."
+          }); return;
         }
       }
       if (sourceInput.platform === targetInput.platform) {
