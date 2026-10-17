@@ -390,6 +390,14 @@ function discordSession(req: IncomingMessage): DiscordSession | undefined {
   return session;
 }
 
+function discordAccountsLinked(req: IncomingMessage): boolean {
+  const session = discordSession(req);
+  if (!session) return false;
+  const discordIdentity = database.getIdentityByExternalId("discord", session.user.id);
+  if (!discordIdentity) return false;
+  return database.getUserIdentities(discordIdentity.userId).some((identity) => identity.platform === "telegram");
+}
+
 function dashboardAuthorized(req: IncomingMessage): boolean {
   return Boolean(discordSession(req)) || authorized(req);
 }
@@ -1708,6 +1716,10 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       json(res, 200, { saved: true, communityId, ...settings }); return;
     }
 
+    if (url.pathname.startsWith("/api/bridge") && !authorized(req) && !discordAccountsLinked(req)) {
+      json(res, 403, { error: "linked_accounts_required", message: "Свяжите Telegram и Discord через /link в личных чатах с ботами." }); return;
+    }
+
     if (url.pathname === "/api/bridge" && req.method === "GET") {
       const requestedCommunityId = url.searchParams.get("communityId") ?? "";
       if (!authorized(req)) {
@@ -1747,7 +1759,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
         json(res, 403, { error: "bridge_endpoint_outside_community" }); return;
       }
       const endpoint = {
-        id: typeof body.id === "string" && body.id.trim() ? body.id : `endpoint-${randomUUID()}`,
+        id: `${body.platform}:${(body.communityExternalId as string).trim()}:${(body.channelExternalId as string).trim()}`,
         platform: body.platform as "telegram" | "discord",
         communityExternalId: (body.communityExternalId as string).trim(),
         communityName: (body.communityName as string).trim(),
@@ -1812,6 +1824,8 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       if (!authorized(req) && (!bridgeCommunityAllowed(communityId) || !(await canManageDiscordCommunity(req, communityId)) || source.communityId !== communityId || target.communityId !== communityId)) {
         json(res, 403, { error: "bridge_community_access_forbidden" }); return;
       }
+      const queue = database.getRuntimeState<Array<Record<string, unknown>>>("api.action_queue") ?? [];
+      const notice = "🔗 Создан мост Modexa между \"" + source.channelName + "\" (" + source.platform.toUpperCase() + ") и \"" + target.channelName + "\" (" + target.platform.toUpperCase() + ").";
       const existing = database.getBridgeLinks().find((item) =>
         (item.sourceEndpointId === sourceEndpointId && item.targetEndpointId === targetEndpointId) ||
         (item.sourceEndpointId === targetEndpointId && item.targetEndpointId === sourceEndpointId)
@@ -1819,7 +1833,21 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       if (existing) { json(res, 200, { item: existing, existing: true }); return; }
       const now = new Date();
       const link = { id: `bridge-${randomUUID()}`, sourceEndpointId, targetEndpointId, createdAt: now, updatedAt: now };
-      try { database.upsertBridgeLink(link); json(res, 201, { item: link }); }
+      try {
+        database.upsertBridgeLink(link);
+        for (const endpoint of [source, target]) {
+          queue.push({
+            id: `bridge-notice-${randomUUID()}`,
+            communityId: endpoint.communityId ?? communityId,
+            source: "bridge:created",
+            action: { type: "message.send", platform: endpoint.platform, channelExternalId: endpoint.channelExternalId, content: notice },
+            status: "pending",
+            createdAt: now.toISOString()
+          });
+        }
+        database.setRuntimeState("api.action_queue", queue.slice(-5000));
+        json(res, 201, { item: link });
+      }
       catch { json(res, 400, { error: "bridge_link_create_failed" }); }
       return;
     }
