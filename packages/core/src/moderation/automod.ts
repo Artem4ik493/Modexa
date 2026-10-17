@@ -12,10 +12,7 @@ export interface AutoModRule {
 export interface AutoModDecision { matched: boolean; rule?: AutoModRule; reason?: string; }
 
 function wildcard(value: string, pattern: string): boolean {
-  const escaped = pattern.replace(/[|\\{}()[\\]^$+?.]/g, "\\function wildcard(value: string, pattern: string): boolean {
-  const escaped = pattern.replaceAll(".", "\\.").replaceAll("+", "\\+").replaceAll("?", "\\?");
-  return new RegExp("^" + escaped.replaceAll("*", ".*") + "$", "i").test(value);
-}").replaceAll("*", ".*");
+  const escaped = pattern.replace(/[|\\{}()[\\]^$+?.]/g, (character) => "\\" + character).replaceAll("*", ".*");
   return new RegExp("^" + escaped + "$", "i").test(value);
 }
 
