@@ -828,7 +828,7 @@ async function saveBridgeSettings(){
  const selected=selectedModexaCommunity(),communityId=selected?.communityId||selected?.id||'';
  const status=document.getElementById('bridgeSettingsStatus');
  if(!communityId)return toast('Сначала выберите Discord-сервер');
- if(!authKey&&selected?.canManageBot!==true)return toast('Нужны права управления выбранным Discord-сервером');
+ if(!authKey&&!selected)return toast('Сначала выберите Discord-сервер');
  try{
   await request('/api/bridge/settings',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({
    communityId,enabled:document.getElementById('bridgeEnabled').checked,
@@ -873,7 +873,7 @@ async function manageBridge(id){
 async function loadBridge(){
  const selected=selectedModexaCommunity();
  const communityId=selected?.communityId||selected?.id||'';
- const canManage=authKey||Boolean(selected&&selected.canManageBot===true&&communityId);
+ const canManage=authKey||Boolean(selected&&communityId);
  if(!canManage){
   document.getElementById('bridgeList').innerHTML='<div class="empty">Выберите Discord-сервер, которым вы управляете.</div>';
   document.getElementById('bridgeEndpointChoices').innerHTML='<div class="empty">Для управления мостами выберите сервер и свяжите аккаунты Telegram и Discord через /link в личных чатах с ботами.</div>';
@@ -908,7 +908,7 @@ function prepareBridgeCreation(){
 function updateBridgeConfirmState(){const checks=[...document.querySelectorAll('.bridge-confirm-check')],checked=checks.filter(x=>x.checked).length;document.getElementById('bridgeConfirmCount').textContent=checked+'/'+checks.length;document.getElementById('bridgeConfirmCreate').disabled=checks.length<2||checked!==checks.length}
 function cancelBridgeCreation(){bridgeDraft=[];document.getElementById('bridgeConfirmCard').hidden=true;loadBridge()}
 async function confirmAndCreateBridge(){
- const community=selectedModexaCommunity();if(!authKey&&(!community||community.canManageBot!==true))return toast('Выберите Discord-сервер, которым вы управляете');
+ const community=selectedModexaCommunity();if(!authKey&&(!community||(community.communityId||community.id)==null))return toast('Выберите Discord-сервер');
  const ids=[...new Set(bridgeDraft)],checks=[...document.querySelectorAll('.bridge-confirm-check')];
  if(ids.length!==2||checks.length!==2||checks.some(x=>!x.checked))return toast('Подтвердите Telegram-группу и Discord-канал');
  const endpoints=ids.map(id=>bridgeCache.endpoints.find(x=>x.id===id)).filter(Boolean);
