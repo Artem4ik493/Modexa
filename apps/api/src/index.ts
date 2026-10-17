@@ -1931,6 +1931,9 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
     if (automodRulesMatch && ["GET", "POST"].includes(req.method ?? "")) {
       const communityId = decodeURIComponent(automodRulesMatch[1]!);
       if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) { json(res, 404, { error: "community_not_found" }); return; }
+      if (!authorized(req) && !(await canManageDiscordCommunity(req, communityId))) {
+        json(res, 403, { error: "community_management_forbidden" }); return;
+      }
       if (req.method === "GET") { json(res, 200, { items: runtimeServices.autoModService.listRules(communityId) }); return; }
       const body = await readJsonBody(req);
       const types = new Set(["keyword", "link", "invite", "scam", "caps", "flood", "repeated_text", "emotes", "mentions", "zalgo"]);
@@ -1938,7 +1941,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       if (typeof body.type !== "string" || !types.has(body.type) || typeof body.enabled !== "boolean" ||
           typeof body.action !== "string" || !actions.has(body.action) ||
           (body.value !== undefined && (typeof body.value !== "string" || body.value.length > 500)) ||
-          (body.threshold !== undefined && (!Number.isFinite(body.threshold) || Number(body.threshold) < 0 || Number(body.threshold) > 1)) ||
+          (body.threshold !== undefined && (!Number.isFinite(body.threshold) || Number(body.threshold) < (body.type === "caps" ? 0.1 : 1) || Number(body.threshold) > (body.type === "caps" ? 1 : 100))) ||
           (body.windowSeconds !== undefined && (!Number.isInteger(body.windowSeconds) || Number(body.windowSeconds) < 1 || Number(body.windowSeconds) > 86400)) ||
           (body.whitelist !== undefined && (!Array.isArray(body.whitelist) || !body.whitelist.every((v) => typeof v === "string" && v.length <= 300)))) {
         json(res, 400, { error: "invalid_automod_rule" }); return;
@@ -1966,6 +1969,9 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
     if (automodRuleMatch && req.method === "DELETE") {
       const communityId = decodeURIComponent(automodRuleMatch[1]!);
       const ruleId = decodeURIComponent(automodRuleMatch[2]!);
+      if (!authorized(req) && !(await canManageDiscordCommunity(req, communityId))) {
+        json(res, 403, { error: "community_management_forbidden" }); return;
+      }
       const all = database.getRuntimeState<Array<Record<string, unknown>>>("api.automod_rules") ?? [];
       const item = all.find((rule) => rule.id === ruleId && rule.communityId === communityId);
       if (!item) { json(res, 404, { error: "automod_rule_not_found" }); return; }
