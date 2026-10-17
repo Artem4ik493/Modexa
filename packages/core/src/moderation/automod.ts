@@ -23,7 +23,8 @@ function isWhitelistedLink(link: string, patterns: string[]): boolean {
     const candidate = pattern.trim().toLowerCase();
     if (!candidate) return false;
     if (wildcard(link.toLowerCase(), candidate)) return true;
-    const domainPattern = candidate.replace(/^(?:https?:\\/\\/)?/, "").replace(/^www\\./, "").split(/[/?#]/, 1)[0] ?? "";
+    const withoutProtocol = candidate.startsWith("https://") ? candidate.slice(8) : candidate.startsWith("http://") ? candidate.slice(7) : candidate;
+    const domainPattern = withoutProtocol.replace(/^www\\./, "").split(/[/?#]/, 1)[0] ?? "";
     const domain = hostname.replace(/^www\\./, "");
     return Boolean(domainPattern && domain && (domain === domainPattern || domain.endsWith("." + domainPattern) || wildcard(domain, domainPattern)));
   });
