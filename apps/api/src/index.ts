@@ -1721,6 +1721,27 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
     }
 
     if (url.pathname === "/api/bridge" && req.method === "GET") {
+      // Migrate legacy panel endpoint IDs to the stable IDs used by live platform events.
+      const currentEndpoints = database.getBridgeEndpoints();
+      const canonicalIds = new Map<string, string>();
+      for (const endpoint of currentEndpoints) {
+        const canonicalId = [endpoint.platform, endpoint.communityExternalId, endpoint.channelExternalId].join(":");
+        canonicalIds.set(endpoint.id, canonicalId);
+        if (canonicalId !== endpoint.id && !currentEndpoints.some((item) => item.id === canonicalId)) {
+          database.upsertBridgeEndpoint({ ...endpoint, id: canonicalId });
+        }
+      }
+      for (const link of database.getBridgeLinks()) {
+        const sourceEndpointId = canonicalIds.get(link.sourceEndpointId) ?? link.sourceEndpointId;
+        const targetEndpointId = canonicalIds.get(link.targetEndpointId) ?? link.targetEndpointId;
+        if (sourceEndpointId !== link.sourceEndpointId || targetEndpointId !== link.targetEndpointId) {
+          database.upsertBridgeLink({ ...link, sourceEndpointId, targetEndpointId, updatedAt: new Date() });
+        }
+      }
+      for (const endpoint of currentEndpoints) {
+        const canonicalId = canonicalIds.get(endpoint.id);
+        if (canonicalId && canonicalId !== endpoint.id) database.deleteBridgeEndpoint(endpoint.id);
+      }
       const requestedCommunityId = url.searchParams.get("communityId") ?? "";
       if (!authorized(req)) {
         if (!requestedCommunityId || !(await canManageDiscordCommunity(req, requestedCommunityId))) {
