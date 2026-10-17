@@ -39,7 +39,8 @@ export class AutoModService {
 
   inspect(input: { communityId: string; userId: string; channelId?: string; content: string; mentionCount?: number; now?: Date }): AutoModDecision {
     const now = input.now ?? new Date();
-    for (const rule of this.listRules(input.communityId).filter((item) => item.enabled)) {\n      if ((rule.ignoredUserIds ?? []).includes(input.userId) || (input.channelId && (rule.ignoredChannelIds ?? []).includes(input.channelId))) continue;
+    for (const rule of this.listRules(input.communityId).filter((item) => item.enabled)) {
+      if ((rule.ignoredUserIds ?? []).includes(input.userId) || (input.channelId && (rule.ignoredChannelIds ?? []).includes(input.channelId))) continue;
       const content = input.content.trim();
       const lower = content.toLowerCase();
       if (rule.type === "keyword" && rule.value) {
