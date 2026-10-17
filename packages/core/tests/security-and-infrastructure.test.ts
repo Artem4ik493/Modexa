@@ -52,6 +52,10 @@ describe("Modexa security and infrastructure", () => {
       action: "mute"
     });
     expect(auto.inspect({ communityId: "c", userId: "u", content: "visit https://example.com" }).reason).toBe("link");
+    auto.upsertRule({ id: "link-allowlist", communityId: "c", type: "link", enabled: true, action: "delete", whitelist: ["example.com"] });
+    expect(auto.inspect({ communityId: "c", userId: "u", content: "visit https://example.com/path" }).matched).toBe(false);
+    expect(auto.inspect({ communityId: "c", userId: "u", content: "visit https://sub.example.com/path" }).matched).toBe(false);
+    expect(auto.inspect({ communityId: "c", userId: "u", content: "visit https://notexample.com/path" }).matched).toBe(true);
 
     auto.removeRule("link");
     auto.upsertRule({
