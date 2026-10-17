@@ -507,9 +507,9 @@ nav{min-height:0;padding-bottom:18px}
     <div class="top-actions"><button class="btn" onclick="cancelBridgeCreation()">Назад</button><button class="btn primary" id="bridgeConfirmCreate" onclick="confirmAndCreateBridge()" disabled>Создать мост</button></div>
   </div>
   <div class="card" id="bridgeManageCard" hidden>
-    <div class="section"><div><h2 id="bridgeManageTitle">Управление мостом</h2><div class="meta" id="bridgeManageDescription">Настройки выбранного моста.</div></div><button class="btn" onclick="closeBridgeManagement()">Назад к мостам</button></div>
+    <div class="section"><div><h2 id="bridgeManageTitle">Управление мостом</h2><div class="meta" id="bridgeManageDescription">Настройки выбранного моста.</div></div><div class="top-actions"><button class="btn danger" onclick="deleteActiveBridge()">Удалить мост</button><button class="btn" onclick="closeBridgeManagement()">Назад к мостам</button></div></div>
     <div class="card" id="bridgeSettingsCard">
-      <div class="section"><div><h3>Настройки доставки</h3><div class="meta">Применяются к мостам выбранного сообщества.</div></div></div>
+      <div class="section"><div><h3>Настройки доставки</h3><div class="meta">Эти параметры применяются ко всем мостам выбранного сообщества.</div></div></div>
       <div class="form">
         <label class="row"><input type="checkbox" id="bridgeEnabled" checked><span><b>Мост включён</b><span class="meta">При выключении новые сообщения не пересылаются.</span></span></label>
         <label class="row"><input type="checkbox" id="bridgeSyncEdits" checked><span><b>Синхронизировать редактирование</b></span></label>
@@ -850,6 +850,12 @@ function showBridgeCreation(){
 }
 function hideBridgeCreation(){document.getElementById('bridgeCreateCard').hidden=true;document.getElementById('bridgeConfirmCard').hidden=true;bridgeDraft=[];loadBridge()}
 function closeBridgeManagement(){activeBridgeId=null;document.getElementById('bridgeManageCard').hidden=true;loadBridge()}
+async function deleteActiveBridge(){
+ if(!activeBridgeId)return toast('Сначала выберите мост');
+ if(!confirm('Удалить выбранный мост? Пересылка между этими чатами прекратится.'))return;
+ const id=activeBridgeId;
+ try{const communityId=selectedModexaCommunity()?.communityId||selectedModexaCommunity()?.id||'';await request('/api/bridge/links/'+encodeURIComponent(id)+(!authKey?'?communityId='+encodeURIComponent(communityId):''),{method:'DELETE'});activeBridgeId=null;document.getElementById('bridgeManageCard').hidden=true;toast('Мост удалён');await loadBridge()}catch(e){toast(e.message||'Не удалось удалить мост')}
+}
 async function manageBridge(id){
  activeBridgeId=id;
  const link=bridgeCache.links.find(x=>x.id===id);
