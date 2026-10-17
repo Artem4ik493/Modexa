@@ -1682,6 +1682,10 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       return;
     }
 
+    if (url.pathname.startsWith("/api/bridge") && !authorized(req) && !discordAccountsLinked(req)) {
+      json(res, 403, { error: "linked_accounts_required", message: "Свяжите Telegram и Discord через /link в личных чатах с ботами." }); return;
+    }
+
     if (url.pathname === "/api/bridge/settings" && ["GET", "PUT"].includes(req.method ?? "")) {
       const body = req.method === "PUT" ? await readJsonBody(req) : {};
       const communityId = req.method === "GET"
@@ -1714,10 +1718,6 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       };
       database.setRuntimeState(key, settings);
       json(res, 200, { saved: true, communityId, ...settings }); return;
-    }
-
-    if (url.pathname.startsWith("/api/bridge") && !authorized(req) && !discordAccountsLinked(req)) {
-      json(res, 403, { error: "linked_accounts_required", message: "Свяжите Telegram и Discord через /link в личных чатах с ботами." }); return;
     }
 
     if (url.pathname === "/api/bridge" && req.method === "GET") {
