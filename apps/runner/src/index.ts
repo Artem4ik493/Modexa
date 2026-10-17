@@ -157,7 +157,9 @@ if (telegramToken) {
           database,
 
         auditService:
-          services.auditService
+          services.auditService,
+        autoModService:
+          services.autoModService
       }
     )
   );
@@ -220,7 +222,9 @@ if (discordToken) {
           database,
 
         auditService:
-          services.auditService
+          services.auditService,
+        autoModService:
+          services.autoModService
       }
     )
   );
