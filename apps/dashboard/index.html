@@ -488,46 +488,49 @@ nav{min-height:0;padding-bottom:18px}
 
 <section class="page" id="bridge">
   <div class="card">
-    <div class="section"><div><h2>Создать мост</h2><div class="meta">Выберите не менее двух подключённых чатов. Перед созданием подтвердите каждую сторону отдельно.</div></div><span class="pill">Bridge wizard</span></div>
-    <div class="notice">Один мост объединяет несколько каналов в общую переписку. Сообщение из любого выбранного места будет пересылаться в остальные выбранные места.</div>
+    <div class="section"><div><h2>Мосты</h2><div class="meta">Активные мосты, доступные выбранному сообществу.</div></div><button class="btn" onclick="loadBridge()">↻ Обновить</button></div>
+    <div id="bridgeList"><div class="empty">Загрузка мостов…</div></div>
+    <div class="top-actions"><button class="btn primary" onclick="showBridgeCreation()">＋ Создать мост</button></div>
+  </div>
+  <div class="card" id="bridgeCreateCard" hidden>
+    <div class="section"><div><h2>Создание моста</h2><div class="meta">Выберите Telegram-группу и Discord-канал. Для создания моста аккаунты Telegram и Discord должны быть связаны через /link в личных чатах с ботами.</div></div><span class="pill">Новый мост</span></div>
+    <div id="bridgeAccountLinkNotice" class="notice">Если аккаунты ещё не связаны, откройте личный чат с ботом Telegram и Discord и выполните /link, затем следуйте инструкциям.</div>
     <div class="form">
       <label for="bridgeName">Название моста</label><input id="bridgeName" class="input" placeholder="Например, Общее сообщество">
-      <label>Каналы, которые нужно связать</label><div id="bridgeEndpointChoices" class="bridge-endpoint-choices"><div class="empty">Загрузка каналов…</div></div>
-      <button class="btn primary" onclick="prepareBridgeCreation()">Продолжить и подтвердить стороны</button>
+      <label>Выберите чаты для связи</label><div id="bridgeEndpointChoices" class="bridge-endpoint-choices"><div class="empty">Загрузка чатов…</div></div>
+      <div class="top-actions"><button class="btn" onclick="hideBridgeCreation()">Назад к мостам</button><button class="btn primary" onclick="prepareBridgeCreation()">Продолжить</button></div>
     </div>
   </div>
   <div class="card" id="bridgeConfirmCard" hidden>
-    <div class="section"><div><h2>Подтверждение моста</h2><div class="meta">Каждая выбранная сторона должна быть подтверждена отдельно.</div></div><span id="bridgeConfirmCount" class="pill">0/0</span></div>
+    <div class="section"><div><h2>Подтверждение моста</h2><div class="meta">Проверьте выбранные чаты перед созданием.</div></div><span id="bridgeConfirmCount" class="pill">0/0</span></div>
     <div id="bridgeConfirmList" class="form"></div>
-    <div class="top-actions" style="margin-top:14px"><button class="btn" onclick="cancelBridgeCreation()">Отмена</button><button class="btn primary" id="bridgeConfirmCreate" onclick="confirmAndCreateBridge()" disabled>Создать мост</button></div>
+    <div class="top-actions"><button class="btn" onclick="cancelBridgeCreation()">Назад</button><button class="btn primary" id="bridgeConfirmCreate" onclick="confirmAndCreateBridge()" disabled>Создать мост</button></div>
   </div>
-  <div class="card" id="bridgeSettingsCard">
-    <div class="section"><div><h2>Настройки доставки</h2><div class="meta">Применяются ко всем мостам выбранного Discord-сообщества.</div></div><span class="pill">Настройки сообщества</span></div>
-    <div class="form">
-      <label class="row"><input type="checkbox" id="bridgeEnabled" checked><span><b>Мост включён</b><span class="meta">При выключении сообщения временно не пересылаются, связи сохраняются.</span></span></label>
-      <label class="row"><input type="checkbox" id="bridgeSyncEdits" checked><span><b>Синхронизировать редактирование</b><span class="meta">Изменения исходного сообщения обновляют копию в других чатах.</span></span></label>
-      <label class="row"><input type="checkbox" id="bridgeSyncDeletes" checked><span><b>Синхронизировать удаление</b><span class="meta">Удаление исходного сообщения удаляет связанные копии, если платформа это разрешает.</span></span></label>
-      <label class="row"><input type="checkbox" id="bridgeIncludeMedia" checked><span><b>Пересылать медиа</b><span class="meta">Разрешить передачу поддерживаемых фото, GIF и видео.</span></span></label>
-      <div class="top-actions"><button class="btn" onclick="loadBridgeSettings()">Загрузить настройки</button><button class="btn primary" onclick="saveBridgeSettings()">Сохранить настройки</button></div>
-      <div class="meta" id="bridgeSettingsStatus">Выберите сообщество для настройки Bridge.</div>
+  <div class="card" id="bridgeManageCard" hidden>
+    <div class="section"><div><h2 id="bridgeManageTitle">Управление мостом</h2><div class="meta" id="bridgeManageDescription">Настройки выбранного моста.</div></div><button class="btn" onclick="closeBridgeManagement()">Назад к мостам</button></div>
+    <div class="card" id="bridgeSettingsCard">
+      <div class="section"><div><h3>Настройки доставки</h3><div class="meta">Применяются к мостам выбранного сообщества.</div></div></div>
+      <div class="form">
+        <label class="row"><input type="checkbox" id="bridgeEnabled" checked><span><b>Мост включён</b><span class="meta">При выключении новые сообщения не пересылаются.</span></span></label>
+        <label class="row"><input type="checkbox" id="bridgeSyncEdits" checked><span><b>Синхронизировать редактирование</b></span></label>
+        <label class="row"><input type="checkbox" id="bridgeSyncDeletes" checked><span><b>Синхронизировать удаление</b></span></label>
+        <label class="row"><input type="checkbox" id="bridgeIncludeMedia" checked><span><b>Пересылать медиа</b></span></label>
+        <div class="top-actions"><button class="btn" onclick="loadBridgeSettings()">Загрузить</button><button class="btn primary" onclick="saveBridgeSettings()">Сохранить настройки</button></div>
+        <div class="meta" id="bridgeSettingsStatus">Настройки ещё не загружены.</div>
+      </div>
     </div>
   </div>
-  <div class="card">
-    <div class="section"><div><h2>Активные мосты</h2><div class="meta">Все созданные связи между чатами.</div></div><button class="btn" onclick="loadBridge()">↻ Обновить</button></div>
-    <div id="bridgeList"><div class="empty">Загрузка мостов…</div></div>
+  <div class="card" id="bridgeEndpointsCard" hidden>
+    <div class="section"><div><h2>Подключённые чаты</h2><div class="meta">Чаты, доступные выбранному сообществу.</div></div></div><div id="bridgeEndpoints"></div>
   </div>
-  <div class="card">
-    <div class="section"><div><h2>Подключённые чаты</h2><div class="meta">Discord-каналы и Telegram-группы, доступные для связывания.</div></div><button class="btn" onclick="loadBridge()">↻ Обновить</button></div>
-    <div id="bridgeEndpoints"></div>
-  </div>
-  <div class="grid two owner-only">
+  <div class="grid two owner-only" id="bridgeOwnerTools" hidden>
     <div class="card">
       <div class="section"><h2>Добавить чат вручную</h2><span class="pill">Owner</span></div>
-      <p class="muted">Используйте только если чат ещё не появился после обычной привязки. Для Telegram лучше использовать код привязки.</p>
+      <p class="muted">Используйте только если чат ещё не появился после обычной привязки.</p>
       <div class="form">
         <label>Платформа</label><select id="bridgePlatform" class="select2"><option value="discord">Discord</option><option value="telegram">Telegram</option></select>
         <label>Название сообщества / группы</label><input id="bridgeCommunityName" class="input" placeholder="Например, Modexa Community">
-        <label>ID сообщества / чата</label><input id="bridgeCommunityExternalId" class="input" placeholder="Discord Guild ID или Telegram Chat ID">
+        <label>ID сообщества / группы</label><input id="bridgeCommunityExternalId" class="input" placeholder="Discord Guild ID или Telegram Chat ID">
         <label>Название канала</label><input id="bridgeChannelName" class="input" placeholder="general / общий чат">
         <label>ID канала</label><input id="bridgeChannelExternalId" class="input" placeholder="ID канала или chat ID">
         <button class="btn" onclick="saveBridgeEndpoint()">Добавить чат</button>
@@ -535,8 +538,8 @@ nav{min-height:0;padding-bottom:18px}
     </div>
     <div class="card">
       <div class="section"><h2>Привязка Telegram-группы</h2><button class="btn" onclick="loadPendingTelegramGroups()">↻ Проверить</button></div>
-      <p class="muted">В Telegram-группе выполните <b>/dashboard_link</b>, затем вставьте код. Бот должен состоять в группе и иметь нужные права. Код действует ограниченное время.</p>
-      <div class="form"><label>Код из Telegram</label><input id="telegramLinkCode" class="input" placeholder="Код привязки" maxlength="16" autocomplete="off" autocapitalize="characters" spellcheck="false" onkeydown="if(event.key==='Enter')linkTelegramGroup()"><button id="telegramBridgeLinkButton" class="btn primary" onclick="linkTelegramGroup()">Привязать к выбранному сообществу</button></div>
+      <p class="muted">В Telegram-группе выполните <b>/dashboard_link</b>, затем вставьте код. Для привязки аккаунтов используйте <b>/link</b> в личных чатах с ботами.</p>
+      <div class="form"><label>Код из Telegram</label><input id="telegramLinkCode" class="input" placeholder="Код привязки" maxlength="16" autocomplete="off" autocapitalize="characters" spellcheck="false" onkeydown="if(event.key==='Enter')linkTelegramGroup()"><button id="telegramBridgeLinkButton" class="btn primary" onclick="linkTelegramGroup()">Привязать Telegram-группу</button></div>
       <div id="telegramPendingGroups"><div class="empty">Загрузка ожидающих привязок…</div></div>
     </div>
   </div>
@@ -837,27 +840,48 @@ async function saveBridgeSettings(){
   toast('Настройки Bridge сохранены');
  }catch(e){if(status)status.textContent=e.message||'Не удалось сохранить настройки.';toast(e.message)}
 }
+let activeBridgeId=null;
+function showBridgeCreation(){
+ document.getElementById('bridgeCreateCard').hidden=false;
+ document.getElementById('bridgeConfirmCard').hidden=true;
+ document.getElementById('bridgeManageCard').hidden=true;
+ document.getElementById('bridgeOwnerTools').hidden=!authKey;
+ document.getElementById('bridgeCreateCard').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function hideBridgeCreation(){document.getElementById('bridgeCreateCard').hidden=true;document.getElementById('bridgeConfirmCard').hidden=true;bridgeDraft=[];loadBridge()}
+function closeBridgeManagement(){activeBridgeId=null;document.getElementById('bridgeManageCard').hidden=true;loadBridge()}
+async function manageBridge(id){
+ activeBridgeId=id;
+ const link=bridgeCache.links.find(x=>x.id===id);
+ const endpoints=bridgeCache.endpoints||[];
+ if(!link)return toast('Мост не найден. Обновите список.');
+ const source=endpoints.find(x=>x.id===link.sourceEndpointId),target=endpoints.find(x=>x.id===link.targetEndpointId);
+ document.getElementById('bridgeManageTitle').textContent='Управление мостом';
+ document.getElementById('bridgeManageDescription').textContent=(source?.channelName||'Чат')+' ↔ '+(target?.channelName||'Чат');
+ document.getElementById('bridgeManageCard').hidden=false;
+ document.getElementById('bridgeCreateCard').hidden=true;
+ document.getElementById('bridgeConfirmCard').hidden=true;
+ await loadBridgeSettings();
+ document.getElementById('bridgeManageCard').scrollIntoView({behavior:'smooth',block:'start'});
+}
 async function loadBridge(){
  const selected=selectedModexaCommunity();
  const communityId=selected?.communityId||selected?.id||'';
  const canManage=authKey||Boolean(selected&&selected.canManageBot===true&&communityId);
  if(!canManage){
-  document.getElementById('bridgeEndpoints').innerHTML='<div class="empty">Выберите Discord-сервер, которым вы управляете. Мосты доступны администраторам подключённого сервера.</div>';
-  document.getElementById('bridgeList').innerHTML='<div class="empty">После выбора сервера здесь появятся активные связи.</div>';
-  document.getElementById('bridgeEndpointChoices').innerHTML='<div class="empty">Сначала выберите управляемый Discord-сервер и подключите Telegram-группу через код.</div>';
-  document.getElementById('bridgeEndpoints').dataset.communityId='';
-  loadPendingTelegramGroups();return;
+  document.getElementById('bridgeList').innerHTML='<div class="empty">Выберите Discord-сервер, которым вы управляете.</div>';
+  document.getElementById('bridgeEndpointChoices').innerHTML='<div class="empty">Для управления мостами выберите сервер и свяжите аккаунты Telegram и Discord через /link в личных чатах с ботами.</div>';
+  return;
  }
  try{
   await loadBridgeSettings();
-  bridgeCache=await get('/api/bridge'+(!authKey?'?communityId='+encodeURIComponent(communityId):''));
+  bridgeCache=await get('/api/bridge?communityId='+encodeURIComponent(communityId));
   const endpoints=bridgeCache.endpoints||[],links=bridgeCache.links||[];
   document.getElementById('bridgeEndpoints').dataset.communityId=communityId;
   const selectedIds=new Set(bridgeDraft);
-  document.getElementById('bridgeEndpointChoices').innerHTML=endpoints.map(x=>'<label class="bridge-endpoint-option"><input type="checkbox" value="'+esc(x.id)+'" '+(selectedIds.has(x.id)?'checked':'')+' onchange="updateBridgeDraft(this)"><span class="bridge-endpoint-icon">'+(x.platform==='telegram'?'TG':'DC')+'</span><span class="grow"><b>'+esc(x.channelName)+'</b><span class="meta">'+esc(x.platform.toUpperCase())+' · '+esc(x.communityName)+'</span></span></label>').join('')||'<div class="empty">Чаты пока не подключены. Сначала подключите бота Discord и привяжите Telegram-группу.</div>';
-  document.getElementById('bridgeEndpoints').innerHTML=endpoints.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.platform==='telegram'?'Telegram':'Discord')+' · '+esc(x.channelName)+'</div><div class="meta">'+esc(x.communityName)+' · ID '+esc(x.channelExternalId)+'</div></div>'+(authKey?'<button class="btn" onclick="editBridgeEndpoint(\''+esc(x.id)+'\')">Изменить</button><button class="btn danger" onclick="deleteBridgeEndpoint(\''+esc(x.id)+'\')">Удалить</button>':'<span class="pill">Подключён</span>')+'</div>').join('')||'<div class="empty">Нет подключённых чатов. Убедитесь, что бот добавлен на сервер и Telegram-группа привязана.</div>';
-  const validLinks=links.filter(x=>endpoints.some(e=>e.id===x.sourceEndpointId)&&endpoints.some(e=>e.id===x.targetEndpointId));
-  document.getElementById('bridgeList').innerHTML=validLinks.map(x=>{const a=endpoints.find(e=>e.id===x.sourceEndpointId),b=endpoints.find(e=>e.id===x.targetEndpointId);return '<div class="row"><div class="grow"><div class="name">'+esc(a.channelName)+' ↔ '+esc(b.channelName)+'</div><div class="meta">'+esc(a.platform.toUpperCase()+' · '+a.communityName)+' ↔ '+esc(b.platform.toUpperCase()+' · '+b.communityName)+'</div></div><button class="btn danger" onclick="deleteBridgeLink(\''+esc(x.id)+'\')">Удалить связь</button></div>'}).join('')||'<div class="empty">Связей пока нет. Выберите минимум два подключённых чата и создайте мост.</div>';
+  document.getElementById('bridgeEndpointChoices').innerHTML=endpoints.map(x=>'<label class="bridge-endpoint-option"><input type="checkbox" value="'+esc(x.id)+'" '+(selectedIds.has(x.id)?'checked':'')+' onchange="updateBridgeDraft(this)"><span class="bridge-endpoint-icon">'+(x.platform==='telegram'?'TG':'DC')+'</span><span class="grow"><b>'+esc(x.channelName)+'</b><span class="meta">'+esc(x.platform.toUpperCase())+' · '+esc(x.communityName)+'</span></span></label>').join('')||'<div class="empty">Нет доступных чатов. Привяжите Telegram-группу и добавьте бота в Discord-канал.</div>';
+  document.getElementById('bridgeEndpoints').innerHTML=endpoints.map(x=>'<div class="row"><div class="grow"><div class="name">'+esc(x.platform==='telegram'?'Telegram':'Discord')+' · '+esc(x.channelName)+'</div><div class="meta">'+esc(x.communityName)+' · ID '+esc(x.channelExternalId)+'</div></div><span class="pill">Подключён</span></div>').join('')||'<div class="empty">Нет подключённых чатов.</div>';
+  document.getElementById('bridgeList').innerHTML=links.map(x=>{const a=endpoints.find(e=>e.id===x.sourceEndpointId),b=endpoints.find(e=>e.id===x.targetEndpointId);if(!a||!b)return '';return '<div class="row"><div class="grow"><div class="name">'+esc(a.channelName)+' ↔ '+esc(b.channelName)+'</div><div class="meta">'+esc(a.platform.toUpperCase())+' ↔ '+esc(b.platform.toUpperCase())+' · '+esc(a.communityName)+'</div></div><button class="btn" onclick="manageBridge(\''+esc(x.id)+'\')">Управлять</button></div>'}).join('')||'<div class="empty">Пока нет активных мостов. Нажмите «Создать мост».</div>';
   await loadPendingTelegramGroups();
  }catch(e){toast(e.message||'Не удалось загрузить мосты')}
 }
@@ -885,7 +909,7 @@ async function confirmAndCreateBridge(){
  if(!confirm('Создать мост между '+endpoints.length+' чатами? Сообщения будут пересылаться между всеми выбранными местами.'))return;
  try{
   const pairs=[];for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++)pairs.push([ids[i],ids[j]]);
-  for(const [sourceEndpointId,targetEndpointId] of pairs)await post('/api/bridge/links',{sourceEndpointId,targetEndpointId,...(!authKey?{communityId:selectedModexaCommunity()?.communityId||selectedModexaCommunity()?.id}: {})});
+  for(const [sourceEndpointId,targetEndpointId] of pairs)await post('/api/bridge/links',{sourceEndpointId,targetEndpointId,communityId:selectedModexaCommunity()?.communityId||selectedModexaCommunity()?.id});
   toast('Мост создан: '+endpoints.length+' чата связаны');bridgeDraft=[];document.getElementById('bridgeConfirmCard').hidden=true;await loadBridge();
  }catch(e){toast('Не удалось создать все связи. Проверьте список мостов и повторите: '+e.message);await loadBridge()}
 }
