@@ -28,7 +28,10 @@ export class AutoModService {
     for (const rule of this.listRules(input.communityId).filter((item) => item.enabled)) {
       const content = input.content.trim();
       const lower = content.toLowerCase();
-      if (rule.type === "keyword" && rule.value && lower.includes(rule.value.toLowerCase())) return { matched: true, rule, reason: "keyword" };
+      if (rule.type === "keyword" && rule.value) {
+        const keywords = rule.value.split("|").map((item) => item.trim().toLowerCase()).filter(Boolean);
+        if (keywords.some((keyword) => lower.includes(keyword))) return { matched: true, rule, reason: "keyword" };
+      }
       if (rule.type === "link" && /(?:https?:\/\/|www\.)[^\s]+/i.test(content)) {
         const links = content.match(/(?:https?:\/\/|www\.)[^\s]+/gi) ?? [];
         if (links.some((link) => !(rule.whitelist ?? []).some((pattern) => wildcard(link, pattern)))) return { matched: true, rule, reason: "link" };
