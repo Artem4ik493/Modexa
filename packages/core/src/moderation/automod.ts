@@ -34,8 +34,13 @@ export class AutoModService {
   private readonly rules = new Map<string, AutoModRule>();
   private readonly recentMessages = new Map<string, Array<{ content: string; at: number }>>();
 
-  upsertRule(rule: AutoModRule): void { this.rules.set(rule.id, { ...rule, whitelist: rule.whitelist ? [...rule.whitelist] : undefined, ignoredUserIds: rule.ignoredUserIds ? [...rule.ignoredUserIds] : undefined, ignoredChannelIds: rule.ignoredChannelIds ? [...rule.ignoredChannelIds] : undefined, ignoredRoleIds: rule.ignoredRoleIds ? [...rule.ignoredRoleIds] : undefined }); }
-  removeRule(ruleId: string): void { this.rules.delete(ruleId); }
+  private ruleKey(communityId: string, ruleId: string): string { return `${communityId}:${ruleId}`; }
+
+  upsertRule(rule: AutoModRule): void { this.rules.set(this.ruleKey(rule.communityId, rule.id), { ...rule, whitelist: rule.whitelist ? [...rule.whitelist] : undefined, ignoredUserIds: rule.ignoredUserIds ? [...rule.ignoredUserIds] : undefined, ignoredChannelIds: rule.ignoredChannelIds ? [...rule.ignoredChannelIds] : undefined, ignoredRoleIds: rule.ignoredRoleIds ? [...rule.ignoredRoleIds] : undefined }); }
+  removeRule(ruleId: string, communityId?: string): void {
+    if (communityId !== undefined) { this.rules.delete(this.ruleKey(communityId, ruleId)); return; }
+    for (const [key, rule] of this.rules) if (rule.id === ruleId) this.rules.delete(key);
+  }
   listRules(communityId: string): AutoModRule[] { return [...this.rules.values()].filter((rule) => rule.communityId === communityId); }
 
   inspect(input: { communityId: string; userId: string; channelId?: string; roleIds?: string[]; content: string; mentionCount?: number; now?: Date }): AutoModDecision {
