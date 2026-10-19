@@ -57,10 +57,10 @@ export class AutoModService {
       if (rule.type === "caps") {
         const letters = content.replace(/[^a-zа-яё]/gi, "");
         const upper = letters.replace(/[^A-ZА-ЯЁ]/g, "").length;
-        if (letters.length >= (rule.windowSeconds ?? 10) && upper / letters.length >= (rule.threshold ?? 0.7)) return { matched: true, rule, reason: "caps" };
+        if (letters.length >= 5 && upper / letters.length >= (rule.threshold ?? 0.7)) return { matched: true, rule, reason: "caps" };
       }
       if (rule.type === "flood" || rule.type === "repeated_text") {
-        const key = input.communityId + ":" + input.userId;
+        const key = rule.id + ":" + input.communityId + ":" + (input.channelId ?? "all") + ":" + input.userId;
         const windowMs = (rule.windowSeconds ?? 10) * 1000;
         const history = (this.recentMessages.get(key) ?? []).filter((item) => now.getTime() - item.at <= windowMs);
         const count = rule.type === "repeated_text" ? history.filter((item) => item.content === lower).length + 1 : history.length + 1;
