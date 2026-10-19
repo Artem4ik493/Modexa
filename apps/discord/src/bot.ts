@@ -465,7 +465,8 @@ export function createDiscordAdapter(
         options.membershipService,
       communityService:
         options.communityService,
-      autoModService: options.autoModService
+      autoModService: options.autoModService,
+      database: options.database
   });
   adapter.onEvent(async (event) => {
     const externalCommunityId =
