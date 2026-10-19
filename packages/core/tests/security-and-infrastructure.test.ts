@@ -143,6 +143,44 @@ describe("Modexa security and infrastructure", () => {
     expect(auto.listRules("community-b")).toHaveLength(1);
   });
 
+  it("detects bare domains and Telegram invites and honors the configured caps minimum", () => {
+    const links = new AutoModService();
+    links.upsertRule({
+      id: "bare-links", communityId: "c", type: "link", enabled: true,
+      action: "delete", whitelist: ["example.com"]
+    });
+    expect(links.inspect({ communityId: "c", userId: "u", content: "visit example.com/path" }).matched).toBe(false);
+    expect(links.inspect({ communityId: "c", userId: "u", content: "visit notexample.com/path" }).matched).toBe(true);
+
+    const invites = new AutoModService();
+    invites.upsertRule({
+      id: "invites", communityId: "c", type: "invite", enabled: true, action: "delete"
+    });
+    expect(invites.inspect({ communityId: "c", userId: "u", content: "Join https://t.me/+AbC123" }).reason).toBe("platform invite");
+
+    const caps = new AutoModService();
+    caps.upsertRule({
+      id: "caps", communityId: "c", type: "caps", enabled: true, action: "warn",
+      threshold: 0.8, windowSeconds: 8
+    });
+    expect(caps.inspect({ communityId: "c", userId: "u", content: "LOUD" }).matched).toBe(false);
+    expect(caps.inspect({ communityId: "c", userId: "u", content: "LOUDTEXT" }).reason).toBe("caps");
+  });
+
+  it("replaces only one community's AutoMod rules during live synchronization", () => {
+    const auto = new AutoModService();
+    auto.upsertRule({ id: "old", communityId: "a", type: "keyword", value: "old", enabled: true, action: "delete" });
+    auto.upsertRule({ id: "other", communityId: "b", type: "keyword", value: "keep", enabled: true, action: "warn" });
+    auto.syncCommunityRules("a", [
+      { id: "new", communityId: "a", type: "keyword", value: "new", enabled: true, action: "ban" }
+    ]);
+
+    expect(auto.listRules("a").map((rule) => rule.id)).toEqual(["new"]);
+    expect(auto.listRules("b").map((rule) => rule.id)).toEqual(["other"]);
+    expect(auto.inspect({ communityId: "a", userId: "u", content: "old" }).matched).toBe(false);
+    expect(auto.inspect({ communityId: "a", userId: "u", content: "new" }).rule?.action).toBe("ban");
+  });
+
   it("scopes interaction tokens and expires them", () => {
     const store = new InteractionActionStore({ ttlMs: 1000 });
     const now = new Date("2026-10-03T10:00:00Z");
