@@ -1938,16 +1938,25 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       const body = await readJsonBody(req);
       const types = new Set(["keyword", "link", "invite", "scam", "caps", "flood", "repeated_text", "emotes", "mentions", "zalgo"]);
       const actions = new Set(["warn", "mute", "kick", "ban", "delete"]);
+      const stringArray = (value: unknown, maxItems = 500, maxLength = 300): boolean =>
+        Array.isArray(value) && value.length <= maxItems && value.every((item) => typeof item === "string" && item.length <= maxLength);
+      const invalidThreshold = body.threshold !== undefined &&
+        (!Number.isFinite(Number(body.threshold)) ||
+          Number(body.threshold) < (body.type === "caps" ? 0.1 : 1) ||
+          Number(body.threshold) > (body.type === "caps" ? 1 : 100) ||
+          (body.type !== "caps" && !Number.isInteger(Number(body.threshold))));
       if (typeof body.type !== "string" || !types.has(body.type) || typeof body.enabled !== "boolean" ||
           typeof body.action !== "string" || !actions.has(body.action) ||
+          (body.id !== undefined && (typeof body.id !== "string" || body.id.length > 100)) ||
           (body.value !== undefined && (typeof body.value !== "string" || body.value.length > 500)) ||
-          (body.threshold !== undefined && (!Number.isFinite(body.threshold) || Number(body.threshold) < (body.type === "caps" ? 0.1 : 1) || Number(body.threshold) > (body.type === "caps" ? 1 : 100))) ||
+          (body.type === "keyword" && body.enabled && (typeof body.value !== "string" || !body.value.trim())) ||
+          invalidThreshold ||
           (body.windowSeconds !== undefined && (!Number.isInteger(body.windowSeconds) || Number(body.windowSeconds) < 1 || Number(body.windowSeconds) > 86400)) ||
-          (body.durationSeconds !== undefined && (!Number.isInteger(body.durationSeconds) || Number(body.durationSeconds) < 1 || Number(body.durationSeconds) > 2_592_000)) ||
-          (body.whitelist !== undefined && (!Array.isArray(body.whitelist) || !body.whitelist.every((v) => typeof v === "string" && v.length <= 300))) ||
-          (body.ignoredUserIds !== undefined && (!Array.isArray(body.ignoredUserIds) || !body.ignoredUserIds.every((v) => typeof v === "string" && v.length <= 100))) ||
-          (body.ignoredChannelIds !== undefined && (!Array.isArray(body.ignoredChannelIds) || !body.ignoredChannelIds.every((v) => typeof v === "string" && v.length <= 100))) ||
-          (body.ignoredRoleIds !== undefined && (!Array.isArray(body.ignoredRoleIds) || body.ignoredRoleIds.length > 500 || !body.ignoredRoleIds.every((v) => typeof v === "string" && v.length <= 100)))) {
+          (body.durationSeconds !== undefined && (!Number.isInteger(body.durationSeconds) || Number(body.durationSeconds) < 30 || Number(body.durationSeconds) > 2_592_000)) ||
+          (body.whitelist !== undefined && !stringArray(body.whitelist, 500, 300)) ||
+          (body.ignoredUserIds !== undefined && !stringArray(body.ignoredUserIds, 500, 100)) ||
+          (body.ignoredChannelIds !== undefined && !stringArray(body.ignoredChannelIds, 500, 100)) ||
+          (body.ignoredRoleIds !== undefined && !stringArray(body.ignoredRoleIds, 500, 100))) {
         json(res, 400, { error: "invalid_automod_rule" }); return;
       }
       const all = database.getRuntimeState<Array<Record<string, unknown>>>("api.automod_rules") ?? [];
