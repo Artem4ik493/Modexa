@@ -876,7 +876,7 @@ async function handleMessage(
         deps.auditService?.record({ communityId: automodCommunity.id, action: "automod.trigger", actorUserId: executionContext.user.id, channelId: message.channel?.externalId, messageId: message.externalId, reason, metadata: { platform: deps.platform, ruleId: rule.id, ruleType: rule.type, action: rule.action, matched: true } });
       } catch (error) {
         const failure = error instanceof Error ? error.message : String(error);
-        deps.logger.warn("automod.action.failed", { platform: deps.platform, communityId: automodCommunity.id, ruleId: rule.id, ruleType: rule.type, action: rule.action, failure }, error);
+        deps.logger.warn("automod.action.failed", { platform: deps.platform, communityId: automodCommunity.id, ruleId: rule.id, ruleType: rule.type, action: rule.action, failure });
         deps.auditService?.record({
           communityId: automodCommunity.id,
           action: "automod.trigger",
