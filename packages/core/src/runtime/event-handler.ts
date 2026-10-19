@@ -725,7 +725,13 @@ async function applyAutoMod(
   if (!decision.matched || !decision.rule) return false;
 
   const rule = decision.rule;
-  const reason = `AutoMod: ${rule.type} (${decision.reason ?? "matched"})`;
+  const ruleLabels: Record<AutoModRule["type"], string> = {
+    keyword: "запрещённые слова", link: "нежелательные ссылки", invite: "ссылки-приглашения",
+    scam: "скам и фишинг", caps: "избыточные заглавные буквы", flood: "флуд",
+    repeated_text: "повтор сообщений", emotes: "чрезмерное количество эмодзи",
+    mentions: "массовые упоминания", zalgo: "искажённый текст"
+  };
+  const reason = `Автоматическая модерация: ${ruleLabels[rule.type]}.`;
   const targetDisplayName = message.author.displayName ?? message.author.username ?? message.author.externalId;
   try {
     if (rule.action === "delete") {
