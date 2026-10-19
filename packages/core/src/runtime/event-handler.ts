@@ -704,8 +704,8 @@ async function applyAutoMod(
   // Refresh the selected community's rules per message so Dashboard changes take effect
   // without restarting the bots and without sharing in-memory state between processes.
   if (deps.database) {
-    const stored = deps.database.getRuntimeState<AutoModRule[]>("api.automod_rules") ?? [];
-    service.syncCommunityRules(community.id, stored);
+    const stored = deps.database.getRuntimeState<AutoModRule[]>("api.automod_rules");
+    if (Array.isArray(stored)) service.syncCommunityRules(community.id, stored);
   }
 
   const rawMentionCount = Number(message.metadata?.mentionCount ?? 0);
