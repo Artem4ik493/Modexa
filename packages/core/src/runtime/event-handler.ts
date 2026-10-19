@@ -740,11 +740,6 @@ async function applyAutoMod(
         userExternalId: message.author.externalId, reason,
         metadata: { targetDisplayName, source: "automod", ruleId: rule.id }
       });
-      await deps.responder.sendAction({
-        type: "message.send", platform: deps.platform,
-        channelExternalId: message.destinationExternalId,
-        content: `⚠️ ${targetDisplayName}, please follow this community's rules.`
-      });
     } else if (rule.action === "mute") {
       await deps.responder.sendAction({
         type: "member.mute", platform: deps.platform,
