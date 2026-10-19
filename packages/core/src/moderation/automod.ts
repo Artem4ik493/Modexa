@@ -67,7 +67,7 @@ export class AutoModService {
         if (links.some((link) => !isWhitelistedLink(link.replace(/[.,!?;:]+$/g, "").replace(/[)\]}]+$/g, ""), rule.whitelist ?? []))) return { matched: true, rule, reason: "link" };
       }
       if (rule.type === "invite" && /(?:discord(?:app)?\.com\/invite\/|discord\.gg\/|t\.me\/(?:\+|joinchat\/)|telegram\.me\/joinchat\/)[a-z0-9_-]+/i.test(content)) return { matched: true, rule, reason: "platform invite" };
-      if (rule.type === "scam" && /(?:free\s+(?:nitro|gift)|steam\s+gift|claim\s+(?:your\s+)?gift|verify\s+(?:your\s+)?account|бесплатн\w*\s+(?:нитро|подарок)|получ\w*\s+(?:свой\s+)?подарок|подтверд\w*\s+(?:свой\s+)?аккаунт)/i.test(content) && /(?:https?:\/\/|www\.|\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\b)/i.test(content)) return { matched: true, rule, reason: "scam/phishing" };
+      if (rule.type === "scam" && /(?:free\s+(?:nitro|gift)|steam\s+gift|claim\s+(?:your\s+)?gift|verify\s+(?:your\s+)?account|бесплатн[а-яё]*\s+(?:нитро|подарок)|получ[а-яё]*\s+(?:свой\s+)?подарок|подтверд[а-яё]*\s+(?:свой\s+)?аккаунт)/i.test(content) && /(?:https?:\/\/|www\.|\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\b)/i.test(content)) return { matched: true, rule, reason: "scam/phishing" };
       if (rule.type === "caps") {
         const letters = content.replace(/[^a-zа-яё]/gi, "");
         const upper = letters.replace(/[^A-ZА-ЯЁ]/g, "").length;
