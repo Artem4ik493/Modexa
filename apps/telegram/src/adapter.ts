@@ -978,10 +978,10 @@ export class TelegramAdapter
             message.date * 1000
           ),
 
-        metadata:
-          bridgeMedia
-            ? { bridgeMedia }
-            : undefined
+        metadata: {
+          ...(bridgeMedia ? { bridgeMedia } : {}),
+          mentionCount: ("entities" in message && Array.isArray(message.entities) ? message.entities : []).filter((entity) => entity.type === "mention" || entity.type === "text_mention").length
+        }
       }
     };
   }
