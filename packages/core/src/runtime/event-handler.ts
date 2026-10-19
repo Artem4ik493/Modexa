@@ -84,7 +84,7 @@ import type {
   CommunityService
 } from "../communities/service.js";
 
-import type { AutoModService } from "../moderation/automod.js";
+import type { AutoModRule, AutoModService } from "../moderation/automod.js";
 
 const EMPTY_CONTENT_FALLBACK =
   "…";
@@ -691,6 +691,105 @@ function rememberMessageAuthor(
   );
 }
 
+async function applyAutoMod(
+  deps: PlatformEventHandlerDeps,
+  message: AdapterMessage,
+  executionContext: ExecutionContext
+): Promise<boolean> {
+  const community = executionContext.community;
+  const service = deps.autoModService;
+  if (!service || !community || !message.content.trim() || message.content.trimStart().startsWith("/")) return false;
+
+  // API and adapters may run as separate processes against the same SQLite database.
+  // Refresh the selected community's rules per message so Dashboard changes take effect
+  // without restarting the bots and without sharing in-memory state between processes.
+  if (deps.database) {
+    const stored = deps.database.getRuntimeState<AutoModRule[]>("api.automod_rules") ?? [];
+    service.syncCommunityRules(community.id, stored);
+  }
+
+  const rawMentionCount = Number(message.metadata?.mentionCount ?? 0);
+  const mentionCount = Number.isFinite(rawMentionCount) && rawMentionCount > 0 ? rawMentionCount : 0;
+  const roleIds = Array.isArray(message.metadata?.authorRoleIds)
+    ? message.metadata.authorRoleIds.filter((value): value is string => typeof value === "string")
+    : [];
+  const decision = service.inspect({
+    communityId: community.id,
+    userId: message.author.externalId,
+    channelId: message.channel?.externalId,
+    roleIds,
+    content: message.content,
+    mentionCount,
+    now: message.createdAt
+  });
+  if (!decision.matched || !decision.rule) return false;
+
+  const rule = decision.rule;
+  const reason = `AutoMod: ${rule.type} (${decision.reason ?? "matched"})`;
+  const targetDisplayName = message.author.displayName ?? message.author.username ?? message.author.externalId;
+  try {
+    if (rule.action === "delete") {
+      await deps.responder.sendAction({
+        type: "message.delete", platform: deps.platform,
+        channelExternalId: message.destinationExternalId, messageExternalId: message.externalId
+      });
+    } else if (rule.action === "warn") {
+      await deps.responder.sendAction({
+        type: "member.warn", platform: deps.platform,
+        communityExternalId: message.community?.externalId ?? "",
+        userExternalId: message.author.externalId, reason,
+        metadata: { targetDisplayName, source: "automod", ruleId: rule.id }
+      });
+      await deps.responder.sendAction({
+        type: "message.send", platform: deps.platform,
+        channelExternalId: message.destinationExternalId,
+        content: `⚠️ ${targetDisplayName}, please follow this community's rules.`
+      });
+    } else if (rule.action === "mute") {
+      await deps.responder.sendAction({
+        type: "member.mute", platform: deps.platform,
+        communityExternalId: message.community?.externalId ?? "",
+        userExternalId: message.author.externalId,
+        durationSeconds: Math.max(30, rule.durationSeconds ?? 600), reason,
+        metadata: { targetDisplayName, source: "automod", ruleId: rule.id }
+      });
+    } else if (rule.action === "kick") {
+      await deps.responder.sendAction({
+        type: "member.kick", platform: deps.platform,
+        communityExternalId: message.community?.externalId ?? "",
+        userExternalId: message.author.externalId, reason,
+        metadata: { targetDisplayName, source: "automod", ruleId: rule.id }
+      });
+    } else if (rule.action === "ban") {
+      await deps.responder.sendAction({
+        type: "member.ban", platform: deps.platform,
+        communityExternalId: message.community?.externalId ?? "",
+        userExternalId: message.author.externalId, reason,
+        metadata: { targetDisplayName, source: "automod", ruleId: rule.id }
+      });
+    }
+
+    deps.auditService?.record({
+      communityId: community.id, action: "automod.trigger", actorUserId: executionContext.user.id,
+      channelId: message.channel?.externalId, messageId: message.externalId, reason,
+      metadata: { platform: deps.platform, ruleId: rule.id, ruleType: rule.type, action: rule.action, matched: true, success: true }
+    });
+  } catch (error) {
+    const failure = error instanceof Error ? error.message : String(error);
+    deps.logger.warn("automod.action.failed", {
+      platform: deps.platform, communityId: community.id, ruleId: rule.id,
+      ruleType: rule.type, action: rule.action, failure
+    });
+    deps.auditService?.record({
+      communityId: community.id, action: "automod.trigger", actorUserId: executionContext.user.id,
+      channelId: message.channel?.externalId, messageId: message.externalId,
+      reason: reason + " — действие не выполнено",
+      metadata: { platform: deps.platform, ruleId: rule.id, ruleType: rule.type, action: rule.action, matched: true, success: false, failure: failure.slice(0, 500) }
+    });
+  }
+  return true;
+}
+
 async function handleMessageUpdate(
   deps: PlatformEventHandlerDeps,
   message: AdapterMessage
@@ -704,6 +803,8 @@ async function handleMessageUpdate(
       channel: message.channel
     }
   );
+
+  if (await applyAutoMod(deps, message, executionContext)) return;
 
   if (
     deps.bridgeService &&
@@ -843,53 +944,8 @@ async function handleMessage(
     executionContext
   );
 
-  // AutoMod runs before bridge relay and command handling.
-  const automodCommunity = executionContext.community;
-  if (deps.autoModService && automodCommunity && message.content.trim() && !message.content.startsWith("/")) {
-    const mentionCount = Number(message.metadata?.mentionCount ?? 0);
-    const roleIds = Array.isArray(message.metadata?.authorRoleIds) ? message.metadata!.authorRoleIds as string[] : [];
-    const decision = deps.autoModService.inspect({
-      communityId: automodCommunity.id,
-      userId: message.author.externalId,
-      channelId: message.channel?.externalId,
-      roleIds: Array.isArray(message.metadata?.authorRoleIds) ? message.metadata.authorRoleIds.filter((value): value is string => typeof value === "string") : [],
-      content: message.content,
-      mentionCount: Number.isFinite(mentionCount) ? mentionCount : 0,
-      now: message.createdAt
-    });
-    if (decision.matched && decision.rule) {
-      const rule = decision.rule;
-      const reason = `AutoMod: ${rule.type} (${decision.reason ?? "matched"})`;
-      try {
-        if (rule.action === "delete") {
-          await deps.responder.sendAction({ type: "message.delete", platform: deps.platform, channelExternalId: message.destinationExternalId, messageExternalId: message.externalId });
-        } else if (rule.action === "warn") {
-          await deps.responder.sendAction({ type: "member.warn", platform: deps.platform, communityExternalId: message.community?.externalId ?? "", userExternalId: message.author.externalId, reason });
-          await deps.responder.sendAction({ type: "message.send", platform: deps.platform, channelExternalId: message.destinationExternalId, content: `Please follow this community's rules, ${message.author.username ?? message.author.displayName ?? "member"}.` });
-        } else if (rule.action === "mute") {
-          await deps.responder.sendAction({ type: "member.mute", platform: deps.platform, communityExternalId: message.community?.externalId ?? "", userExternalId: message.author.externalId, durationSeconds: rule.durationSeconds ?? 600, reason });
-        } else if (rule.action === "kick") {
-          await deps.responder.sendAction({ type: "member.kick", platform: deps.platform, communityExternalId: message.community?.externalId ?? "", userExternalId: message.author.externalId, reason });
-        } else if (rule.action === "ban") {
-          await deps.responder.sendAction({ type: "member.ban", platform: deps.platform, communityExternalId: message.community?.externalId ?? "", userExternalId: message.author.externalId, reason });
-        }
-        deps.auditService?.record({ communityId: automodCommunity.id, action: "automod.trigger", actorUserId: executionContext.user.id, channelId: message.channel?.externalId, messageId: message.externalId, reason, metadata: { platform: deps.platform, ruleId: rule.id, ruleType: rule.type, action: rule.action, matched: true } });
-      } catch (error) {
-        const failure = error instanceof Error ? error.message : String(error);
-        deps.logger.warn("automod.action.failed", { platform: deps.platform, communityId: automodCommunity.id, ruleId: rule.id, ruleType: rule.type, action: rule.action, failure });
-        deps.auditService?.record({
-          communityId: automodCommunity.id,
-          action: "automod.trigger",
-          actorUserId: executionContext.user.id,
-          channelId: message.channel?.externalId,
-          messageId: message.externalId,
-          reason: reason + " — действие не выполнено",
-          metadata: { platform: deps.platform, ruleId: rule.id, ruleType: rule.type, action: rule.action, matched: true, success: false, failure: failure.slice(0, 500) }
-        });
-      }
-      return;
-    }
-  }
+  // AutoMod must run before relay and command handling.
+  if (await applyAutoMod(deps, message, executionContext)) return;
 
   if (
     deps.bridgeService &&
