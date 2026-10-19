@@ -100,6 +100,23 @@ describe("Modexa security and infrastructure", () => {
     expect(auto.inspect({ communityId: "c", userId: "u", roleIds: ["trusted-role"], content: "badword" }).matched).toBe(false);
   });
 
+  it("supports AutoMod allowlisted domains, role exclusions and configured mute duration", () => {
+    const auto = new AutoModService();
+    auto.upsertRule({
+      id: "links", communityId: "c", type: "link", enabled: true,
+      action: "delete", whitelist: ["example.com"]
+    });
+    expect(auto.inspect({ communityId: "c", userId: "u", content: "https://docs.example.com/page" }).matched).toBe(false);
+    expect(auto.inspect({ communityId: "c", userId: "u", content: "https://evil.test" }).matched).toBe(true);
+    auto.upsertRule({
+      id: "role-exclusion", communityId: "c", type: "keyword", value: "badword",
+      enabled: true, action: "mute", ignoredRoleIds: ["trusted-role"], durationSeconds: 1800
+    });
+    expect(auto.inspect({ communityId: "c", userId: "u", roleIds: ["trusted-role"], content: "badword" }).matched).toBe(false);
+    const decision = auto.inspect({ communityId: "c", userId: "u", content: "badword" });
+    expect(decision.rule?.durationSeconds).toBe(1800);
+  });
+
   it("scopes interaction tokens and expires them", () => {
     const store = new InteractionActionStore({ ttlMs: 1000 });
     const now = new Date("2026-10-03T10:00:00Z");
