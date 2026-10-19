@@ -252,7 +252,9 @@ export class DiscordAdapter
           ? action.metadata.actorExternalId
           : undefined;
         const targetMember = await guild.members.fetch(action.userExternalId);
-        await this.assertActorNativeHierarchy(guild, actorExternalId, targetMember);
+        if (action.metadata?.source !== "automod") {
+          await this.assertActorNativeHierarchy(guild, actorExternalId, targetMember);
+        }
         const target = await this.client.users.fetch(action.userExternalId);
         const targetName =
           typeof action.metadata?.targetDisplayName === "string"
@@ -289,7 +291,8 @@ export class DiscordAdapter
           typeof action.metadata?.actorExternalId === "string"
             ? action.metadata.actorExternalId
             : undefined,
-          member
+          member,
+          action.metadata?.source === "automod"
         );
         if (!Number.isFinite(action.durationSeconds) || !action.durationSeconds || action.durationSeconds <= 0) {
           throw new Error("Discord mute duration must be positive");
@@ -314,7 +317,8 @@ export class DiscordAdapter
           typeof action.metadata?.actorExternalId === "string"
             ? action.metadata.actorExternalId
             : undefined,
-          member
+          member,
+          action.metadata?.source === "automod"
         );
         await member.kick(action.reason);
         return;
@@ -365,7 +369,8 @@ export class DiscordAdapter
           typeof action.metadata?.actorExternalId === "string"
             ? action.metadata.actorExternalId
             : undefined,
-          member
+          member,
+          action.metadata?.source === "automod"
         );
         await guild.members.ban(action.userExternalId, { reason: action.reason });
         return;
@@ -377,7 +382,8 @@ export class DiscordAdapter
     guild: Guild,
     botMember: GuildMember,
     actorExternalId: string | undefined,
-    target: GuildMember
+    target: GuildMember,
+    automated = false
   ): Promise<void> {
     if (target.id === guild.ownerId) {
       throw new Error("Discord moderation cannot target the server owner");
@@ -387,7 +393,9 @@ export class DiscordAdapter
       throw new Error("Discord bot role hierarchy: the bot must have a higher role than the target");
     }
 
-    await this.assertActorNativeHierarchy(guild, actorExternalId, target);
+    // Automated rules have no human moderator to compare against. The bot's own
+    // permission and role hierarchy checks above still apply to every AutoMod action.
+    if (!automated) await this.assertActorNativeHierarchy(guild, actorExternalId, target);
   }
 
   private async assertActorNativeHierarchy(
