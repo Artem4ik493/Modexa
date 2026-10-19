@@ -18,7 +18,7 @@ function wildcard(value: string, pattern: string): boolean {
 
 function isWhitelistedLink(link: string, patterns: string[]): boolean {
   let hostname = "";
-  try { hostname = new URL(/^https?:\\/\\//i.test(link) ? link : "https://" + link).hostname.toLowerCase(); } catch { /* compare the raw value below */ }
+  try { hostname = new URL(/^https?:\/\//i.test(link) ? link : "https://" + link).hostname.toLowerCase(); } catch { /* compare the raw value below */ }
   return patterns.some((pattern) => {
     const candidate = pattern.trim().toLowerCase();
     if (!candidate) return false;
@@ -63,10 +63,10 @@ export class AutoModService {
         if (keywords.some((keyword) => lower.includes(keyword))) return { matched: true, rule, reason: "keyword" };
       }
       if (rule.type === "link") {
-        const links = content.match(/(?<![@\\w.-])(?:https?:\\/\\/|www\\.)[^\\s<>()[\\]{}]+|(?<![@\\w.-])(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,}(?:\\/[^\\s<>()[\\]{}]*)?/gi) ?? [];
-        if (links.some((link) => !isWhitelistedLink(link.replace(/[.,!?;:]+$/g, "").replace(/[)\\]}]+$/g, ""), rule.whitelist ?? []))) return { matched: true, rule, reason: "link" };
+        const links = content.match(/(?<![@\w.-])(?:https?:\/\/|www\.)[^\s<>()[\]{}]+|(?<![@\w.-])(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}(?:\/[^\s<>()[\]{}]*)?/gi) ?? [];
+        if (links.some((link) => !isWhitelistedLink(link.replace(/[.,!?;:]+$/g, "").replace(/[)\]}]+$/g, ""), rule.whitelist ?? []))) return { matched: true, rule, reason: "link" };
       }
-      if (rule.type === "invite" && /(?:discord(?:app)?\\.com\\/invite\\/|discord\\.gg\\/|t\\.me\\/(?:\\+|joinchat\\/)|telegram\\.me\\/joinchat\\/)[a-z0-9_-]+/i.test(content)) return { matched: true, rule, reason: "platform invite" };
+      if (rule.type === "invite" && /(?:discord(?:app)?\.com\/invite\/|discord\.gg\/|t\.me\/(?:\+|joinchat\/)|telegram\.me\/joinchat\/)[a-z0-9_-]+/i.test(content)) return { matched: true, rule, reason: "platform invite" };
       if (rule.type === "scam" && /(?:free\s+(?:nitro|gift)|steam\s+gift|claim\s+(?:your\s+)?gift|verify\s+(?:your\s+)?account)/i.test(content) && /https?:\/\//i.test(content)) return { matched: true, rule, reason: "scam/phishing" };
       if (rule.type === "caps") {
         const letters = content.replace(/[^a-zа-яё]/gi, "");
