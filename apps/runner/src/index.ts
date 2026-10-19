@@ -529,9 +529,9 @@ type StoredAuditEntry = {
 };
 
 function auditCategory(action: string): string {
-  if (/^(member\\.|moderation\\.|automod\\.)/.test(action)) return "moderation";
-  if (/^automation\\./.test(action)) return "panel";
-  if (/^(channel\\.|role\\.)/.test(action)) return "settings";
+  if (/^(member\.|moderation\.|automod\.)/.test(action)) return "moderation";
+  if (/^automation\./.test(action)) return "panel";
+  if (/^(channel\.|role\.)/.test(action)) return "settings";
   return "panel";
 }
 
