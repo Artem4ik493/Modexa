@@ -119,6 +119,30 @@ describe("Modexa security and infrastructure", () => {
     expect(decision.rule?.durationSeconds).toBe(1800);
   });
 
+  it("keeps AutoMod rules with the same id isolated between communities", () => {
+    const auto = new AutoModService();
+    auto.upsertRule({
+      id: "shared-rule", communityId: "community-a", type: "keyword",
+      value: "alpha", enabled: true, action: "delete"
+    });
+    auto.upsertRule({
+      id: "shared-rule", communityId: "community-b", type: "keyword",
+      value: "beta", enabled: true, action: "warn"
+    });
+
+    expect(auto.listRules("community-a")).toHaveLength(1);
+    expect(auto.listRules("community-a")[0]?.value).toBe("alpha");
+    expect(auto.listRules("community-b")).toHaveLength(1);
+    expect(auto.listRules("community-b")[0]?.value).toBe("beta");
+    expect(auto.inspect({ communityId: "community-a", userId: "u", content: "alpha" }).rule?.action).toBe("delete");
+    expect(auto.inspect({ communityId: "community-a", userId: "u", content: "beta" }).matched).toBe(false);
+    expect(auto.inspect({ communityId: "community-b", userId: "u", content: "beta" }).rule?.action).toBe("warn");
+
+    auto.removeRule("shared-rule", "community-a");
+    expect(auto.listRules("community-a")).toHaveLength(0);
+    expect(auto.listRules("community-b")).toHaveLength(1);
+  });
+
   it("scopes interaction tokens and expires them", () => {
     const store = new InteractionActionStore({ ttlMs: 1000 });
     const now = new Date("2026-10-03T10:00:00Z");
