@@ -1966,7 +1966,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
         ...(Array.isArray(body.ignoredRoleIds) ? { ignoredRoleIds: body.ignoredRoleIds } : {}),
         action: body.action
       };
-      const existing = all.findIndex((rule) => rule.id === item.id);
+      const existing = all.findIndex((rule) => rule.id === item.id && rule.communityId === communityId);
       if (existing >= 0) all[existing] = item; else all.push(item);
       database.setRuntimeState("api.automod_rules", all);
       runtimeServices.autoModService.upsertRule(item as never);
@@ -1983,8 +1983,8 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       const all = database.getRuntimeState<Array<Record<string, unknown>>>("api.automod_rules") ?? [];
       const item = all.find((rule) => rule.id === ruleId && rule.communityId === communityId);
       if (!item) { json(res, 404, { error: "automod_rule_not_found" }); return; }
-      database.setRuntimeState("api.automod_rules", all.filter((rule) => rule.id !== ruleId));
-      runtimeServices.autoModService.removeRule(ruleId);
+      database.setRuntimeState("api.automod_rules", all.filter((rule) => !(rule.id === ruleId && rule.communityId === communityId)));
+      runtimeServices.autoModService.removeRule(ruleId, communityId);
       json(res, 200, { deleted: true, id: ruleId }); return;
     }
 
