@@ -1952,7 +1952,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
           (body.type === "keyword" && body.enabled && (typeof body.value !== "string" || !body.value.trim())) ||
           invalidThreshold ||
           (body.windowSeconds !== undefined && (!Number.isInteger(body.windowSeconds) || Number(body.windowSeconds) < 1 || Number(body.windowSeconds) > 86400)) ||
-          (body.durationSeconds !== undefined && (!Number.isInteger(body.durationSeconds) || Number(body.durationSeconds) < 30 || Number(body.durationSeconds) > 2_592_000)) ||
+          (body.durationSeconds !== undefined && (!Number.isInteger(body.durationSeconds) || Number(body.durationSeconds) < (body.action === "mute" ? 30 : 1) || Number(body.durationSeconds) > 2_592_000)) ||
           (body.whitelist !== undefined && !stringArray(body.whitelist, 500, 300)) ||
           (body.ignoredUserIds !== undefined && !stringArray(body.ignoredUserIds, 500, 100)) ||
           (body.ignoredChannelIds !== undefined && !stringArray(body.ignoredChannelIds, 500, 100)) ||
