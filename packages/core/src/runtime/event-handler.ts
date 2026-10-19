@@ -847,6 +847,7 @@ async function handleMessage(
   const automodCommunity = executionContext.community;
   if (deps.autoModService && automodCommunity && message.content.trim() && !message.content.startsWith("/")) {
     const mentionCount = Number(message.metadata?.mentionCount ?? 0);
+    const roleIds = Array.isArray(message.metadata?.authorRoleIds) ? message.metadata!.authorRoleIds as string[] : [];
     const decision = deps.autoModService.inspect({
       communityId: automodCommunity.id,
       userId: message.author.externalId,
