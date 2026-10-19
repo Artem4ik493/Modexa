@@ -41,6 +41,15 @@ export class AutoModService {
     if (communityId !== undefined) { this.rules.delete(this.ruleKey(communityId, ruleId)); return; }
     for (const [key, rule] of this.rules) if (rule.id === ruleId) this.rules.delete(key);
   }
+  syncCommunityRules(communityId: string, rules: AutoModRule[]): void {
+    for (const [key, rule] of this.rules) {
+      if (rule.communityId === communityId) this.rules.delete(key);
+    }
+    for (const rule of rules) {
+      if (rule && rule.communityId === communityId && typeof rule.id === "string") this.upsertRule(rule);
+    }
+  }
+
   listRules(communityId: string): AutoModRule[] { return [...this.rules.values()].filter((rule) => rule.communityId === communityId); }
 
   inspect(input: { communityId: string; userId: string; channelId?: string; roleIds?: string[]; content: string; mentionCount?: number; now?: Date }): AutoModDecision {
