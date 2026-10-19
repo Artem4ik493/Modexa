@@ -158,6 +158,10 @@ describe("Modexa security and infrastructure", () => {
     });
     expect(invites.inspect({ communityId: "c", userId: "u", content: "Join https://t.me/+AbC123" }).reason).toBe("platform invite");
 
+    const scams = new AutoModService();
+    scams.upsertRule({ id: "scam", communityId: "c", type: "scam", enabled: true, action: "delete" });
+    expect(scams.inspect({ communityId: "c", userId: "u", content: "Получите свой подарок: https://gift.example.ru" }).reason).toBe("scam/phishing");
+
     const caps = new AutoModService();
     caps.upsertRule({
       id: "caps", communityId: "c", type: "caps", enabled: true, action: "warn",
