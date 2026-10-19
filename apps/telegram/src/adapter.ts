@@ -980,7 +980,12 @@ export class TelegramAdapter
 
         metadata: {
           ...(bridgeMedia ? { bridgeMedia } : {}),
-          mentionCount: ("entities" in message && Array.isArray(message.entities) ? message.entities : []).filter((entity) => entity.type === "mention" || entity.type === "text_mention").length
+          mentionCount: ("entities" in message && Array.isArray(message.entities) ? message.entities : []).filter((entity) => entity.type === "mention" || entity.type === "text_mention").length,
+          authorRoleIds: platformRole === "owner"
+            ? ["telegram:creator"]
+            : platformRole === "admin"
+              ? ["telegram:administrator"]
+              : ["telegram:member"]
         }
       }
     };
