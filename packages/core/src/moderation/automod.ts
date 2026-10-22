@@ -153,6 +153,7 @@ export class AutoModService {
       }
       if (rule.type === "link" && rule.linkMode !== "suspicious") {
         const links = this.extractLinks(content);
+        if (rule.linkMode === "all" && links.length > 0) return { matched: true, rule, reason: "link" };
         if (links.some((link) => !isWhitelistedLink(link, rule.whitelist ?? []))) return { matched: true, rule, reason: "link" };
       }
       if (rule.type === "invite" && /(?:discord(?:app)?\.com\/invite\/|discord\.gg\/|t\.me\/(?:\+|joinchat\/)|telegram\.me\/joinchat\/)[a-z0-9_-]+/i.test(content)) return { matched: true, rule, reason: "platform invite" };
