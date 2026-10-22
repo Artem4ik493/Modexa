@@ -2000,7 +2000,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
     if (automodRulesMatch && ["GET", "POST"].includes(req.method ?? "")) {
       const communityId = decodeURIComponent(automodRulesMatch[1]!);
       if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) { json(res, 404, { error: "community_not_found" }); return; }
-      if (!authorized(req) && !(await canManageDiscordCommunity(req, communityId))) {
+      if (!authorized(req) && !(await canManageModexaCommunity(req, communityId))) {
         json(res, 403, { error: "community_management_forbidden" }); return;
       }
       if (req.method === "GET") { json(res, 200, { items: runtimeServices.autoModService.listRules(communityId) }); return; }
@@ -2058,7 +2058,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
     if (automodRuleMatch && req.method === "DELETE") {
       const communityId = decodeURIComponent(automodRuleMatch[1]!);
       const ruleId = decodeURIComponent(automodRuleMatch[2]!);
-      if (!authorized(req) && !(await canManageDiscordCommunity(req, communityId))) {
+      if (!authorized(req) && !(await canManageModexaCommunity(req, communityId))) {
         json(res, 403, { error: "community_management_forbidden" }); return;
       }
       const all = database.getRuntimeState<Array<Record<string, unknown>>>("api.automod_rules") ?? [];
