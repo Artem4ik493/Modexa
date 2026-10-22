@@ -727,7 +727,7 @@ function applyDashboardIcons(){
 
 applyDashboardIcons();
 
-function changeCommunity(id){selectedCommunity=id;localStorage.setItem('modexa_community',id);membersPage=1;renderSelected();loadCommands();loadMembers();loadRoles();loadRanking();loadWelcome();loadCustomCommands();loadAutoMod();loadModeration();loadAudit();loadAutomations();loadPendingTelegramGroups();}
+function changeCommunity(id){if(document.body.classList.contains('user-mode')){toast('Настройки сообществ доступны после входа по API-ключу владельца.');return}selectedCommunity=id;localStorage.setItem('modexa_community',id);membersPage=1;renderSelected();loadCommands();loadMembers();loadRoles();loadRanking();loadWelcome();loadCustomCommands();loadAutoMod();loadModeration();loadAudit();loadAutomations();loadPendingTelegramGroups();}
 
 function serverRank(x){if(x.botInstalled===true&&x.canManageBot===true)return 0;if(x.botInstalled!==true&&x.canInviteBot===true)return 1;return 2}
 function sortedCommunities(){return [...communities].sort((a,b)=>serverRank(a)-serverRank(b)||String(a.name||'').localeCompare(String(b.name||''),'ru'))}
@@ -738,8 +738,8 @@ function renderServers(){
   const inviteable=sorted.filter(c=>c.botInstalled!==true&&c.canInviteBot===true);
   const row=c=>{
     const id=c.communityId||c.id,installed=c.botInstalled===true;
-    const action=installed?`<button class="btn" onclick="changeCommunity('${esc(id)}');showPage('commands')">Управлять</button>`:`<button class="btn primary" onclick="inviteGuild('${esc(c.id)}')">Пригласить бота</button>`;
-    const label=installed?'Бот подключён · доступно управление':'Можно пригласить бота';
+    const action=installed?(authKey?`<button class="btn" onclick="changeCommunity('${esc(id)}');showPage('commands')">Настройки</button>`:`<button class="btn" onclick="showLogin('Для управления настройками войдите по API-ключу владельца.')">Настройки по API-ключу</button>`):`<button class="btn primary" onclick="inviteGuild('${esc(c.id)}')">Пригласить бота</button>`;
+    const label=installed?(authKey?'Бот подключён · настройки доступны':'Бот подключён'):'Можно пригласить бота';
     return `<div class="row"><div class="avatar">${esc((c.name||'M')[0])}</div><div class="grow"><div class="name">${esc(c.name)}</div><div class="meta">${esc(c.id)} · ${label}</div></div><span class="pill">${installed?'<span class="dot"></span>Подключён':'Приглашение'}</span>${action}</div>`;
   };
   const manageableHtml=manageable.length?manageable.map(row).join(''):'<div class="empty">Нет подключённых серверов, которыми вы можете управлять. Пригласите бота в сервер из списка ниже.</div>';
