@@ -1171,8 +1171,8 @@ function renderWelcomePreviewCard(kind){
 function updateWelcomeEmbedPreview(){renderWelcomePreviewCard('join');renderWelcomePreviewCard('leave')}
 
 async function previewWelcome(){
- if(!selectedCommunity)return toast('Выберите сообщество');
- try{const d=await post('/api/communities/'+encodeURIComponent(selectedCommunity)+'/welcome/preview',{member:'Пример участника',username:'example'});updateWelcomeEmbedPreview();const root=document.getElementById('welcomePreview');if(!document.getElementById('welcomeEmbedEnabled').checked)root.innerHTML='<div class="setting"><span>Вход</span><b>'+esc(d.welcome)+'</b></div><div class="setting"><span>Выход</span><b>'+esc(d.leave)+'</b></div>'}catch(e){toast(e.message)}
+ updateWelcomeEmbedPreview();
+ toast('Предпросмотр входа и выхода обновлён');
 }
 async function loadCustomCommands(){
   if(!selectedCommunity){document.getElementById('customCommandList').innerHTML='<div class="empty">Выберите сообщество.</div>';return}
