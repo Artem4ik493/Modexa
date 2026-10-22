@@ -1325,8 +1325,13 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
         communityId = existing?.communityId ?? `community-${randomUUID()}`;
         community = database.getCommunitiesSnapshot().find((item) => item.id === communityId);
         if (!community) {
-          community = { id: communityId, name: claim.chatTitle, mode: "public", createdAt: timestamp, updatedAt: timestamp };
-          database.upsertCommunity(community);
+          database.upsertCommunity({
+            id: communityId,
+            name: claim.chatTitle,
+            mode: "public",
+            createdAt: timestamp,
+            updatedAt: timestamp
+          });
         }
       }
       database.upsertCommunityIdentity({
