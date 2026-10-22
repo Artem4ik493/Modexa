@@ -327,6 +327,14 @@ main{min-width:0}
 :where(button,a,input,select,textarea,[tabindex]):focus-visible{outline:2px solid #c4b5fd;outline-offset:2px;box-shadow:var(--focus-ring)}
 button:disabled{cursor:not-allowed;opacity:.55;transform:none}
 #communitySelect{max-width:min(360px,55vw)}
+.command{min-width:0}
+.command>.grow{min-width:0;flex:1 1 auto;overflow-wrap:anywhere}
+.command .switch{box-sizing:border-box;display:block;flex:0 0 56px;width:56px;min-width:56px;max-width:56px;height:30px;min-height:30px;padding:0;margin:0;border:0;border-radius:999px;position:relative;align-self:center;justify-self:end;overflow:hidden;appearance:none;-webkit-appearance:none}
+.command .switch:after{content:"";position:absolute;top:3px;left:3px;right:auto;width:24px;height:24px;max-width:24px;min-height:0;border-radius:50%;background:#fff;transition:transform .16s ease;transform:translateX(0)}
+.command .switch.on:after{left:3px;transform:translateX(26px)}
+.command .switch:disabled{opacity:.7;cursor:wait}
+@media(max-width:520px){.command-grid{grid-template-columns:minmax(0,1fr)}.command{gap:10px;padding:12px}.command .switch{flex-basis:56px}}
+
  .api-key-only{display:none!important}
 .owner-mode .api-key-only{display:initial!important}
 .owner-mode .nav.api-key-only{display:flex!important}
@@ -334,7 +342,7 @@ button:disabled{cursor:not-allowed;opacity:.55;transform:none}
 .owner-mode .card.api-key-only{display:block!important}
 .owner-mode .page.api-key-only.active{display:block!important}
 .user-mode .owner-only,.user-mode .api-key-only{display:none!important}
-.user-mode #communitySelect{display:none}
+.user-mode #communitySelect{display:block;visibility:visible;min-width:220px;max-width:min(360px,55vw)}
 .user-mode .aside-bottom{display:none}
 .user-mode .top-actions #themeToggle,.user-mode .top-actions #languageToggle{display:inline-flex}
 .user-mode #overview .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -749,12 +757,45 @@ function renderServers(){
   document.getElementById('overviewServers').innerHTML=manageableHtml;
   document.getElementById('serverCount').textContent=manageable.length+' управляемых · '+inviteable.length+' для приглашения';
 }
-async function renderSelected(){return;}
+async function renderSelected(){
+  renderCommunitySelect();
+  renderServers();
+  const selected=communities.find(item=>(item.communityId||item.id)===selectedCommunity);
+  const select=document.getElementById('communitySelect');
+  if(select){
+    select.value=selectedCommunity||'';
+    select.setAttribute('aria-label','Выбранное сообщество');
+    select.title=selected?.name||'Выберите сообщество для управления';
+  }
+  const title=document.getElementById('pageSubtitle');
+  if(title&&selected){
+    const active=document.querySelector('.page.active')?.id;
+    title.dataset.base=titles[active]?.[1]||'';
+    title.textContent=(titles[active]?.[1]||'')+' · '+selected.name;
+  }else if(title){
+    const active=document.querySelector('.page.active')?.id;
+    title.textContent=titles[active]?.[1]||'';
+  }
+}
 
 async function setMode(mode){if(!selectedCommunity)return toast('Сначала выберите сервер');try{await post('/api/community/mode',{communityId:selectedCommunity,mode});toast('Режим сообщества изменён');await loadAll()}catch(e){toast(e.message)}}
 
-async function loadCommands(){if(!selectedCommunity){document.getElementById('commandList').innerHTML='<div class="empty">Выберите сервер сверху.</div>';return}try{const d=await get('/api/commands?communityId='+encodeURIComponent(selectedCommunity));document.getElementById('commandCount').textContent=d.items.length+' команд';const groups={basic:'Основные',members:'Участники',moderation:'Модерация',settings:'Настройки',other:'Другое'};const names=['help','menu','info','server','user','stats','account','members','member','role','warn','mute','kick','ban','unmute','unban','warns','warnings','mutes','clear','command','settings','system'];const html=d.items.map(c=>{const cat=names.includes(c.name)?(c.name==='warn'||c.name==='mute'||c.name==='kick'||c.name==='ban'||c.name==='unmute'||c.name==='unban'||c.name==='warns'||c.name==='warnings'||c.name==='mutes'?'moderation':c.name==='member'||c.name==='members'||c.name==='user'||c.name==='role'?'members':c.name==='settings'||c.name==='command'||c.name==='system'?'settings':'basic'):'other';return '<div class="command"><div class="grow"><div class="command-name">/'+esc(c.name)+'</div><div class="command-desc">'+esc(c.descriptions?.ru||c.descriptions?.en||'Без описания')+'</div><div class="meta">'+groups[cat]+'</div></div><button class="switch '+(c.enabled?'on':'')+'" onclick="toggleCommand(\''+esc(c.name)+'\','+(c.enabled?'false':'true')+',this)"></button></div>'}).join('');document.getElementById('commandList').innerHTML=html}catch(e){document.getElementById('commandList').innerHTML='<div class="empty">Не удалось загрузить команды: '+esc(e.message)+'</div>'}}
-async function toggleCommand(name,enabled,button){try{await post('/api/command-settings',{communityId:selectedCommunity,commandName:name,enabled});button.classList.toggle('on',enabled);toast('/'+name+' '+(enabled?'включена':'отключена'))}catch(e){toast(e.message)}}
+async function loadCommands(){if(!selectedCommunity){document.getElementById('commandList').innerHTML='<div class="empty">Выберите сервер сверху.</div>';return}try{const d=await get('/api/commands?communityId='+encodeURIComponent(selectedCommunity));document.getElementById('commandCount').textContent=d.items.length+' команд';const groups={basic:'Основные',members:'Участники',moderation:'Модерация',settings:'Настройки',other:'Другое'};const names=['help','menu','info','server','user','stats','account','members','member','role','warn','mute','kick','ban','unmute','unban','warns','warnings','mutes','clear','command','settings','system'];const html=d.items.map(c=>{const cat=names.includes(c.name)?(c.name==='warn'||c.name==='mute'||c.name==='kick'||c.name==='ban'||c.name==='unmute'||c.name==='unban'||c.name==='warns'||c.name==='warnings'||c.name==='mutes'?'moderation':c.name==='member'||c.name==='members'||c.name==='user'||c.name==='role'?'members':c.name==='settings'||c.name==='command'||c.name==='system'?'settings':'basic'):'other';return '<div class="command"><div class="grow"><div class="command-name">/'+esc(c.name)+'</div><div class="command-desc">'+esc(c.descriptions?.ru||c.descriptions?.en||'Без описания')+'</div><div class="meta">'+groups[cat]+'</div></div><button type="button" role="switch" aria-label="Команда /'+esc(c.name)+'" aria-checked="'+String(Boolean(c.enabled))+'" class="switch '+(c.enabled?'on':'')+'" onclick="toggleCommand(\''+esc(c.name)+'\','+(c.enabled?'false':'true')+',this)"></button></div>'}).join('');document.getElementById('commandList').innerHTML=html}catch(e){document.getElementById('commandList').innerHTML='<div class="empty">Не удалось загрузить команды: '+esc(e.message)+'</div>'}}
+async function toggleCommand(name,enabled,button){
+ if(!selectedCommunity){toast('Сначала выберите сообщество');return}
+ const previous=!enabled;
+ button.classList.toggle('on',enabled);
+ button.setAttribute('aria-checked',String(enabled));
+ button.disabled=true;
+ try{
+  await post('/api/command-settings',{communityId:selectedCommunity,commandName:name,enabled});
+  toast('/'+name+' '+(enabled?'включена':'отключена'));
+ }catch(e){
+  button.classList.toggle('on',previous);
+  button.setAttribute('aria-checked',String(previous));
+  toast('Не удалось изменить /'+name+': '+e.message);
+ }finally{button.disabled=false}
+}
 
 let moderationCases=[],selectedModerationCase=null;
 async function loadModeration(){
