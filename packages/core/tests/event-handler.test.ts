@@ -5,6 +5,7 @@ import {
 } from "vitest";
 
 import {
+  AutoModService,
   CommandParser,
   CommandRegistry,
   CommandService,
@@ -64,7 +65,8 @@ function tokensOf(
 
 function setup(
   platform: Platform = "telegram",
-  failSend = false
+  failSend = false,
+  autoModService?: AutoModService
 ) {
   const actions: AdapterAction[] = [];
 
@@ -128,6 +130,7 @@ function setup(
       store,
       executionContextService:
         new ExecutionContextService(),
+      autoModService,
       renderMetadata: fakeRender
     });
 
@@ -598,3 +601,73 @@ describe("createPlatformExecutionContext", () => {
     );
   });
 });
+
+describe("AutoMod event integration", () => {
+  it("deletes a matched message before normal message handling", async () => {
+    const autoMod = new AutoModService();
+    autoMod.upsertRule({
+      id: "blocked-keyword",
+      communityId: "telegram:42",
+      type: "keyword",
+      value: "blocked",
+      enabled: true,
+      action: "delete"
+    });
+    const { actions, handler } = setup("telegram", false, autoMod);
+
+    await handler(messageEvent("telegram", "this is blocked", { community: true }));
+
+    expect(actions).toHaveLength(1);
+    expect(actions[0]).toMatchObject({
+      type: "message.delete",
+      platform: "telegram",
+      channelExternalId: "42",
+      messageExternalId: "1"
+    });
+  });
+
+  it("applies AutoMod to edited messages", async () => {
+    const autoMod = new AutoModService();
+    autoMod.upsertRule({
+      id: "blocked-link",
+      communityId: "discord:42",
+      type: "link",
+      enabled: true,
+      action: "warn"
+    });
+    const { actions, handler } = setup("discord", false, autoMod);
+    const event = messageEvent("discord", "edited text with https://example.com", { community: true });
+    event.type = "message.updated";
+
+    await handler(event);
+
+    expect(actions).toHaveLength(1);
+    expect(actions[0]).toMatchObject({
+      type: "member.warn",
+      platform: "discord",
+      communityExternalId: "42",
+      userExternalId: "42",
+      metadata: { source: "automod", ruleId: "blocked-link" }
+    });
+  });
+
+  it("records an action failure without throwing out of the event handler", async () => {
+    const autoMod = new AutoModService();
+    autoMod.upsertRule({
+      id: "blocked-keyword",
+      communityId: "telegram:42",
+      type: "keyword",
+      value: "blocked",
+      enabled: true,
+      action: "delete"
+    });
+    const { entries, handler } = setup("telegram", true, autoMod);
+
+    await expect(
+      handler(messageEvent("telegram", "blocked message", { community: true }))
+    ).resolves.toBeUndefined();
+
+    expect(entries.some((entry) => entry.event === "automod.action.failed")).toBe(true);
+  });
+});
+
