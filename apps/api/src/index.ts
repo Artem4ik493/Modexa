@@ -1231,13 +1231,45 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       const identity = database.getCommunityIdentitiesSnapshot(communityId)
         .find((item) => item.platform === "telegram" && item.externalId === chatId);
       if (!identity) { json(res, 404, { error: "telegram_group_not_linked" }); return; }
-      database.deleteCommunityIdentity(communityId, "telegram", chatId);
+      const communityIdentities = database.getCommunityIdentitiesSnapshot(communityId);
+      const hasDiscordIdentity = communityIdentities.some((item) => item.platform === "discord");
       const endpoints = database.getBridgeEndpoints().filter((item) =>
         item.platform === "telegram" && item.communityId === communityId &&
         (item.communityExternalId === chatId || item.channelExternalId === chatId)
       );
       for (const endpoint of endpoints) database.deleteBridgeEndpoint(endpoint.id);
-      json(res, 200, { unlinked: true, chatId });
+      if (hasDiscordIdentity) {
+        // Detach from Discord but keep the Telegram group manageable as its own community.
+        const standaloneCommunityId = `community-${randomUUID()}`;
+        const timestamp = new Date();
+        database.upsertCommunity({
+          id: standaloneCommunityId,
+          name: identity.name ?? chatId,
+          mode: "public",
+          createdAt: timestamp,
+          updatedAt: timestamp
+        });
+        database.upsertCommunityIdentity({
+          ...identity,
+          communityId: standaloneCommunityId,
+          updatedAt: timestamp
+        });
+        database.upsertBridgeEndpoint({
+          id: `telegram:${chatId}:${chatId}`,
+          platform: "telegram",
+          communityExternalId: chatId,
+          communityName: identity.name ?? chatId,
+          channelExternalId: chatId,
+          channelName: identity.name ?? chatId,
+          communityId: standaloneCommunityId,
+          channelId: chatId,
+          updatedAt: timestamp
+        });
+        json(res, 200, { unlinked: true, detached: true, chatId, communityId: standaloneCommunityId });
+        return;
+      }
+      database.deleteCommunityIdentity(communityId, "telegram", chatId);
+      json(res, 200, { unlinked: true, deleted: true, chatId });
       return;
     }
 
@@ -1395,10 +1427,18 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
         const session = discordSession(req);
         const identity = database.getCommunityIdentitiesSnapshot(communityId)
           .find((item) => item.platform === "discord");
-        if (!session || !identity) {
+        if (!identity) {
+          if (await canManageModexaCommunity(req, communityId)) {
+            // Verified Telegram group managers may read their standalone community.
+          } else {
+            json(res, 403, { error: "community_read_forbidden" });
+            return;
+          }
+        } else if (!session) {
           json(res, 403, { error: "community_read_forbidden" });
           return;
         }
+        if (identity && session) {
         let guilds: DiscordGuild[];
         try {
           guilds = await discordApi<DiscordGuild[]>("/users/@me/guilds", session.accessToken);
@@ -1414,6 +1454,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
         if (!canManage) {
           json(res, 403, { error: "community_read_forbidden" });
           return;
+        }
         }
       }
     }
