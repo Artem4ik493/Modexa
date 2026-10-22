@@ -1206,7 +1206,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
         json(res, 400, { error: "communityId_required" });
         return;
       }
-      if (!authorized(req) && !ownerSession(req) && !await canManageDiscordCommunity(req, communityId)) {
+      if (!authorized(req) && !ownerSession(req) && !await canManageModexaCommunity(req, communityId)) {
         json(res, 403, { error: "community_management_forbidden" });
         return;
       }
@@ -1225,7 +1225,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       if (!database.getCommunitiesSnapshot().some((item) => item.id === communityId)) {
         json(res, 404, { error: "community_not_found" }); return;
       }
-      if (!authorized(req) && !ownerSession(req) && !await canManageDiscordCommunity(req, communityId)) {
+      if (!authorized(req) && !ownerSession(req) && !await canManageModexaCommunity(req, communityId)) {
         json(res, 403, { error: "community_management_forbidden" }); return;
       }
       const identity = database.getCommunityIdentitiesSnapshot(communityId)
@@ -1426,7 +1426,6 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       url.pathname === "/api/runtime" ||
       url.pathname === "/api/runtime/logs" ||
       url.pathname === "/api/backup" ||
-      url.pathname === "/api/telegram/groups/pending" ||
       url.pathname === "/api/actions" ||
       url.pathname.startsWith("/api/actions/");
     if (ownerOnlyPath && !authorized(req)) {
