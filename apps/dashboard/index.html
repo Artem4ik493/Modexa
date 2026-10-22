@@ -415,7 +415,17 @@ nav{min-height:0;padding-bottom:18px}
     <div class="card"><div class="section"><h2>Приветствие и уход</h2><span class="pill">Welcome</span></div>
       <div class="form"><label class="setting"><span>Приветствия включены</span><input id="welcomeEnabled" type="checkbox"></label><label class="meta">Текст приветствия<textarea id="welcomeMessage" class="textarea">Добро пожаловать, {{ member }}!</textarea></label>
       <label class="setting"><span>Сообщение об уходе</span><input id="welcomeLeaveEnabled" type="checkbox"></label><label class="meta">Текст при уходе<textarea id="welcomeLeaveMessage" class="textarea">{{ member }} покинул сервер.</textarea></label>
-      <label class="meta">ID канала (необязательно)<input id="welcomeChannel" class="input" placeholder="ID канала"></label><button class="btn primary" onclick="saveWelcome()">Сохранить</button><button class="btn" onclick="previewWelcome()">Предпросмотр</button></div>
+      <label class="meta">ID канала (необязательно; по умолчанию системный канал сервера / чат группы)<input id="welcomeChannel" class="input" placeholder="ID канала или чата"></label>
+      <details class="card" style="margin:0"><summary style="cursor:pointer;font-weight:700;padding:8px">Embed-конструктор Discord</summary><div class="form" style="padding-top:12px">
+       <label class="setting"><span>Отправлять как Embed</span><input id="welcomeEmbedEnabled" type="checkbox" onchange="updateWelcomeEmbedPreview()"></label>
+       <label class="meta">Заголовок<input id="welcomeEmbedTitle" class="input" maxlength="256" placeholder="✨ Добро пожаловать, {{ member }}!"></label>
+       <label class="meta">Описание Embed<textarea id="welcomeEmbedDescription" class="textarea" maxlength="4096" placeholder="{{ member }}, рады видеть тебя на сервере {{ community }}!"></textarea></label>
+       <div class="form-grid"><label class="meta">Цвет (HEX)<input id="welcomeEmbedColor" class="input" type="color" value="#5865F2"></label><label class="meta">Подпись внизу<input id="welcomeEmbedFooter" class="input" maxlength="2048" placeholder="Modexa Community"></label></div>
+       <label class="meta">URL миниатюры<input id="welcomeEmbedThumbnailUrl" class="input" type="url" placeholder="https://example.com/avatar.png"></label>
+       <label class="meta">URL большого изображения<input id="welcomeEmbedImageUrl" class="input" type="url" placeholder="https://example.com/banner.png"></label>
+       <div class="meta">Переменные: {{ member }}, {{ username }}, {{ community }}. Embed поддерживается в Discord; Telegram получит текстовое сообщение.</div>
+      </div></details>
+      <button class="btn primary" onclick="saveWelcome()">Сохранить</button><button class="btn" onclick="previewWelcome()">Предпросмотр</button></div>
     </div>
     <div class="card"><div class="section"><h2>Предпросмотр</h2><span class="pill">Template</span></div><div id="welcomePreview" class="empty">Нажмите «Предпросмотр», чтобы проверить шаблоны.</div><div class="meta">Переменные: {{ member }}, {{ username }}, {{ community }}</div></div>
   </div>
@@ -985,16 +995,24 @@ async function saveRanking(){
 }
 async function loadWelcome(){
   if(!selectedCommunity)return;
-  try{const d=await get('/api/communities/'+encodeURIComponent(selectedCommunity)+'/welcome'),x=d.item||{};document.getElementById('welcomeEnabled').checked=!!x.enabled;document.getElementById('welcomeMessage').value=x.message||'';document.getElementById('welcomeLeaveEnabled').checked=!!x.leaveEnabled;document.getElementById('welcomeLeaveMessage').value=x.leaveMessage||'';document.getElementById('welcomeChannel').value=x.channelId||''}catch(e){toast(e.message)}
+  try{const d=await get('/api/communities/'+encodeURIComponent(selectedCommunity)+'/welcome'),x=d.item||{};document.getElementById('welcomeEnabled').checked=!!x.enabled;document.getElementById('welcomeMessage').value=x.message||'';document.getElementById('welcomeLeaveEnabled').checked=!!x.leaveEnabled;document.getElementById('welcomeLeaveMessage').value=x.leaveMessage||'';document.getElementById('welcomeChannel').value=x.channelId||'';document.getElementById('welcomeEmbedEnabled').checked=!!x.embedEnabled;document.getElementById('welcomeEmbedTitle').value=x.embedTitle||'';document.getElementById('welcomeEmbedDescription').value=x.embedDescription||'';document.getElementById('welcomeEmbedColor').value=/^#[0-9a-fA-F]{6}$/.test(x.embedColor||'')?x.embedColor:'#5865F2';document.getElementById('welcomeEmbedFooter').value=x.embedFooter||'';document.getElementById('welcomeEmbedThumbnailUrl').value=x.embedThumbnailUrl||'';document.getElementById('welcomeEmbedImageUrl').value=x.embedImageUrl||'';updateWelcomeEmbedPreview()}catch(e){toast(e.message)}
 }
 async function saveWelcome(){
   if(!selectedCommunity)return toast('Выберите сообщество');
-  const body={enabled:document.getElementById('welcomeEnabled').checked,message:document.getElementById('welcomeMessage').value,leaveEnabled:document.getElementById('welcomeLeaveEnabled').checked,leaveMessage:document.getElementById('welcomeLeaveMessage').value,channelId:document.getElementById('welcomeChannel').value.trim()||undefined};
+  const body={enabled:document.getElementById('welcomeEnabled').checked,message:document.getElementById('welcomeMessage').value,leaveEnabled:document.getElementById('welcomeLeaveEnabled').checked,leaveMessage:document.getElementById('welcomeLeaveMessage').value,channelId:document.getElementById('welcomeChannel').value.trim()||undefined,embedEnabled:document.getElementById('welcomeEmbedEnabled').checked,embedTitle:document.getElementById('welcomeEmbedTitle').value,embedDescription:document.getElementById('welcomeEmbedDescription').value,embedColor:document.getElementById('welcomeEmbedColor').value,embedFooter:document.getElementById('welcomeEmbedFooter').value,embedThumbnailUrl:document.getElementById('welcomeEmbedThumbnailUrl').value.trim(),embedImageUrl:document.getElementById('welcomeEmbedImageUrl').value.trim()};
   try{await send('/api/communities/'+encodeURIComponent(selectedCommunity)+'/welcome','PUT',body);toast('Настройки приветствия сохранены')}catch(e){toast(e.message)}
 }
+function welcomeRenderPreview(template){return String(template||'').replace(/{{\s*member\s*}}/gi,'Пример участника').replace(/{{\s*username\s*}}/gi,'example').replace(/{{\s*community\s*}}/gi,'Modexa Community')}
+function updateWelcomeEmbedPreview(){
+ const root=document.getElementById('welcomePreview');if(!root)return;
+ const enabled=document.getElementById('welcomeEmbedEnabled')?.checked;
+ if(!enabled){root.innerHTML='<div class="setting"><span>Обычное сообщение</span><b>'+esc(welcomeRenderPreview(document.getElementById('welcomeMessage')?.value||'Добро пожаловать, {{ member }}!'))+'</b></div>';return}
+ const title=welcomeRenderPreview(document.getElementById('welcomeEmbedTitle')?.value),description=welcomeRenderPreview(document.getElementById('welcomeEmbedDescription')?.value||document.getElementById('welcomeMessage')?.value),footer=welcomeRenderPreview(document.getElementById('welcomeEmbedFooter')?.value),color=document.getElementById('welcomeEmbedColor')?.value||'#5865F2',image=document.getElementById('welcomeEmbedImageUrl')?.value.trim(),thumb=document.getElementById('welcomeEmbedThumbnailUrl')?.value.trim();
+ root.innerHTML='<div style="background:#2b2d31;color:#dbdee1;padding:16px;border-radius:8px;border-left:4px solid '+esc(color)+';max-width:560px">'+(title?'<div style="font-weight:700;margin-bottom:8px">'+esc(title)+'</div>':'')+(thumb&&/^https?:\/\//i.test(thumb)?'<img src="'+esc(thumb)+'" alt="" style="float:right;max-width:80px;max-height:80px;object-fit:cover;border-radius:6px;margin:0 0 8px 10px">':'')+'<div style="white-space:pre-wrap">'+esc(description)+'</div>'+(image&&/^https?:\/\//i.test(image)?'<img src="'+esc(image)+'" alt="" style="display:block;max-width:100%;max-height:240px;object-fit:contain;margin-top:12px;border-radius:4px">':'')+(footer?'<div style="font-size:12px;color:#b5bac1;margin-top:12px">'+esc(footer)+'</div>':'')+'</div>';
+}
 async function previewWelcome(){
-  if(!selectedCommunity)return toast('Выберите сообщество');
-  try{const d=await post('/api/communities/'+encodeURIComponent(selectedCommunity)+'/welcome/preview',{member:'Пример участника',username:'example'});document.getElementById('welcomePreview').innerHTML='<div class="setting"><span>Вход</span><b>'+esc(d.welcome)+'</b></div><div class="setting"><span>Выход</span><b>'+esc(d.leave)+'</b></div>'}catch(e){toast(e.message)}
+ if(!selectedCommunity)return toast('Выберите сообщество');
+ try{const d=await post('/api/communities/'+encodeURIComponent(selectedCommunity)+'/welcome/preview',{member:'Пример участника',username:'example'});updateWelcomeEmbedPreview();const root=document.getElementById('welcomePreview');if(!document.getElementById('welcomeEmbedEnabled').checked)root.innerHTML='<div class="setting"><span>Вход</span><b>'+esc(d.welcome)+'</b></div><div class="setting"><span>Выход</span><b>'+esc(d.leave)+'</b></div>'}catch(e){toast(e.message)}
 }
 async function loadCustomCommands(){
   if(!selectedCommunity){document.getElementById('customCommandList').innerHTML='<div class="empty">Выберите сообщество.</div>';return}
