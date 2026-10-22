@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   AutoModService,
   InteractionActionStore,
@@ -82,6 +82,31 @@ describe("Modexa security and infrastructure", () => {
     auto.inspect({ communityId: "c", userId: "u", content: "1", now });
     auto.inspect({ communityId: "c", userId: "u", content: "2", now: new Date(now.getTime()+1000) });
     expect(auto.inspect({ communityId: "c", userId: "u", content: "3", now: new Date(now.getTime()+2000) }).matched).toBe(true);
+  });
+
+  it("checks suspicious-only links against cached external phishing reputation", async () => {
+    const fetchMock = vi.fn(async () => new Response(
+      JSON.stringify({ found: true, phish: { status: "verified" } }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const auto = new AutoModService();
+      auto.upsertRule({
+        id: "reputation", communityId: "c", type: "link",
+        linkMode: "suspicious", enabled: true, action: "delete"
+      });
+      expect(auto.inspect({ communityId: "c", userId: "u", content: "https://unknown.example/path" }).matched).toBe(false);
+      const decision = await auto.inspectAsync({ communityId: "c", userId: "u", content: "https://unknown.example/path" });
+      expect(decision.matched).toBe(true);
+      expect(decision.rule?.id).toBe("reputation");
+      expect(decision.reason).toContain("phishing URL");
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      await auto.inspectAsync({ communityId: "c", userId: "u", content: "https://unknown.example/path" });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("supports multiple AutoMod keywords and per-user/channel exclusions", () => {
