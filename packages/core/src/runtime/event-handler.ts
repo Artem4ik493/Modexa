@@ -111,8 +111,8 @@ async function sendWelcomeLifecycleMessage(
   }
   // Dashboard settings are keyed by the internal Modexa community ID.
   // Resolve that ID from the platform identity if lifecycle context is incomplete.
-  const resolvedCommunity = communityId ? deps.database.getCommunity(communityId) : undefined;
-  const matchingCommunity = resolvedCommunity ?? deps.database.getCommunitiesSnapshot().find((item) =>
+  const communities = deps.database.getCommunitiesSnapshot();
+  const matchingCommunity = communities.find((item) => item.id === communityId) ?? communities.find((item) =>
     item.identities.some((identity) => identity.platform === deps.platform && identity.externalId === member.community.externalId)
   );
   const settingsCommunityId = matchingCommunity?.id ?? communityId;
