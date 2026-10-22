@@ -115,7 +115,7 @@ export class AutoModService {
     if (!links.length) return regular;
     for (const link of links) {
       if (await this.lookupThreat(link)) {
-        const rule = applicable.find((candidate) => candidate.type === "scam") ?? applicable.find((candidate) => candidate.type === "link");
+        const rule = applicable.find((candidate) => candidate.type === "link") ?? applicable.find((candidate) => candidate.type === "scam");
         if (rule) return { matched: true, rule, reason: "known phishing URL (OpenPhish/PhishTank)" };
       }
     }
