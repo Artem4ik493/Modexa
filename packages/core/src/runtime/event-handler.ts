@@ -118,10 +118,13 @@ async function sendWelcomeLifecycleMessage(
   // Dashboard settings are keyed by the internal Modexa community ID.
   // Resolve that ID from the platform identity if lifecycle context is incomplete.
   const communities = deps.database.getCommunitiesSnapshot();
-  const matchingCommunity = communities.find((item) => item.id === communityId) ?? communities.find((item) =>
-    item.identities.some((identity) => identity.platform === deps.platform && identity.externalId === member.community.externalId)
-  );
-  const settingsCommunityId = matchingCommunity?.id ?? communityId;
+  // Community snapshots intentionally contain only public community fields.
+  // Lifecycle event contexts can already carry the canonical Modexa ID; when
+  // they do not, use the platform's stable synthetic context ID as a fallback.
+  const settingsCommunityId =
+    communities.some((item) => item.id === communityId)
+      ? communityId
+      : communityId ?? (deps.platform + ":" + member.community.externalId);
   if (!settingsCommunityId) {
     deps.logger.warn("welcome.message.skipped", { platform: deps.platform, kind, communityExternalId: member.community.externalId, reason: "community_resolution_failed" });
     return;
@@ -142,7 +145,7 @@ async function sendWelcomeLifecycleMessage(
   }
   const channelExternalId = settings.channelId?.trim() || member.community.externalId;
   const displayName = member.user.displayName || member.user.username || member.user.externalId;
-  const variables = { member: displayName, username: member.user.username || displayName, community: member.community.name || communityId };
+  const variables: Record<string, string> = { member: displayName, username: member.user.username || displayName, community: member.community.name || communityId || member.community.externalId };
   const content = renderWelcomeTemplate(contentTemplate, variables);
   const metadata: Record<string, unknown> = {};
   // Each lifecycle message has its own editor. Old settings remain the fallback
