@@ -1938,6 +1938,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       const body = await readJsonBody(req);
       const types = new Set(["keyword", "link", "invite", "scam", "caps", "flood", "repeated_text", "emotes", "mentions", "zalgo"]);
       const actions = new Set(["warn", "mute", "kick", "ban", "delete"]);
+      const linkModes = new Set(["all", "suspicious", "allowlist"]);
       const stringArray = (value: unknown, maxItems = 500, maxLength = 300): boolean =>
         Array.isArray(value) && value.length <= maxItems && value.every((item) => typeof item === "string" && item.length <= maxLength);
       const invalidThreshold = body.threshold !== undefined &&
@@ -1950,6 +1951,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
           (body.id !== undefined && (typeof body.id !== "string" || body.id.length > 100)) ||
           (body.value !== undefined && (typeof body.value !== "string" || body.value.length > 500)) ||
           (body.type === "keyword" && body.enabled && (typeof body.value !== "string" || !body.value.trim())) ||
+          (body.linkMode !== undefined && (body.type !== "link" || typeof body.linkMode !== "string" || !linkModes.has(body.linkMode))) ||
           invalidThreshold ||
           (body.windowSeconds !== undefined && (!Number.isInteger(body.windowSeconds) || Number(body.windowSeconds) < 1 || Number(body.windowSeconds) > 86400)) ||
           (body.durationSeconds !== undefined && (!Number.isInteger(body.durationSeconds) || Number(body.durationSeconds) < (body.action === "mute" ? 30 : 1) || Number(body.durationSeconds) > 2_592_000)) ||
@@ -1970,6 +1972,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
         ...(typeof body.windowSeconds === "number" ? { windowSeconds: body.windowSeconds } : {}),
         ...(typeof body.durationSeconds === "number" ? { durationSeconds: body.durationSeconds } : {}),
         ...(Array.isArray(body.whitelist) ? { whitelist: body.whitelist } : {}),
+        ...(typeof body.linkMode === "string" ? { linkMode: body.linkMode } : {}),
         ...(Array.isArray(body.ignoredUserIds) ? { ignoredUserIds: body.ignoredUserIds } : {}),
         ...(Array.isArray(body.ignoredChannelIds) ? { ignoredChannelIds: body.ignoredChannelIds } : {}),
         ...(Array.isArray(body.ignoredRoleIds) ? { ignoredRoleIds: body.ignoredRoleIds } : {}),
