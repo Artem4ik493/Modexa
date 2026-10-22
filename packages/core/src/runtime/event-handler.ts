@@ -713,7 +713,7 @@ async function applyAutoMod(
   const roleIds = Array.isArray(message.metadata?.authorRoleIds)
     ? message.metadata.authorRoleIds.filter((value): value is string => typeof value === "string")
     : [];
-  const decision = service.inspect({
+  const decision = await service.inspectAsync({
     communityId: community.id,
     userId: message.author.externalId,
     channelId: message.channel?.externalId,
