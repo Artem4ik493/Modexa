@@ -91,8 +91,14 @@ const EMPTY_CONTENT_FALLBACK =
 
 type WelcomeRuntimeSettings = {
   enabled?: boolean; message?: string; leaveEnabled?: boolean; leaveMessage?: string;
-  channelId?: string; embedEnabled?: boolean; embedTitle?: string; embedDescription?: string;
+  channelId?: string;
+  // Legacy shared embed fields remain supported for existing saved settings.
+  embedEnabled?: boolean; embedTitle?: string; embedDescription?: string;
   embedColor?: string; embedFooter?: string; embedThumbnailUrl?: string; embedImageUrl?: string;
+  welcomeEmbedEnabled?: boolean; welcomeEmbedTitle?: string; welcomeEmbedDescription?: string;
+  welcomeEmbedColor?: string; welcomeEmbedFooter?: string; welcomeEmbedThumbnailUrl?: string; welcomeEmbedImageUrl?: string;
+  leaveEmbedEnabled?: boolean; leaveEmbedTitle?: string; leaveEmbedDescription?: string;
+  leaveEmbedColor?: string; leaveEmbedFooter?: string; leaveEmbedThumbnailUrl?: string; leaveEmbedImageUrl?: string;
 };
 
 function renderWelcomeTemplate(template: string, variables: Record<string, string>): string {
@@ -139,19 +145,31 @@ async function sendWelcomeLifecycleMessage(
   const variables = { member: displayName, username: member.user.username || displayName, community: member.community.name || communityId };
   const content = renderWelcomeTemplate(contentTemplate, variables);
   const metadata: Record<string, unknown> = {};
-  const useEmbed = Boolean(settings.embedEnabled && deps.platform === "discord");
+  // Each lifecycle message has its own editor. Old settings remain the fallback
+  // so communities do not lose their existing welcome embed after upgrading.
+  const legacyEmbed = settings.embedEnabled;
+  const embedEnabled = kind === "join"
+    ? (settings.welcomeEmbedEnabled ?? legacyEmbed)
+    : (settings.leaveEmbedEnabled ?? legacyEmbed);
+  const titleTemplate = kind === "join" ? (settings.welcomeEmbedTitle ?? settings.embedTitle) : (settings.leaveEmbedTitle ?? settings.embedTitle);
+  const descriptionTemplate = kind === "join" ? (settings.welcomeEmbedDescription ?? settings.embedDescription) : (settings.leaveEmbedDescription ?? settings.embedDescription);
+  const colorValue = kind === "join" ? (settings.welcomeEmbedColor ?? settings.embedColor) : (settings.leaveEmbedColor ?? settings.embedColor);
+  const footerTemplate = kind === "join" ? (settings.welcomeEmbedFooter ?? settings.embedFooter) : (settings.leaveEmbedFooter ?? settings.embedFooter);
+  const thumbnailUrl = kind === "join" ? (settings.welcomeEmbedThumbnailUrl ?? settings.embedThumbnailUrl) : (settings.leaveEmbedThumbnailUrl ?? settings.embedThumbnailUrl);
+  const imageUrl = kind === "join" ? (settings.welcomeEmbedImageUrl ?? settings.embedImageUrl) : (settings.leaveEmbedImageUrl ?? settings.embedImageUrl);
+  const useEmbed = Boolean(embedEnabled && deps.platform === "discord");
   if (useEmbed) {
     const embed: Record<string, unknown> = {};
-    const title = settings.embedTitle ? renderWelcomeTemplate(settings.embedTitle, variables) : "";
-    const description = settings.embedDescription ? renderWelcomeTemplate(settings.embedDescription, variables) : content;
-    const footer = settings.embedFooter ? renderWelcomeTemplate(settings.embedFooter, variables) : "";
+    const title = titleTemplate ? renderWelcomeTemplate(titleTemplate, variables) : "";
+    const description = descriptionTemplate ? renderWelcomeTemplate(descriptionTemplate, variables) : content;
+    const footer = footerTemplate ? renderWelcomeTemplate(footerTemplate, variables) : "";
     if (title) embed.title = title.slice(0, 256);
     if (description) embed.description = description.slice(0, 4096);
-    const color = settings.embedColor?.trim().replace(/^#/, "");
+    const color = colorValue?.trim().replace(/^#/, "");
     if (color && /^[0-9a-fA-F]{6}$/.test(color)) embed.color = Number.parseInt(color, 16);
     if (footer) embed.footer = footer.slice(0, 2048);
-    if (settings.embedThumbnailUrl && /^https?:\/\//i.test(settings.embedThumbnailUrl)) embed.thumbnailUrl = settings.embedThumbnailUrl;
-    if (settings.embedImageUrl && /^https?:\/\//i.test(settings.embedImageUrl)) embed.imageUrl = settings.embedImageUrl;
+    if (thumbnailUrl && /^https?:\/\//i.test(thumbnailUrl)) embed.thumbnailUrl = thumbnailUrl;
+    if (imageUrl && /^https?:\/\//i.test(imageUrl)) embed.imageUrl = imageUrl;
     metadata.discord = { embed };
   }
   try {
