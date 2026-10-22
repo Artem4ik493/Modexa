@@ -178,7 +178,7 @@ async function sendWelcomeLifecycleMessage(
       content: useEmbed ? "" : content,
       ...(Object.keys(metadata).length ? { metadata } : {})
     });
-    deps.logger.info("welcome.message.sent", { platform: deps.platform, communityId, communityExternalId: member.community.externalId, userExternalId: member.user.externalId, kind, channelExternalId, embed: useEmbed });
+    deps.logger.info("welcome.message.sent", { platform: deps.platform, communityId: settingsCommunityId, communityExternalId: member.community.externalId, userExternalId: member.user.externalId, kind, channelExternalId, embed: useEmbed });
   } catch (error) {
     deps.logger.error("welcome.message.failed", { platform: deps.platform, communityId: settingsCommunityId, communityExternalId: member.community.externalId, communityName: member.community.name, userExternalId: member.user.externalId, kind, channelExternalId, embed: useEmbed }, error);
   }
