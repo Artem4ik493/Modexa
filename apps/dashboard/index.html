@@ -436,7 +436,7 @@ nav{min-height:0;padding-bottom:18px}
  <div class="card" id="autoModEditor" hidden><div class="section"><div><h2 id="autoModEditorTitle">Настройки фильтра</h2><div class="meta" id="autoModEditorDescription"></div></div><button class="btn" onclick="closeAutoModEditor()">Закрыть</button></div>
  <div class="form"><input type="hidden" id="autoModEditId"><input type="hidden" id="autoModEditType">
  <div class="form"><label for="autoModPreset">Готовый шаблон</label><select id="autoModPreset" class="select2" onchange="applyAutoModPreset(this.value)"></select><div class="meta">Шаблон заполнит параметры; перед сохранением их можно изменить вручную.</div></div>
- <div class="form" id="autoModLinkModeWrap" style="display:none"><label for="autoModLinkMode">Режим проверки ссылок</label><select id="autoModLinkMode" class="select2"><option value="suspicious">Только подтверждённый фишинг (базы репутации)</option><option value="all">Все ссылки, кроме разрешённых</option><option value="allowlist">Только разрешённые домены</option></select><div class="meta">Репутация проверяется через OpenPhish.eu; при наличии PHISHTANK_API_KEY дополнительно используется PhishTank. При недоступности источников обычная ссылка не блокируется только из-за ошибки сети.</div></div>
+ <div class="form" id="autoModLinkModeWrap" style="display:none"><label for="autoModLinkMode">Режим проверки ссылок</label><select id="autoModLinkMode" class="select2"><option value="suspicious">Только подтверждённый фишинг (базы репутации)</option><option value="all">Все ссылки, включая разрешённые</option><option value="allowlist">Только разрешённые домены</option></select><div class="meta">Репутация проверяется через OpenPhish.eu; при наличии PHISHTANK_API_KEY дополнительно используется PhishTank. При недоступности источников обычная ссылка не блокируется только из-за ошибки сети.</div></div>
  <div class="form" id="autoModValueWrap"><label for="autoModValue">Слова, фразы или шаблоны</label><textarea id="autoModValue" class="input" rows="3" placeholder="Каждое значение с новой строки"></textarea><div class="meta" id="autoModValueHelp"></div></div>
  <div class="form-grid"><div class="form"><label for="autoModAction">Действие при нарушении</label><select id="autoModAction" class="select2"><option value="delete">Удалить сообщение</option><option value="warn">Предупредить</option><option value="mute">Ограничить участника</option><option value="kick">Исключить участника</option><option value="ban">Заблокировать участника</option></select></div>
  <div class="form" id="autoModThresholdWrap"><label for="autoModThreshold">Порог срабатывания</label><input id="autoModThreshold" class="input" type="number" min="1" max="100" value="5"><div class="meta" id="autoModThresholdHelp"></div></div>
@@ -1024,7 +1024,7 @@ function autoModRuleFor(type){return autoModRules.find(r=>r.type===type)}
 const autoModPresets={
  link:[
   {id:'suspicious',name:'Защита от фишинга',action:'delete',linkMode:'suspicious',threshold:1,windowSeconds:10},
-  {id:'block-links',name:'Блокировать все ссылки',action:'delete',linkMode:'all',threshold:1,windowSeconds:10},
+  {id:'block-links',name:'Блокировать все ссылки (включая разрешённые)',action:'delete',linkMode:'all',threshold:1,windowSeconds:10},
   {id:'allowlist',name:'Только разрешённые домены',action:'delete',linkMode:'allowlist',threshold:1,windowSeconds:10}
  ],
  invite:[{id:'default',name:'Стандартная защита',action:'delete',threshold:1,windowSeconds:10},{id:'warn',name:'Предупреждать за приглашения',action:'warn',threshold:1,windowSeconds:10}],
