@@ -521,6 +521,22 @@ async function canManageDiscordCommunity(req: IncomingMessage, communityId: stri
   }
 }
 
+async function canManageModexaCommunity(req: IncomingMessage, communityId: string): Promise<boolean> {
+  if (await canManageDiscordCommunity(req, communityId)) return true;
+  const session = discordSession(req);
+  if (!session) return false;
+  const discordIdentity = database.getIdentityByExternalId("discord", session.user.id);
+  if (!discordIdentity) return false;
+  const telegramIds = database.getUserIdentities(discordIdentity.userId)
+    .filter((identity) => identity.platform === "telegram")
+    .map((identity) => identity.externalId);
+  if (telegramIds.length === 0) return false;
+  const managers = database.getRuntimeState<Record<string, string[]>>("telegram.group_managers") ?? {};
+  return database.getCommunityIdentitiesSnapshot(communityId)
+    .filter((identity) => identity.platform === "telegram")
+    .some((identity) => telegramIds.some((telegramId) => (managers[identity.externalId] ?? []).includes(telegramId)));
+}
+
 function isCommunityScopedReadPath(path: string, method: string): boolean {
   if (method !== "GET" && method !== "HEAD") return false;
   if (path === "/api/commands" || path === "/api/command-settings" ||
@@ -1425,13 +1441,13 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
         json(res, 400, { error: "communityId_required" });
         return;
       }
-      if (!await canManageDiscordCommunity(req, communityId)) {
+      if (!await canManageModexaCommunity(req, communityId)) {
         json(res, 403, { error: "community_management_forbidden" });
         return;
       }
     }
 
-    // Community mutations are allowed for Discord users only when the target
+    // Community mutations are allowed for Discord or verified Telegram group managers.
     // community is linked to a guild they can manage. Owner API-key sessions
     // remain the separate installation-wide control plane.
     const isCommunityScopedMutation = isCommunityScopedMutationPath(url.pathname, req.method ?? "");
@@ -1480,7 +1496,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
         json(res, 404, { error: "community_not_found" });
         return;
       }
-      if (!await canManageDiscordCommunity(req, communityId)) {
+      if (!await canManageModexaCommunity(req, communityId)) {
         json(res, 403, { error: "community_management_forbidden" });
         return;
       }
