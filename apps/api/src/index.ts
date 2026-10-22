@@ -1135,6 +1135,30 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       return;
     }
 
+    if (url.pathname === "/api/telegram/groups" && req.method === "GET") {
+      const session = discordSession(req);
+      const discordIdentity = session ? database.getIdentityByExternalId("discord", session.user.id) : undefined;
+      const linkedTelegramIds = discordIdentity
+        ? database.getUserIdentities(discordIdentity.userId).filter((identity) => identity.platform === "telegram").map((identity) => identity.externalId)
+        : [];
+      if (!authorized(req) && linkedTelegramIds.length === 0) {
+        json(res, 403, { error: "telegram_account_link_required" });
+        return;
+      }
+      const managers = database.getRuntimeState<Record<string, string[]>>("telegram.group_managers") ?? {};
+      const communities = database.getCommunitiesSnapshot();
+      const identities = database.getCommunityIdentitiesSnapshot()
+        .filter((item) => item.platform === "telegram")
+        .filter((item) => authorized(req) || linkedTelegramIds.some((id) => (managers[item.externalId] ?? []).includes(id)))
+        .map((item) => {
+          const community = communities.find((entry) => entry.id === item.communityId);
+          const discordIdentity = database.getCommunityIdentitiesSnapshot(item.communityId).find((entry) => entry.platform === "discord");
+          return { chatId: item.externalId, chatTitle: item.name ?? item.externalId, communityId: item.communityId, communityName: community?.name ?? item.name ?? item.externalId, linkedToDiscord: Boolean(discordIdentity), discordName: discordIdentity?.name };
+        });
+      json(res, 200, { items: identities });
+      return;
+    }
+
     if (url.pathname === "/api/telegram/groups/pending" && req.method === "GET") {
       if (!authorized(req)) {
         const communityId = url.searchParams.get("communityId") ?? "";
@@ -1203,14 +1227,15 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
 
     if (url.pathname === "/api/telegram/groups/link" && req.method === "POST") {
       const body = await readJsonBody(req);
-      const communityId = typeof body.communityId === "string" ? body.communityId : "";
+      const requestedCommunityId = typeof body.communityId === "string" ? body.communityId.trim() : "";
       const code = typeof body.code === "string" ? body.code.trim().toUpperCase() : "";
-      if (!communityId || !/^[A-F0-9]{16}$/.test(code)) {
-        json(res, 400, { error: "communityId_and_valid_link_code_required" });
+      if (!/^[A-F0-9]{16}$/.test(code)) {
+        json(res, 400, { error: "valid_link_code_required" });
         return;
       }
-      const community = database.getCommunitiesSnapshot().find((item) => item.id === communityId);
-      if (!community) {
+      let communityId = requestedCommunityId;
+      let community = communityId ? database.getCommunitiesSnapshot().find((item) => item.id === communityId) : undefined;
+      if (communityId && !community) {
         json(res, 404, { error: "community_not_found" });
         return;
       }
@@ -1235,7 +1260,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
         const canManage = Boolean(guild && (guild.owner ||
           (permissions & 0x8n) === 0x8n ||
           (permissions & 0x20n) === 0x20n));
-        if (!canManage) {
+        if (communityId && !canManage) {
           json(res, 403, { error: "community_management_forbidden" });
           return;
         }
@@ -1251,9 +1276,19 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
         json(res, 404, { error: "link_code_not_found_or_expired" });
         return;
       }
+      const session = discordSession(req);
+      const discordAccount = session ? database.getIdentityByExternalId("discord", session.user.id) : undefined;
+      const linkedTelegramIds = discordAccount
+        ? database.getUserIdentities(discordAccount.userId).filter((item) => item.platform === "telegram").map((item) => item.externalId)
+        : [];
+      if (!authorized(req) && !ownerSession(req) && !linkedTelegramIds.includes(claim.requestedBy)) {
+        json(res, 403, { error: "telegram_requester_identity_mismatch", message: "Link your Telegram account to Discord first, then generate a new group code." });
+        return;
+      }
+
       const existing = database.getCommunityIdentitiesSnapshot()
         .find((item) => item.platform === "telegram" && item.externalId === claim.chatId);
-      if (existing && existing.communityId !== communityId) {
+      if (existing && communityId && existing.communityId !== communityId) {
         const linkedCommunity = database.getCommunitiesSnapshot().find((item) => item.id === existing.communityId);
         json(res, 409, {
           error: "telegram_group_already_linked",
@@ -1264,6 +1299,14 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       }
 
       const timestamp = new Date();
+      if (!communityId) {
+        communityId = existing?.communityId ?? `community-${randomUUID()}`;
+        community = database.getCommunitiesSnapshot().find((item) => item.id === communityId);
+        if (!community) {
+          community = { id: communityId, name: claim.chatTitle, mode: "public", createdAt: timestamp, updatedAt: timestamp };
+          database.upsertCommunity(community);
+        }
+      }
       database.upsertCommunityIdentity({
         id: existing?.id ?? `community-identity-${randomUUID()}`,
         communityId,
@@ -1286,6 +1329,10 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
         channelId: claim.chatId,
         updatedAt: timestamp
       });
+      const groupManagers = database.getRuntimeState<Record<string, string[]>>("telegram.group_managers") ?? {};
+      const authorizedManagers = new Set(groupManagers[claim.chatId] ?? []);
+      authorizedManagers.add(claim.requestedBy);
+      database.setRuntimeState("telegram.group_managers", { ...groupManagers, [claim.chatId]: [...authorizedManagers] });
       database.setRuntimeState("telegram.pending_group_links", pending.filter((item) => item.code !== code));
       json(res, 200, {
         linked: true,
