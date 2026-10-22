@@ -335,6 +335,7 @@ button:disabled{cursor:not-allowed;opacity:.55;transform:none}
 .owner-mode .page.api-key-only.active{display:block!important}
 .user-mode .owner-only,.user-mode .api-key-only{display:none!important}
 .user-mode #communitySelect{display:none}
+.user-mode .aside-bottom{display:none}
 .user-mode .top-actions #themeToggle,.user-mode .top-actions #languageToggle{display:inline-flex}
 .user-mode #overview .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 .user-mode #overview .two{grid-template-columns:minmax(0,1fr)}
@@ -740,7 +741,7 @@ function renderServers(){
     const id=c.communityId||c.id,installed=c.botInstalled===true;
     const action=installed?(authKey?`<button class="btn" onclick="changeCommunity('${esc(id)}');showPage('commands')">Настройки</button>`:`<button class="btn" onclick="showLogin('Для управления настройками войдите по API-ключу владельца.')">Настройки по API-ключу</button>`):`<button class="btn primary" onclick="inviteGuild('${esc(c.id)}')">Пригласить бота</button>`;
     const label=installed?(authKey?'Бот подключён · настройки доступны':'Бот подключён'):'Можно пригласить бота';
-    return `<div class="row"><div class="avatar">${esc((c.name||'M')[0])}</div><div class="grow"><div class="name">${esc(c.name)}</div><div class="meta">${esc(c.id)} · ${label}</div></div><span class="pill">${installed?'<span class="dot"></span>Подключён':'Приглашение'}</span>${action}</div>`;
+    return `<div class="row"><div class="avatar">${esc((c.name||'M')[0])}</div><div class="grow"><div class="name">${esc(c.name)}</div><div class="meta">${authKey?esc(c.id)+' · ':''}${label}</div></div><span class="pill">${installed?'<span class="dot"></span>Подключён':'Приглашение'}</span>${action}</div>`;
   };
   const manageableHtml=manageable.length?manageable.map(row).join(''):'<div class="empty">Нет подключённых серверов, которыми вы можете управлять. Пригласите бота в сервер из списка ниже.</div>';
   const inviteableHtml=inviteable.length?inviteable.map(row).join(''):'<div class="empty">Нет других серверов, доступных для приглашения бота.</div>';
