@@ -1179,11 +1179,24 @@ export class DiscordAdapter
     // case the lifecycle handler passes the guild ID, so use its system channel.
     if (!channel) {
       const guild = await this.client.guilds.fetch(channelId).catch(() => null);
-      if (guild) channel = guild.systemChannel ?? null;
+      if (guild) {
+        channel = guild.systemChannel ?? null;
+        // Many servers disable the system channel. Choose the first ordinary
+        // text channel where this bot can actually send instead of silently
+        // making the welcome/leave feature unusable until an ID is configured.
+        if (!channel) {
+          const channels = await guild.channels.fetch();
+          channel = channels.find((candidate) => {
+            if (!candidate || !candidate.isTextBased() || !("send" in candidate)) return false;
+            const permissions = candidate.permissionsFor(this.client.user!);
+            return Boolean(permissions?.has(PermissionsBitField.Flags.ViewChannel) && permissions.has(PermissionsBitField.Flags.SendMessages));
+          }) ?? null;
+        }
+      }
     }
 
     if (!channel || !channel.isTextBased() || !("send" in channel)) {
-      throw new Error(`Discord channel "${channelId}" is not a text channel and no usable system channel was found`);
+      throw new Error(`Discord channel "${channelId}" is not a sendable text channel; configure a channel ID or grant the bot View Channel and Send Messages permissions`);
     }
 
     return channel;
