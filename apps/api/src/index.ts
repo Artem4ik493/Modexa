@@ -1242,27 +1242,33 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
 
       if (!authorized(req) && !ownerSession(req)) {
         const session = discordSession(req);
-        const identity = database.getCommunityIdentitiesSnapshot(communityId)
-          .find((item) => item.platform === "discord");
-        if (!session || !identity) {
+        if (!session) {
           json(res, 403, { error: "community_management_forbidden" });
           return;
         }
-        let guilds: DiscordGuild[];
-        try {
-          guilds = await discordApi<DiscordGuild[]>("/users/@me/guilds", session.accessToken);
-        } catch {
-          json(res, 401, { error: "discord_session_expired" });
-          return;
-        }
-        const guild = guilds.find((item) => item.id === identity.externalId);
-        const permissions = guild ? discordGuildPermissions(guild) : 0n;
-        const canManage = Boolean(guild && (guild.owner ||
-          (permissions & 0x8n) === 0x8n ||
-          (permissions & 0x20n) === 0x20n));
-        if (communityId && !canManage) {
-          json(res, 403, { error: "community_management_forbidden" });
-          return;
+        if (communityId) {
+          const identity = database.getCommunityIdentitiesSnapshot(communityId)
+            .find((item) => item.platform === "discord");
+          if (!identity) {
+            json(res, 403, { error: "community_management_forbidden" });
+            return;
+          }
+          let guilds: DiscordGuild[];
+          try {
+            guilds = await discordApi<DiscordGuild[]>("/users/@me/guilds", session.accessToken);
+          } catch {
+            json(res, 401, { error: "discord_session_expired" });
+            return;
+          }
+          const guild = guilds.find((item) => item.id === identity.externalId);
+          const permissions = guild ? discordGuildPermissions(guild) : 0n;
+          const canManage = Boolean(guild && (guild.owner ||
+            (permissions & 0x8n) === 0x8n ||
+            (permissions & 0x20n) === 0x20n));
+          if (!canManage) {
+            json(res, 403, { error: "community_management_forbidden" });
+            return;
+          }
         }
       }
 
