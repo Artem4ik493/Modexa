@@ -667,7 +667,7 @@ describe("AutoMod event integration", () => {
       handler(messageEvent("telegram", "blocked message", { community: true }))
     ).resolves.toBeUndefined();
 
-    expect(entries.some((entry) => entry.event === "automod.action.failed")).toBe(true);
+    expect(entries.some((entry) => entry.message === "automod.action.failed")).toBe(true);
   });
 });
 
