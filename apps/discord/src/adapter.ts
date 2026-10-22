@@ -1173,19 +1173,17 @@ export class DiscordAdapter
   private async getSendableChannel(
     channelId: string
   ) {
-    const channel =
-      await this.client.channels.fetch(
-        channelId
-      );
+    let channel = await this.client.channels.fetch(channelId).catch(() => null);
 
-    if (
-      !channel ||
-      !channel.isTextBased() ||
-      !("send" in channel)
-    ) {
-      throw new Error(
-        `Discord channel "${channelId}" is not a text channel`
-      );
+    // Welcome/leave settings may intentionally omit a channel. In that
+    // case the lifecycle handler passes the guild ID, so use its system channel.
+    if (!channel) {
+      const guild = await this.client.guilds.fetch(channelId).catch(() => null);
+      if (guild) channel = guild.systemChannel ?? null;
+    }
+
+    if (!channel || !channel.isTextBased() || !("send" in channel)) {
+      throw new Error(`Discord channel "${channelId}" is not a text channel and no usable system channel was found`);
     }
 
     return channel;
