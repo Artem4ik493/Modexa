@@ -89,6 +89,59 @@ import type { AutoModRule, AutoModService } from "../moderation/automod.js";
 const EMPTY_CONTENT_FALLBACK =
   "…";
 
+type WelcomeRuntimeSettings = {
+  enabled?: boolean; message?: string; leaveEnabled?: boolean; leaveMessage?: string;
+  channelId?: string; embedEnabled?: boolean; embedTitle?: string; embedDescription?: string;
+  embedColor?: string; embedFooter?: string; embedThumbnailUrl?: string; embedImageUrl?: string;
+};
+
+function renderWelcomeTemplate(template: string, variables: Record<string, string>): string {
+  return template.replace(/{{\s*([a-zA-Z0-9_.-]+)\s*}}/g, (_, key: string) => variables[key] ?? "");
+}
+
+async function sendWelcomeLifecycleMessage(
+  deps: PlatformEventHandlerDeps,
+  communityId: string | undefined,
+  member: AdapterMemberEvent,
+  kind: "join" | "leave"
+): Promise<void> {
+  if (!communityId || !deps.database) return;
+  const settings = deps.database.getRuntimeState<WelcomeRuntimeSettings>("api.welcome." + communityId);
+  if (!settings || (kind === "join" ? !settings.enabled : !settings.leaveEnabled)) return;
+  const contentTemplate = kind === "join" ? settings.message : settings.leaveMessage;
+  if (!contentTemplate?.trim()) return;
+  const channelExternalId = settings.channelId?.trim() || member.community.externalId;
+  const displayName = member.user.displayName || member.user.username || member.user.externalId;
+  const variables = { member: displayName, username: member.user.username || displayName, community: member.community.name || communityId };
+  const content = renderWelcomeTemplate(contentTemplate, variables);
+  const metadata: Record<string, unknown> = {};
+  const useEmbed = Boolean(settings.embedEnabled && deps.platform === "discord");
+  if (useEmbed) {
+    const embed: Record<string, unknown> = {};
+    const title = settings.embedTitle ? renderWelcomeTemplate(settings.embedTitle, variables) : "";
+    const description = settings.embedDescription ? renderWelcomeTemplate(settings.embedDescription, variables) : content;
+    const footer = settings.embedFooter ? renderWelcomeTemplate(settings.embedFooter, variables) : "";
+    if (title) embed.title = title.slice(0, 256);
+    if (description) embed.description = description.slice(0, 4096);
+    const color = settings.embedColor?.trim().replace(/^#/, "");
+    if (color && /^[0-9a-fA-F]{6}$/.test(color)) embed.color = Number.parseInt(color, 16);
+    if (footer) embed.footer = footer.slice(0, 2048);
+    if (settings.embedThumbnailUrl && /^https?:\/\//i.test(settings.embedThumbnailUrl)) embed.thumbnailUrl = settings.embedThumbnailUrl;
+    if (settings.embedImageUrl && /^https?:\/\//i.test(settings.embedImageUrl)) embed.imageUrl = settings.embedImageUrl;
+    metadata.discord = { embed };
+  }
+  try {
+    await deps.responder.sendAction({
+      type: "message.send", platform: deps.platform, channelExternalId,
+      content: useEmbed ? "" : content,
+      ...(Object.keys(metadata).length ? { metadata } : {})
+    });
+    deps.logger.info("welcome.message.sent", { platform: deps.platform, communityId, communityExternalId: member.community.externalId, userExternalId: member.user.externalId, kind, channelExternalId, embed: useEmbed });
+  } catch (error) {
+    deps.logger.error("welcome.message.failed", { platform: deps.platform, communityId, communityExternalId: member.community.externalId, userExternalId: member.user.externalId, kind, channelExternalId }, error);
+  }
+}
+
 export interface PlatformResponder {
   readonly id: string;
 
@@ -341,6 +394,8 @@ async function handleMemberJoined(
       }
     );
 
+  await sendWelcomeLifecycleMessage(deps, executionContext.community?.id, member, "join");
+
   // The platform identity resolver normally creates the user and
   // membership. Keep an explicit persistence fallback here as well,
   // because member.joined must be enough to register a participant
@@ -465,6 +520,8 @@ async function handleMemberLeft(
   });
   const community = executionContext.community;
   const user = executionContext.user;
+
+  await sendWelcomeLifecycleMessage(deps, community?.id, member, "leave");
 
   if (!community || !deps.membershipService) {
     deps.logger.warn("member.lifecycle.sync_skipped", {
