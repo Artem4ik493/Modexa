@@ -105,11 +105,35 @@ async function sendWelcomeLifecycleMessage(
   member: AdapterMemberEvent,
   kind: "join" | "leave"
 ): Promise<void> {
-  if (!communityId || !deps.database) return;
-  const settings = deps.database.getRuntimeState<WelcomeRuntimeSettings>("api.welcome." + communityId);
-  if (!settings || (kind === "join" ? !settings.enabled : !settings.leaveEnabled)) return;
+  if (!deps.database) {
+    deps.logger.warn("welcome.message.skipped", { platform: deps.platform, kind, communityExternalId: member.community.externalId, reason: "database_unavailable" });
+    return;
+  }
+  // Dashboard settings are keyed by the internal Modexa community ID.
+  // Resolve that ID from the platform identity if lifecycle context is incomplete.
+  const resolvedCommunity = communityId ? deps.database.getCommunity(communityId) : undefined;
+  const matchingCommunity = resolvedCommunity ?? deps.database.getCommunitiesSnapshot().find((item) =>
+    item.identities.some((identity) => identity.platform === deps.platform && identity.externalId === member.community.externalId)
+  );
+  const settingsCommunityId = matchingCommunity?.id ?? communityId;
+  if (!settingsCommunityId) {
+    deps.logger.warn("welcome.message.skipped", { platform: deps.platform, kind, communityExternalId: member.community.externalId, reason: "community_resolution_failed" });
+    return;
+  }
+  const settings = deps.database.getRuntimeState<WelcomeRuntimeSettings>("api.welcome." + settingsCommunityId);
+  if (!settings) {
+    deps.logger.info("welcome.message.skipped", { platform: deps.platform, kind, communityId: settingsCommunityId, communityExternalId: member.community.externalId, reason: "settings_not_found" });
+    return;
+  }
+  if (!(kind === "join" ? settings.enabled : settings.leaveEnabled)) {
+    deps.logger.debug("welcome.message.skipped", { platform: deps.platform, kind, communityId: settingsCommunityId, reason: "feature_disabled" });
+    return;
+  }
   const contentTemplate = kind === "join" ? settings.message : settings.leaveMessage;
-  if (!contentTemplate?.trim()) return;
+  if (!contentTemplate?.trim()) {
+    deps.logger.warn("welcome.message.skipped", { platform: deps.platform, kind, communityId: settingsCommunityId, reason: "message_empty" });
+    return;
+  }
   const channelExternalId = settings.channelId?.trim() || member.community.externalId;
   const displayName = member.user.displayName || member.user.username || member.user.externalId;
   const variables = { member: displayName, username: member.user.username || displayName, community: member.community.name || communityId };
@@ -138,7 +162,7 @@ async function sendWelcomeLifecycleMessage(
     });
     deps.logger.info("welcome.message.sent", { platform: deps.platform, communityId, communityExternalId: member.community.externalId, userExternalId: member.user.externalId, kind, channelExternalId, embed: useEmbed });
   } catch (error) {
-    deps.logger.error("welcome.message.failed", { platform: deps.platform, communityId, communityExternalId: member.community.externalId, userExternalId: member.user.externalId, kind, channelExternalId }, error);
+    deps.logger.error("welcome.message.failed", { platform: deps.platform, communityId: settingsCommunityId, communityExternalId: member.community.externalId, communityName: member.community.name, userExternalId: member.user.externalId, kind, channelExternalId, embed: useEmbed }, error);
   }
 }
 
