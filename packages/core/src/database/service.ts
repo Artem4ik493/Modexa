@@ -3,16 +3,20 @@ import {
 } from "node:crypto";
 
 import {
-  mkdirSync
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync
 } from "node:fs";
 
 import {
-  dirname
+  dirname,
+  join
 } from "node:path";
 
 import {
-  readFileSync
-} from "node:fs";
+  tmpdir
+} from "node:os";
 
 import {
   DatabaseSync
@@ -95,8 +99,18 @@ export class ModexaDatabase {
     );
   }
 
-  exportSnapshot(): string {
-    return readFileSync(this.path).toString("base64");
+  exportSnapshot(): Buffer {
+    // VACUUM INTO creates a consistent standalone SQLite snapshot, including
+    // committed changes that may still be stored in the WAL.
+    const directory = mkdtempSync(join(tmpdir(), "modexa-snapshot-"));
+    const snapshotPath = join(directory, "modexa.sqlite");
+    const escapedPath = snapshotPath.replace(/\u0027/g, "\u0027\u0027");
+    try {
+      this.database.exec("VACUUM INTO '" + escapedPath + "'");
+      return readFileSync(snapshotPath);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   }
 
 
