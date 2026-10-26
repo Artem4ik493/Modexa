@@ -1369,9 +1369,11 @@ export class ModexaDatabase {
       if (applied) continue;
 
       // Keep a recoverable, consistent database file before changing schema.
-      const snapshot = this.exportSnapshot();
-      const backupPath = `${this.path}.pre-migration-v${migration.version}-${Date.now()}.sqlite`;
-      writeFileSync(backupPath, snapshot, { flag: "wx" });
+      if (this.path !== ":memory:") {
+        const snapshot = this.exportSnapshot();
+        const backupPath = `${this.path}.pre-migration-v${migration.version}-${Date.now()}.sqlite`;
+        writeFileSync(backupPath, snapshot, { flag: "wx" });
+      }
 
       this.database.exec("BEGIN IMMEDIATE");
       try {
