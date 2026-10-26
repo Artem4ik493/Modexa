@@ -2661,6 +2661,16 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
     if (userSettingsMatch && ["GET", "PATCH", "PUT"].includes(req.method ?? "")) {
       const userId = decodeURIComponent(userSettingsMatch[1]!);
       if (!database.getUser(userId)) { json(res, 404, { error: "user_not_found" }); return; }
+      if (!authorized(req)) {
+        const session = discordSession(req);
+        const linkedIdentity = session
+          ? database.getIdentityByExternalId("discord", session.user.id)
+          : undefined;
+        if (!linkedIdentity || linkedIdentity.userId !== userId) {
+          json(res, 403, { error: "user_settings_forbidden" });
+          return;
+        }
+      }
       if (req.method === "GET") { json(res, 200, { items: database.getUserSettings(userId) }); return; }
       const body = await readJsonBody(req);
       const allowed = new Set(["locale", "notifications.enabled", "profile.visible"]);
