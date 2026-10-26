@@ -7,6 +7,7 @@ import type { IncomingMessage, ServerResponse } from "http";
 import {
   ModexaDatabase,
   BackupService,
+  activatePendingRestore,
   CommandRegistry,
   listCommandDescriptors,
   createBuiltinCommands,
@@ -26,9 +27,12 @@ if (apiKey.length < 32 || apiKey === "change-me" || apiKey === "REPLACE_WITH_A_L
   throw new Error("MODEXA_API_KEY must be configured with a random secret of at least 32 characters");
 }
 const allowedOrigins = new Set((process.env.MODEXA_ALLOWED_ORIGINS ?? "").split(",").map((origin) => origin.trim()).filter(Boolean));
-const database = new ModexaDatabase({
-  path: process.env.MODEXA_DATABASE_PATH ?? "data/modexa.sqlite"
-});
+const databasePath = process.env.MODEXA_DATABASE_PATH ?? "data/modexa.sqlite";
+const restoreActivation = activatePendingRestore(databasePath);
+if (restoreActivation.activated) {
+  console.info("[backup-restore] staged snapshot activated", { backupPath: restoreActivation.backupPath });
+}
+const database = new ModexaDatabase({ path: databasePath });
 // Keep the five-day audit retention policy enforced even when no new events arrive.
 const auditRetentionTimer = setInterval(() => {
   try { database.deleteExpiredAuditEntries(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)); }
@@ -496,6 +500,24 @@ function authorized(req: IncomingMessage): boolean {
   return decodedLegacyCookie === apiKey;
 }
 
+const MAX_BACKUP_UPLOAD_BYTES = 100 * 1024 * 1024;
+
+async function readBackupBody(req: IncomingMessage): Promise<Buffer> {
+  const declaredLength = Number(req.headers["content-length"] ?? 0);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_BACKUP_UPLOAD_BYTES) {
+    throw new Error("request_body_too_large");
+  }
+  const chunks: Buffer[] = [];
+  let total = 0;
+  for await (const chunk of req) {
+    const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    total += bytes.byteLength;
+    if (total > MAX_BACKUP_UPLOAD_BYTES) throw new Error("request_body_too_large");
+    chunks.push(bytes);
+  }
+  return Buffer.concat(chunks, total);
+}
+
 const parsedRequestBodies = new WeakMap<IncomingMessage, Record<string, unknown>>();
 
 async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
@@ -940,6 +962,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
           ["/api/actions", ["get"]],
           ["/api/actions/{id}", ["get"]],
           ["/api/backup", ["get"]],
+          ["/api/backup/restore", ["post"]],
           ["/api/system", ["get", "post"]]
         ] as Array<[string, string[]]>).map(([path, methods]) => [path, Object.fromEntries(methods.map((method) => [method, {
           summary: `${String(method).toUpperCase()} ${path}`,
@@ -1513,6 +1536,7 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       url.pathname === "/api/runtime" ||
       url.pathname === "/api/runtime/logs" ||
       url.pathname === "/api/backup" ||
+      url.pathname.startsWith("/api/backup/") ||
       url.pathname === "/api/actions" ||
       url.pathname.startsWith("/api/actions/");
     if (ownerOnlyPath && !authorized(req)) {
@@ -3032,16 +3056,38 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
     }
 
     if (url.pathname === "/api/backup" && req.method === "GET") {
-      if (!authorized(req)) { json(res, 403, { error: "api_key_required" }); return; }
       const artifact = backup.exportSnapshot();
       res.writeHead(200, {
         "content-type": "application/vnd.sqlite3",
-        "content-disposition": `attachment; filename="modexa-backup-${new Date().toISOString().replace(/[:.]/g, "-")}.sqlite"` ,
+        "content-disposition": `attachment; filename="modexa-backup-${new Date().toISOString().replace(/[:.]/g, "-")}.sqlite"`,
         "content-length": artifact.byteLength,
         "cache-control": "no-store",
         "x-content-type-options": "nosniff"
       });
       res.end(artifact);
+      return;
+    }
+
+    if (url.pathname === "/api/backup/restore" && req.method === "POST") {
+      const contentType = String(req.headers["content-type"] ?? "").split(";")[0]!.trim().toLowerCase();
+      if (contentType !== "application/vnd.sqlite3" && contentType !== "application/octet-stream") {
+        json(res, 415, { error: "sqlite_backup_content_type_required" });
+        return;
+      }
+      try {
+        const snapshot = await readBackupBody(req);
+        const result = backup.stageRestore(snapshot);
+        json(res, 202, {
+          ...result,
+          message: "Backup validated and staged. Restart the API to activate it; the previous database will be retained."
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "backup_restore_failed";
+        const status = message === "request_body_too_large" || message === "invalid_backup_size" ? 413
+          : message === "restore_already_staged" ? 409
+          : 400;
+        json(res, status, { error: message });
+      }
       return;
     }
 
