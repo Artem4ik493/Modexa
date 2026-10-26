@@ -90,15 +90,25 @@ export function activatePendingRestore(databasePathInput: string): { activated: 
 
   validateSnapshotFile(pendingPath);
   const previousPath = `${databasePath}.pre-restore-${new Date().toISOString().replace(/[:.]/g, "-")}.sqlite`;
+  const sidecars = ["-wal", "-shm"] as const;
   const hadPrevious = existsSync(databasePath);
+  const movedSidecars: Array<{ original: string; backup: string }> = [];
   if (hadPrevious) renameSync(databasePath, previousPath);
-
   try {
+    for (const suffix of sidecars) {
+      const original = `${databasePath}${suffix}`;
+      if (!existsSync(original)) continue;
+      const backup = `${previousPath}${suffix}`;
+      renameSync(original, backup);
+      movedSidecars.push({ original, backup });
+    }
     renameSync(pendingPath, databasePath);
     return { activated: true, ...(hadPrevious ? { backupPath: previousPath } : {}) };
   } catch (error) {
-    if (hadPrevious && existsSync(previousPath) && !existsSync(databasePath)) {
-      renameSync(previousPath, databasePath);
+    if (existsSync(databasePath)) rmSync(databasePath, { force: true });
+    if (hadPrevious && existsSync(previousPath)) renameSync(previousPath, databasePath);
+    for (const item of movedSidecars.reverse()) {
+      if (existsSync(item.backup)) renameSync(item.backup, item.original);
     }
     throw error;
   }
