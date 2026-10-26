@@ -1,13 +1,5 @@
-import { gzipSync } from "node:zlib";
 import type { ModexaDatabase } from "../database/service.js";
 import type { BillingService } from "../billing/service.js";
-
-export interface BackupArtifact {
-  createdAt: Date;
-  databasePath: string;
-  compressed: boolean;
-  data: string;
-}
 
 export class BackupService {
   constructor(
@@ -16,21 +8,17 @@ export class BackupService {
     private readonly communityId?: string
   ) {}
 
-  exportSnapshot(): BackupArtifact {
+  exportSnapshot(): Buffer {
     if (this.billingService && this.communityId) {
       this.billingService.requireFeature(this.communityId, "backup");
     }
-    const snapshot = this.database.exportSnapshot();
-    const compressed = gzipSync(Buffer.from(snapshot, "utf8")).toString("base64");
-    return {
-      createdAt: new Date(),
-      databasePath: this.database.path,
-      compressed: true,
-      data: compressed
-    };
+    return this.database.exportSnapshot();
   }
 
+  // A running SQLite database must never be overwritten in place. Restore is
+  // intentionally staged for a controlled restart instead of replacing the
+  // file currently held open by the process.
   restoreSnapshot(_base64: string): void {
-    throw new Error("Restore requires restarting Modexa with a replacement database file");
+    throw new Error("Restore must be staged and activated during a controlled restart");
   }
 }
