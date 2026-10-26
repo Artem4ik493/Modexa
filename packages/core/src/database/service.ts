@@ -6,7 +6,8 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  rmSync
+  rmSync,
+  writeFileSync
 } from "node:fs";
 
 import {
@@ -1340,12 +1341,49 @@ export class ModexaDatabase {
   }
 
   private ensureMigrations(): void {
-    try {
-      this.database.exec(
-        "ALTER TABLE identities ADD COLUMN avatar_url TEXT"
+    this.database.exec(`
+      CREATE TABLE IF NOT EXISTS modexa_schema_migrations (
+        version INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        applied_at TEXT NOT NULL
       );
-    } catch {
-      // Column already exists.
+    `);
+
+    const migrations: Array<{ version: number; name: string; apply: () => void }> = [
+      {
+        version: 1,
+        name: "identity_avatar_url",
+        apply: () => {
+          const columns = this.database.prepare("PRAGMA table_info(identities)").all() as Array<{ name: string }>; 
+          if (!columns.some((column) => column.name === "avatar_url")) {
+            this.database.exec("ALTER TABLE identities ADD COLUMN avatar_url TEXT");
+          }
+        }
+      }
+    ];
+
+    for (const migration of migrations) {
+      const applied = this.database.prepare(
+        "SELECT version FROM modexa_schema_migrations WHERE version = ?"
+      ).get(migration.version);
+      if (applied) continue;
+
+      // Keep a recoverable, consistent database file before changing schema.
+      const snapshot = this.exportSnapshot();
+      const backupPath = `${this.path}.pre-migration-v${migration.version}-${Date.now()}.sqlite`;
+      writeFileSync(backupPath, snapshot, { flag: "wx" });
+
+      this.database.exec("BEGIN IMMEDIATE");
+      try {
+        migration.apply();
+        this.database.prepare(
+          "INSERT INTO modexa_schema_migrations (version, name, applied_at) VALUES (?, ?, ?)"
+        ).run(migration.version, migration.name, new Date().toISOString());
+        this.database.exec("COMMIT");
+      } catch (error) {
+        this.database.exec("ROLLBACK");
+        throw error;
+      }
     }
   }
 
