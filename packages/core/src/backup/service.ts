@@ -83,7 +83,7 @@ export class BackupService {
  * Called before opening the live database during process startup. Keeps the
  * previous database as a recoverable file and restores it if activation fails.
  */
-export function activatePendingRestore(databasePathInput: string): { activated: boolean; backupPath?: string } {
+export function activatePendingRestore(databasePathInput: string): { activated: boolean; backupPath?: string; rejectedPath?: string } {
   const databasePath = resolve(databasePathInput);
   const pendingPath = `${databasePath}.restore-pending`;
   if (!existsSync(pendingPath)) return { activated: false };
