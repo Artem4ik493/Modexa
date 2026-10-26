@@ -163,6 +163,27 @@ type OwnerSession = { id: string; expiresAt: number; createdAt: number };
 
 const ownerSessions = new Map<string, OwnerSession>();
 const OWNER_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const OWNER_LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const OWNER_LOGIN_MAX_ATTEMPTS = 10;
+const ownerLoginAttempts = new Map<string, { count: number; resetAt: number }>();
+function ownerLoginRateLimit(req: IncomingMessage): { limited: boolean; retryAfterSeconds: number } {
+  const key = req.socket.remoteAddress ?? "unknown";
+  const now = Date.now();
+  const current = ownerLoginAttempts.get(key);
+  if (!current || current.resetAt <= now) {
+    ownerLoginAttempts.set(key, { count: 0, resetAt: now + OWNER_LOGIN_WINDOW_MS });
+    return { limited: false, retryAfterSeconds: 0 };
+  }
+  return { limited: current.count >= OWNER_LOGIN_MAX_ATTEMPTS, retryAfterSeconds: Math.max(1, Math.ceil((current.resetAt - now) / 1000)) };
+}
+function recordOwnerLoginAttempt(req: IncomingMessage, success: boolean): void {
+  const key = req.socket.remoteAddress ?? "unknown";
+  if (success) { ownerLoginAttempts.delete(key); return; }
+  const now = Date.now();
+  const current = ownerLoginAttempts.get(key);
+  if (!current || current.resetAt <= now) ownerLoginAttempts.set(key, { count: 1, resetAt: now + OWNER_LOGIN_WINDOW_MS });
+  else current.count += 1;
+}
 const OWNER_SESSION_COOKIE = "modexa_owner_session";
 
 function persistOwnerSessions(): void {
