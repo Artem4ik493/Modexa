@@ -7,7 +7,8 @@ import {
   ModexaDatabase,
   CardImageService
 } from "../src/index.js";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
 import { join } from "node:path";
 
 describe("Modexa security and infrastructure", () => {
@@ -224,18 +225,27 @@ describe("Modexa security and infrastructure", () => {
     expect(store.resolve(token, { userId: "u1", platform: "discord" }, new Date(now.getTime()+1001)).status).toBe("expired");
   });
 
-  it("exports a compressed database backup and refuses unsafe live restore", () => {
+  it("exports a standalone SQLite database snapshot and refuses unsafe live restore", () => {
     const dir = mkdtempSync(join(process.cwd(), ".modexa-backup-test-"));
+    let database: ModexaDatabase | undefined;
+    let restored: DatabaseSync | undefined;
     try {
-      const database = new ModexaDatabase({ path: join(dir, "modexa.sqlite") });
-      const backup = new BackupService(database);
-      const artifact = backup.exportSnapshot();
+      const databasePath = join(dir, "modexa.sqlite");
+      database = new ModexaDatabase({ path: databasePath });
+      const now = new Date();
+      database.upsertCommunity({ id: "backup-community", name: "Backup test", createdAt: now, updatedAt: now });
+      const artifact = new BackupService(database).exportSnapshot();
 
-      expect(artifact.compressed).toBe(true);
-      expect(artifact.data.length).toBeGreaterThan(0);
-      expect(() => backup.restoreSnapshot(artifact.data)).toThrow(/restarting Modexa/);
-      database.close();
+      expect(Buffer.isBuffer(artifact)).toBe(true);
+      expect(artifact.subarray(0, 16).toString("binary")).toBe("SQLite format 3\\u0000");
+      const snapshotPath = join(dir, "snapshot.sqlite");
+      writeFileSync(snapshotPath, artifact);
+      restored = new DatabaseSync(snapshotPath);
+      expect(restored.prepare("SELECT name FROM communities WHERE id = ?").get("backup-community")).toEqual({ name: "Backup test" });
+      expect(() => new BackupService(database!).restoreSnapshot(artifact.toString("base64"))).toThrow(/controlled restart/);
     } finally {
+      restored?.close();
+      database?.close();
       rmSync(dir, { recursive: true, force: true });
     }
   });
