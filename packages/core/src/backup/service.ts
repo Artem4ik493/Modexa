@@ -88,7 +88,13 @@ export function activatePendingRestore(databasePathInput: string): { activated: 
   const pendingPath = `${databasePath}.restore-pending`;
   if (!existsSync(pendingPath)) return { activated: false };
 
-  validateSnapshotFile(pendingPath);
+  try {
+    validateSnapshotFile(pendingPath);
+  } catch {
+    const rejectedPath = `${pendingPath}.rejected-${new Date().toISOString().replace(/[:.]/g, "-")}`;
+    renameSync(pendingPath, rejectedPath);
+    return { activated: false, rejectedPath };
+  }
   const previousPath = `${databasePath}.pre-restore-${new Date().toISOString().replace(/[:.]/g, "-")}.sqlite`;
   const sidecars = ["-wal", "-shm"] as const;
   const hadPrevious = existsSync(databasePath);
