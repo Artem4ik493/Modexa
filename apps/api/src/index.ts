@@ -1188,12 +1188,17 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
         }
       }
       const now = Date.now();
-      const pending = (database.getRuntimeState<Array<{
+      const allPending = (database.getRuntimeState<Array<{
         code: string; chatId: string; chatTitle: string; requestedBy: string;
         createdAt: string; expiresAt: string;
       }>>("telegram.pending_group_links") ?? []).filter((item) => Date.parse(item.expiresAt) > now);
-      database.setRuntimeState("telegram.pending_group_links", pending);
-      json(res, 200, { items: pending.map((item) => ({
+      database.setRuntimeState("telegram.pending_group_links", allPending);
+      // Community managers may only see link requests created by their own linked
+      // Telegram identity. The owner API key can inspect all pending requests.
+      const visiblePending = authorized(req)
+        ? allPending
+        : allPending.filter((item) => linkedTelegramIds.includes(item.requestedBy));
+      json(res, 200, { items: visiblePending.map((item) => ({
         chatId: item.chatId, chatTitle: item.chatTitle,
         createdAt: item.createdAt, expiresAt: item.expiresAt
       })) });
