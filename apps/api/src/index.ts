@@ -1187,6 +1187,15 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
           return;
         }
       }
+      const session = discordSession(req);
+      const discordIdentity = session
+        ? database.getIdentityByExternalId("discord", session.user.id)
+        : undefined;
+      const linkedTelegramIds = discordIdentity
+        ? database.getUserIdentities(discordIdentity.userId)
+            .filter((identity) => identity.platform === "telegram")
+            .map((identity) => identity.externalId)
+        : [];
       const now = Date.now();
       const allPending = (database.getRuntimeState<Array<{
         code: string; chatId: string; chatTitle: string; requestedBy: string;
