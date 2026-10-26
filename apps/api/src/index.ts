@@ -2991,7 +2991,14 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
     if (url.pathname === "/api/backup" && req.method === "GET") {
       if (!authorized(req)) { json(res, 403, { error: "api_key_required" }); return; }
       const artifact = backup.exportSnapshot();
-      json(res, 200, artifact);
+      res.writeHead(200, {
+        "content-type": "application/vnd.sqlite3",
+        "content-disposition": `attachment; filename="modexa-backup-${new Date().toISOString().replace(/[:.]/g, "-")}.sqlite"` ,
+        "content-length": artifact.byteLength,
+        "cache-control": "no-store",
+        "x-content-type-options": "nosniff"
+      });
+      res.end(artifact);
       return;
     }
 
