@@ -1280,6 +1280,24 @@ async function runCommand(
     return;
   }
 
+  if (deps.database) {
+    const commandName = input.rawText.trim().split(/\\s+/)[0].replace(/^[!/]+/, "").split("@")[0].toLowerCase().slice(0, 64);
+    if (commandName) {
+      const now = new Date();
+      const day = now.toISOString().slice(0, 10);
+      const key = "analytics.command_daily";
+      const state = deps.database.getRuntimeState<Record<string, Record<string, number>>>(key) ?? {};
+      const platformDay = `${day}:${platform}`;
+      const daily = { ...(state[platformDay] ?? {}) };
+      daily.total = (daily.total ?? 0) + 1;
+      daily[`cmd:${commandName}`] = (daily[`cmd:${commandName}`] ?? 0) + 1;
+      state[platformDay] = daily;
+      const retentionDate = new Date(now.getTime() - 400 * 86400000).toISOString().slice(0, 10);
+      for (const existingDay of Object.keys(state)) if (existingDay.slice(0, 10) < retentionDate) delete state[existingDay];
+      deps.database.setRuntimeState(key, state, now);
+    }
+  }
+
   const bound =
     store.bindResponse(
       result.response,
