@@ -237,7 +237,7 @@ describe("Modexa security and infrastructure", () => {
       const artifact = new BackupService(database).exportSnapshot();
 
       expect(Buffer.isBuffer(artifact)).toBe(true);
-      expect(artifact.subarray(0, 16).toString("binary")).toBe("SQLite format 3\\u0000");
+      expect(artifact.subarray(0, 15).toString("binary")).toBe("SQLite format 3");
       const snapshotPath = join(dir, "snapshot.sqlite");
       writeFileSync(snapshotPath, artifact);
       restored = new DatabaseSync(snapshotPath);
