@@ -31,6 +31,8 @@ const databasePath = process.env.MODEXA_DATABASE_PATH ?? "data/modexa.sqlite";
 const restoreActivation = activatePendingRestore(databasePath);
 if (restoreActivation.activated) {
   console.info("[backup-restore] staged snapshot activated", { backupPath: restoreActivation.backupPath });
+} else if ("rejectedPath" in restoreActivation) {
+  console.error("[backup-restore] staged snapshot failed validation and was quarantined", { rejectedPath: restoreActivation.rejectedPath });
 }
 const database = new ModexaDatabase({ path: databasePath });
 // Keep the five-day audit retention policy enforced even when no new events arrive.
