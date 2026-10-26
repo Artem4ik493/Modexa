@@ -59,7 +59,7 @@ describe("BackupService restore", () => {
     const database = new ModexaDatabase({ path: join(directory, "target.sqlite") });
     const backup = new BackupService(database);
 
-    expect(() => backup.stageRestore(Buffer.from("not a database"))).toThrow("invalid_backup_size");
+    expect(() => backup.stageRestore(Buffer.alloc(256, 0x41))).toThrow("invalid_sqlite_header");
     expect(existsSync(`${database.path}.restore-pending`)).toBe(false);
 
     database.close();
