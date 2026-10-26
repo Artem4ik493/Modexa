@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -77,6 +77,30 @@ describe("BackupService restore", () => {
 
     source.close();
     database.close();
+  });
+
+  it("quarantines a corrupt staged snapshot and leaves the live database intact", () => {
+    const directory = temporaryDirectory();
+    const databasePath = join(directory, "target.sqlite");
+    const database = new ModexaDatabase({ path: databasePath });
+    const now = new Date();
+    database.upsertCommunity({ id: "safe-community", name: "Safe", createdAt: now, updatedAt: now });
+    database.setCommunitySetting("safe-community", "marker", "original");
+    database.close();
+
+    const pendingPath = `${databasePath}.restore-pending`;
+    writeFileSync(pendingPath, Buffer.alloc(256, 0x41));
+
+    const result = activatePendingRestore(databasePath);
+    expect(result.activated).toBe(false);
+    expect(result.rejectedPath).toBeTruthy();
+    expect(existsSync(result.rejectedPath!)).toBe(true);
+    expect(existsSync(databasePath)).toBe(true);
+    expect(existsSync(pendingPath)).toBe(false);
+
+    const reopened = new ModexaDatabase({ path: databasePath });
+    expect(reopened.getCommunitySetting("safe-community", "marker")).toBe("original");
+    reopened.close();
   });
 
   it("does not activate a restore when no staged snapshot exists", () => {
