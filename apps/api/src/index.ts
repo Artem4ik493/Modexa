@@ -1655,6 +1655,72 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       return;
     }
 
+    if (url.pathname === "/api/owner/analytics" && req.method === "GET") {
+      if (!authorized(req)) { json(res, 401, { error: "owner_api_key_required" }); return; }
+
+      const requestedPlatform = url.searchParams.get("platform");
+      const platform: "discord" | "telegram" = requestedPlatform === "telegram" ? "telegram" : "discord";
+      const now = new Date();
+      const today = now.toISOString().slice(0, 10);
+      const identities = database.getCommunityIdentitiesSnapshot();
+      const memberships = database.getMembershipsSnapshot();
+      const platformCommunityIds = new Set(identities.filter((item) => item.platform === platform).map((item) => item.communityId));
+      const platformIdentities = identities.filter((item) => item.platform === platform);
+      const installationIds = new Set(platformIdentities.map((item) => item.externalId));
+      const activeMembers = memberships.filter((item) => platformCommunityIds.has(item.communityId) && item.status === "active");
+      const commandState = database.getRuntimeState<Record<string, Record<string, number>>>("analytics.command_daily") ?? {};
+
+      const commandUsage = (days: number) => {
+        const cutoff = new Date(now.getTime() - (days - 1) * 86400000).toISOString().slice(0, 10);
+        let total = 0;
+        const commands: Record<string, number> = {};
+        for (const [key, values] of Object.entries(commandState)) {
+          const [day, eventPlatform] = key.split(":");
+          if (eventPlatform !== platform || day < cutoff || day > today) continue;
+          total += Number(values.total ?? 0);
+          for (const [name, count] of Object.entries(values)) if (name.startsWith("cmd:")) commands[name.slice(4)] = (commands[name.slice(4)] ?? 0) + Number(count ?? 0);
+        }
+        return { total, commands: Object.entries(commands).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, count]) => ({ name, count })) };
+      };
+
+      const communityIdsFor = (target: "discord" | "telegram") => new Set(identities.filter((item) => item.platform === target).map((item) => item.communityId));
+      const snapshots = database.getRuntimeState<Record<string, { discord: { installations: number; members: number }; telegram: { installations: number; members: number } }>>("analytics.daily_snapshots") ?? {};
+      const countMembers = (target: "discord" | "telegram") => memberships.filter((item) => item.status === "active" && communityIdsFor(target).has(item.communityId)).length;
+      snapshots[today] = {
+        discord: { installations: new Set(identities.filter((item) => item.platform === "discord").map((item) => item.externalId)).size, members: countMembers("discord") },
+        telegram: { installations: new Set(identities.filter((item) => item.platform === "telegram").map((item) => item.externalId)).size, members: countMembers("telegram") }
+      };
+      const retentionDate = new Date(now.getTime() - 400 * 86400000).toISOString().slice(0, 10);
+      for (const day of Object.keys(snapshots)) if (day < retentionDate) delete snapshots[day];
+      database.setRuntimeState("analytics.daily_snapshots", snapshots, now);
+
+      const previousMonthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, now.getUTCDate()));
+      const previousMonthKey = previousMonthDate.toISOString().slice(0, 10);
+      const snapshotDays = Object.keys(snapshots).filter((day) => day <= previousMonthKey).sort();
+      const baselineDay = snapshotDays[snapshotDays.length - 1];
+      const baseline = baselineDay ? snapshots[baselineDay][platform] : undefined;
+      const current = snapshots[today][platform];
+      const growth = (value: number, previous: number | undefined) => previous === undefined ? null : { absolute: value - previous, percent: previous === 0 ? (value === 0 ? 0 : null) : Math.round(((value - previous) / previous) * 1000) / 10 };
+      let previousCommands = 0;
+      const previousStart = new Date(now.getTime() - 60 * 86400000).toISOString().slice(0, 10);
+      const previousEnd = new Date(now.getTime() - 30 * 86400000).toISOString().slice(0, 10);
+      for (const [key, values] of Object.entries(commandState)) {
+        const [day, eventPlatform] = key.split(":");
+        if (eventPlatform === platform && day >= previousStart && day < previousEnd) previousCommands += Number(values.total ?? 0);
+      }
+
+      json(res, 200, {
+        generatedAt: now.toISOString(),
+        platform,
+        installations: installationIds.size,
+        members: { total: activeMembers.length, note: platform === "telegram" ? "Counts active Modexa memberships; Telegram does not expose a complete group member list." : "Counts active Modexa memberships in linked Discord communities." },
+        commands: { day1: commandUsage(1), day3: commandUsage(3), day7: commandUsage(7), day30: commandUsage(30) },
+        growth: { baselineDate: baselineDay ?? null, installations: growth(current.installations, baseline?.installations), members: growth(current.members, baseline?.members), commands: growth(commandUsage(30).total, baselineDay ? previousCommands : undefined) },
+        history: Object.entries(snapshots).sort(([a], [b]) => a.localeCompare(b)).map(([date, value]) => ({ date, ...value[platform] }))
+      });
+      return;
+    }
+
     if (url.pathname === "/api/analytics" && req.method === "GET") {
       const communityId = url.searchParams.get("communityId") ?? undefined;
       if (!authorized(req) && !communityId) {
