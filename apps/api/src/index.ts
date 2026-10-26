@@ -1926,7 +1926,23 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
     }
 
     if (url.pathname === "/api/bridge" && req.method === "GET") {
-      // Migrate legacy panel endpoint IDs to the stable IDs used by live platform events.
+      const requestedCommunityId = url.searchParams.get("communityId") ?? "";
+
+      if (!authorized(req)) {
+        if (!requestedCommunityId || !(await canManageDiscordCommunity(req, requestedCommunityId))) {
+          json(res, 403, { error: "bridge_community_access_forbidden" }); return;
+        }
+        const endpoints = database.getBridgeEndpoints().filter((item) => item.communityId === requestedCommunityId);
+        const endpointIds = new Set(endpoints.map((item) => item.id));
+        const links = database.getBridgeLinks().filter((item) => endpointIds.has(item.sourceEndpointId) && endpointIds.has(item.targetEndpointId));
+        json(res, 200, { endpoints, links, communityId: requestedCommunityId, scope: "community" }); return;
+      }
+      if (requestedCommunityId) {
+        const endpoints = database.getBridgeEndpoints().filter((item) => item.communityId === requestedCommunityId);
+        const endpointIds = new Set(endpoints.map((item) => item.id));
+        json(res, 200, { endpoints, links: database.getBridgeLinks().filter((item) => endpointIds.has(item.sourceEndpointId) && endpointIds.has(item.targetEndpointId)), communityId: requestedCommunityId, scope: "community" }); return;
+      }
+      // Legacy-ID normalization writes to the database, so it runs only in the owner-wide view.
       const currentEndpoints = database.getBridgeEndpoints();
       const canonicalIds = new Map<string, string>();
       for (const endpoint of currentEndpoints) {
@@ -1946,21 +1962,6 @@ body{display:grid;place-items:center;padding:24px}.login-card{width:min(100%,440
       for (const endpoint of currentEndpoints) {
         const canonicalId = canonicalIds.get(endpoint.id);
         if (canonicalId && canonicalId !== endpoint.id) database.deleteBridgeEndpoint(endpoint.id);
-      }
-      const requestedCommunityId = url.searchParams.get("communityId") ?? "";
-      if (!authorized(req)) {
-        if (!requestedCommunityId || !(await canManageDiscordCommunity(req, requestedCommunityId))) {
-          json(res, 403, { error: "bridge_community_access_forbidden" }); return;
-        }
-        const endpoints = database.getBridgeEndpoints().filter((item) => item.communityId === requestedCommunityId);
-        const endpointIds = new Set(endpoints.map((item) => item.id));
-        const links = database.getBridgeLinks().filter((item) => endpointIds.has(item.sourceEndpointId) && endpointIds.has(item.targetEndpointId));
-        json(res, 200, { endpoints, links, communityId: requestedCommunityId, scope: "community" }); return;
-      }
-      if (requestedCommunityId) {
-        const endpoints = database.getBridgeEndpoints().filter((item) => item.communityId === requestedCommunityId);
-        const endpointIds = new Set(endpoints.map((item) => item.id));
-        json(res, 200, { endpoints, links: database.getBridgeLinks().filter((item) => endpointIds.has(item.sourceEndpointId) && endpointIds.has(item.targetEndpointId)), communityId: requestedCommunityId, scope: "community" }); return;
       }
       json(res, 200, { endpoints: database.getBridgeEndpoints(), links: database.getBridgeLinks(), scope: "owner" });
       return;
